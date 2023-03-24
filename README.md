@@ -7,7 +7,16 @@ This enables a new artificial layering technique to be applied on the incoming s
 ## Overview
 ![signal_flow](assets/pictures/signal_flow_control.png)
 
-**Signal flow**:
+**Signal flow**: <br />
+
+Explore the possibilities and fine-tune the sound with the following pre-processing effects on your input audio track:
+
+- Transient Designer: Shape the attack and sustain of your audio, tailoring it to your preferences.
+- Low-/High-Cut Filter: Refine the frequency range of your input audio for a more focused sound.
+
+After the synthesis, you can further enrich the audio produced by each model with these additional options:
+- Grain Delay: Add depth and texture to each model channel by applying a granular delay effect.
+- Post Compressor: Ensure a cohesive sound by applying a group compressor to both models, blending them harmoniously.
 
 **Timbre models**:
 - Funk Drums: Our first model is inspired by the captivating sounds of vintage drum-breaks. We've trained it using a diverse dataset of four hours, immersing it in the nuances of the classic funk drumming style.
@@ -16,7 +25,6 @@ This enables a new artificial layering technique to be applied on the incoming s
 ## Installation
 The plugin uses the onnxruntime libary to inference our neural networks. Unfortnuatly at the moment the library is is included as a shared library, so it is necessary to put the shared library next to the exectutable or in your system libaray path. 
 
-**Important:** If you are using the plugin inside a DAW, the shared libaray has to be put next to the DAW executable!
 Detailed instructions can be found here:
 - [Windows Guide](docs/install_instructions_windows.md).
 - [Mac Guide](docs/install_instructions_mac.md).
