@@ -7,9 +7,8 @@ This enables a new artificial layering technique to be applied on the incoming s
 ## Overview
 ![rave_audition](assets/pictures/signal_flow_control.png)
 
-## Installing the plugin
+## Installation
 The plugin uses the onnxruntime libary to inference our neural networks. Unfortnuatly at the moment the library is is included as a shared library, so it is necessary to put the shared library next to the exectutable. If you are using the plugin ...
-    
 
 ## Build instruction
 Build with CMake
@@ -22,12 +21,14 @@ cd Scyclone/
 git submodule update --init --recursive
 
 # build plugin
+# Note: change the following flag to -DCMAKE_GENERATOR_PLATFORM=arm64 if you are using apple silicon 
 cmake . -B cmake-build -DCMAKE_GENERATOR_PLATFORM=x64 
-$ cmake --build cmake-build --config Release
+cmake --build cmake-build --config Release
+
+# build should be here: /cmake-build/Scyclone_artefacts/Release/
 ```
 
-**Note:**<br />
-CMake should automatically download the prebuild onnxruntime library (version 1.12.1). **If the script fails**, use the following steps:
+**Note:** CMake should automatically download the prebuild onnxruntime library (version 1.12.1). **If the script fails**, use the following steps:
 - Download [onnx v1.12.1](https://github.com/microsoft/onnxruntime/releases/tag/v1.12.1) (Select your required prebuild)
 - Extract the file and rename to the folder ```onnxruntime-1.12.1```
 - Copy to folder to ```path/to/Scyclone/modules/```
@@ -37,7 +38,10 @@ CMake should automatically download the prebuild onnxruntime library (version 1.
 
 - RAVE Paper - [RAVE: A variational autoencoder for fast and high-quality neural audio synthesis](https://arxiv.org/abs/2111.05011)
 - RAVE Scripts - [RAVE Github Repository](https://github.com/acids-ircam/RAVE)
+- RNBO Tutorial - [JUCE & RNBO C++ Export](https://kengo.dev/posts/jr-granular)
 
 ## License
-
-.....
+This project is subject to multiple licenses. The primary license for the entire project is the GNU General Public License version 3 (GPLv3), which is the most restrictive of all the licenses applied herein.
+ - The Granular Delay module located at ```modules/RnboExport/``` is licensed under the GPLv3.
+ - All pretrained onnx models located at ```assets/models/``` are licensed under the Creative Commons Attribution-NonCommercial 4.0 International License 
+ - All other code within this project is licensed under the MIT License.
