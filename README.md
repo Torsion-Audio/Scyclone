@@ -7,6 +7,13 @@ This enables a new artificial layering technique to be applied on the incoming s
 ## Overview
 ![rave_audition](assets/pictures/signal_flow_control.png)
 
+**Signal flow**:
+
+**Timbre models**:
+- Funk Drums: Our first model is inspired by the captivating sounds of vintage drum-breaks. We've meticulously trained it using a diverse dataset of four hours, immersing it in the nuances of the classic funk drumming style.
+
+- Djembe: Immerse yourself in the rhythmic world of the djembe with our second model. It's been carefully trained on five hours of audio, featuring three hours of captivating djembe solo performances and an additional two hours of engaging one-shot recordings.
+
 ## Installation
 The plugin uses the onnxruntime libary to inference our neural networks. Unfortnuatly at the moment the library is is included as a shared library, so it is necessary to put the shared library next to the exectutable. If you are using the plugin ...
 
