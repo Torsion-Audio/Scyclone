@@ -7,15 +7,18 @@ This enables a new artificial layering technique to be applied on the incoming s
 ## Overview
 ![signal_flow](assets/pictures/signal_flow_control.png)
 
-**Signal flow**: <br />
 
-Explore the possibilities and fine-tune the sound with the following pre-processing effects on your input audio track:
+
+**Signal flow**: <br />
+Our plug-in provides an intuitive signal flow, empowering you to seamlessly influence the neural audio synthesis of our models with pre-processing effects, enhancing your creative experience:
 
 - Transient Designer: Shape the attack and sustain of your audio, tailoring it to your preferences.
 - Low-/High-Cut Filter: Refine the frequency range of your input audio for a more focused sound.
-
+ 
 After the synthesis, you can further enrich the audio produced by each model with these additional options:
+ 
 - Grain Delay: Add depth and texture to each model channel by applying a granular delay effect.
+- Blend: Crossfade between the outputs of our two distinct model channels, enabling you to create a harmonious mix or smoothly transition from one sound to the other.
 - Post Compressor: Ensure a cohesive sound by applying a group compressor to both models, blending them harmoniously.
 
 **Timbre models**:
