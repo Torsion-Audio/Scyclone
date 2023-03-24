@@ -18,8 +18,8 @@ The plugin uses the onnxruntime libary to inference our neural networks. Unfortn
 
 **Important:** If you are using the plugin inside a DAW, the shared libaray has to be put next to the DAW executable!
 Detailed instructions can be found here:
-- [Windows](docs/install_instructions_windows.md).
-- [Mac](docs/install_instructions_mac.md).
+- [Windows Guide](docs/install_instructions_windows.md).
+- [Mac Guide](docs/install_instructions_mac.md).
 
 ## Build instruction
 Build with CMake
