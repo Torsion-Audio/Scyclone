@@ -7,19 +7,31 @@ This enables a new artificial layering technique to be applied on the incoming s
 ## Overview
 ![signal_flow](assets/pictures/signal_flow_control.png)
 
-**Signal flow**:
 
-**Timbre models**:
-- Funk Drums: Our first model is inspired by the captivating sounds of vintage drum-breaks. We've trained it using a diverse dataset of four hours, immersing it in the nuances of the classic funk drumming style.
-- Djembe: Immerse yourself in the rhythmic world of the djembe with our second model. It's been carefully trained on five hours of audio, featuring three hours of djembe solo performances and an additional two hours of one-shot recordings.
+
+**Signal flow**: <br />
+
+Scyclone provides an intuitive signal flow, empowering the user to seamlessly influence the neural audio synthesis of the models with pre-processing effects:
+
+- Transient Designer: Shape the attack and sustain of the audio and tailoring it to your preferences
+- Low-/High-Cut Filter: Refine the frequency range of your input audio for a more focused sound
+ 
+After the synthesis, you can further enrich the audio with these additional options:
+ 
+- Grain Delay: Add depth and texture to each model's output by applying a granular delay
+- Blend: Crossfade between the outputs of the models, enabling you to create a harmonious mix
+- Post Compressor: Ensure a consistent sound by applying a group compressor to both models, blending them harmoniously
+
+**Trained models**:
+- Funk Drums: This model is inspired by the captivating sounds of vintage drum-breaks, trained on a diverse four hours dataset
+- Djembe: Carefully trained on five hours of dataset. Three hours of djembe solo performances and two hours of one-shot recordings
 
 ## Installation
 The plugin uses the onnxruntime libary to inference our neural networks. Unfortnuatly at the moment the library is is included as a shared library, so it is necessary to put the shared library next to the exectutable or in your system libaray path. 
 
-**Important:** If you are using the plugin inside a DAW, the shared libaray has to be put next to the DAW executable!
-
-Windows instructions:
-
+Detailed instructions can be found here:
+- [Windows Guide](docs/install_instructions_windows.md).
+- [Mac Guide](docs/install_instructions_mac.md).
 
 ## Build instruction
 Build with CMake
