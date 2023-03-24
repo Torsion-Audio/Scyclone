@@ -14,7 +14,12 @@ This enables a new artificial layering technique to be applied on the incoming s
 - Djembe: Immerse yourself in the rhythmic world of the djembe with our second model. It's been carefully trained on five hours of audio, featuring three hours of djembe solo performances and an additional two hours of one-shot recordings.
 
 ## Installation
-The plugin uses the onnxruntime libary to inference our neural networks. Unfortnuatly at the moment the library is is included as a shared library, so it is necessary to put the shared library next to the exectutable. If you are using the plugin ...
+The plugin uses the onnxruntime libary to inference our neural networks. Unfortnuatly at the moment the library is is included as a shared library, so it is necessary to put the shared library next to the exectutable or in your system libaray path. 
+
+**Important:** If you are using the plugin inside a DAW, the shared libaray has to be put next to the DAW executable!
+
+Windows instructions:
+
 
 ## Build instruction
 Build with CMake
