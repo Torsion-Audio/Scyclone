@@ -17,9 +17,9 @@ This enables a new artificial layering technique to be applied on the incoming s
 The plugin uses the onnxruntime libary to inference our neural networks. Unfortnuatly at the moment the library is is included as a shared library, so it is necessary to put the shared library next to the exectutable or in your system libaray path. 
 
 **Important:** If you are using the plugin inside a DAW, the shared libaray has to be put next to the DAW executable!
-
-Windows instructions:
-
+Detailed instructions can be found here:
+- [Windows](docs/install_instructions_windows.md).
+- [Mac](docs/install_instructions_mac.md).
 
 ## Build instruction
 Build with CMake
