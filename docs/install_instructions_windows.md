@@ -17,7 +17,7 @@
 | onnxruntime library | ```Scyclone/modules/onnxruntime-1.12.1/lib/onnxruntime.dll```                                 |
 
 
-## Installation Guid
+## Installation Guide
 
 - copy vst3 binary to your system vst3 folder: ```C:\Program Files\Common Files\VST3```
 - copy the onnxruntime library **either** next to your DAW executable (recommended) **or** in your system folder:  <br />
