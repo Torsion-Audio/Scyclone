@@ -1,0 +1,19 @@
+#pragma once
+
+#ifdef RNBO_DESCRIPTION_AS_STRING
+
+namespace RNBO {
+	const std::string patcher_description(R"RNBOJSON( @PATCHER_DESCRIPTION_JSON@ )RNBOJSON");
+	const std::string patcher_presets(R"RNBOJSON( @PATCHER_PRESETS_JSON@ )RNBOJSON");
+}
+
+#else
+
+#include <json/json.hpp>
+
+namespace RNBO {
+	const nlohmann::json patcher_description = nlohmann::json::parse(std::string(R"RNBOJSON( @PATCHER_DESCRIPTION_JSON@ )RNBOJSON"));
+	const nlohmann::json patcher_presets = nlohmann::json::parse(std::string(R"RNBOJSON( @PATCHER_PRESETS_JSON@ )RNBOJSON"));
+}
+
+#endif

@@ -1,0 +1,19 @@
+[
+  {
+    "name": "untitled",
+    "preset": {
+      "grainPos": {
+        "value": 100
+      },
+      "grainSize": {
+        "value": 500
+      },
+      "interval": {
+        "value": 1
+      },
+      "pitch": {
+        "value": 0
+      }
+    }
+  }
+]

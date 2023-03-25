@@ -1,0 +1,17 @@
+cmake-build*
+CMakeFiles/*
+modules/*
+!modules/RnboExport
+!modules/RnboExport/*
+Builds
+BinaryData.h
+BinaryData*.cpp
+build*/
+Bin*/
+JuceLibraryCode
+LV2.mak
+.idea
+.DS_Store
+.vscode/
+.idea/
+Plugin/xcode/
