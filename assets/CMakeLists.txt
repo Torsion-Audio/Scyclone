@@ -2,7 +2,6 @@ juce_add_binary_data(BinaryData SOURCES
         models/djembe.onnx
         models/funk_drums.onnx
 
-        pictures/ui_mockup.png
         pictures/Gradient.png
         pictures/Gradient_OpenGL.png
 

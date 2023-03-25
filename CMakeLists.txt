@@ -220,7 +220,7 @@ target_sources(${target_name}
 		modules/RnboExport/rnbo_granular.cpp
 
 		#other
-		TODO/README.md
+		README.md
 		)
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
