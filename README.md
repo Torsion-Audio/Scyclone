@@ -11,7 +11,7 @@ This enables a new artificial layering technique to be applied on the incoming s
 
 **Signal flow**: <br />
 
-Scyclone offers an intuitive signal flow to seamlessly influence the model's synthesis with pre-processing effects:
+Scyclone offers an intuitive signal flow to seamlessly influence the model's synthesis using pre-processing effects:
 
 - Transient Controller: Shape the attack and sustain of the audio.
 - Low-/High-Cut Filter: Refine the frequency range of input audio for a more consistent sound
