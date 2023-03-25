@@ -59,7 +59,7 @@ cmake --build cmake-build --config Release
 - Copy to folder to ```path/to/Scyclone/modules/```
 - Now you sould have the following file structes ```Scyclone/modules/onnxruntime-1.12.1/include```
 
-## Credits
+## References
 
 - RAVE Paper - [RAVE: A variational autoencoder for fast and high-quality neural audio synthesis](https://arxiv.org/abs/2111.05011)
 - RAVE Scripts - [RAVE Github Repository](https://github.com/acids-ircam/RAVE)
