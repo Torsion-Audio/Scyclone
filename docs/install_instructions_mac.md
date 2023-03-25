@@ -2,7 +2,7 @@
 
 ## Installation Guide
 
-- if you have not installed homebrew yet run the following line in the Terminal
+- if you have not installed homebrew yet, run the following line in the Terminal and follow the instructions
 
 ```/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"```
 
