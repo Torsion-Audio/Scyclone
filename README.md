@@ -44,14 +44,15 @@ cd Scyclone/
 git submodule update --init --recursive
 
 # build plugin
-# Note: change the following flag to -DCMAKE_GENERATOR_PLATFORM=arm64 if you are using apple silicon 
-cmake . -B cmake-build -DCMAKE_GENERATOR_PLATFORM=x64 
+cmake . -B cmake-build
 cmake --build cmake-build --config Release
 
 # build should be here: /cmake-build/Scyclone_artefacts/Release/
 ```
 
-**Note:** CMake should automatically download the prebuild onnxruntime library (version 1.12.1). **If the script fails**, use the following steps:
+**Note:** If you use apple silicon you need to download the prebuild onnxruntime library (version 1.12.1) manually. The CMake script downloads the x64 version automatically, if no library is found in the modules path. Therefore follow the steps below before building the plugin with CMake.
+
+**Note:** CMake should automatically download the prebuild onnxruntime library (version 1.12.1). **If the script fails**, download the library manually:
 - Download [onnx v1.12.1](https://github.com/microsoft/onnxruntime/releases/tag/v1.12.1) (Select your required prebuild)
 - Extract the file and rename to the folder ```onnxruntime-1.12.1```
 - Copy to folder to ```path/to/Scyclone/modules/```
