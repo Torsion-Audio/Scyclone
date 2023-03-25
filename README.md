@@ -11,20 +11,20 @@ This enables a new artificial layering technique to be applied on the incoming s
 
 **Signal flow**: <br />
 
-Scyclone provides an intuitive signal flow, empowering the user to seamlessly influence the neural audio synthesis of the models with pre-processing effects:
+Scyclone offers an intuitive signal flow to seamlessly influence the model's synthesis with pre-processing effects:
 
-- Transient Controller: Shape the attack and sustain of the audio and tailoring it to your preferences
-- Low-/High-Cut Filter: Refine the frequency range of your input audio for a more focused sound
+- Transient Controller: Shape the attack and sustain of the audio.
+- Low-/High-Cut Filter: Refine the frequency range of input audio for a more consistent sound
  
-After the synthesis, you can further enrich the audio with these additional options:
+After the synthesis, you can further enrich the output with these additional modules:
  
 - Grain Delay: Add depth and texture to each model's output by applying a granular delay
-- Blend: Crossfade between the outputs of the models, enabling you to create a harmonious mix
-- Post Compressor: Ensure a consistent sound by applying a group compressor to both models, blending them harmoniously
+- Blend: Crossfade between the outputs of the models and create a harmonious mix
+- Post-Compressor: Control the dynamics of the out-going signal and glue the sounds together
 
 **Trained models**:
-- Funk Drums: This model is inspired by the captivating sounds of vintage drum-breaks, trained on a diverse four hours dataset
-- Djembe: Carefully trained on five hours of dataset. Three hours of djembe solo performances and two hours of one-shot recordings
+- Funk Drums: This model is trained on four hours of data inspired by the captivating sounds of vintage drum-breaks
+- Djembe: Trained on five hours of carefully compiled Djembe dataset (Three hours of djembe solo performances and two hours of one-shot recordings)
 
 ## Installation
 The plugin uses the onnxruntime libary to inference our neural networks. Unfortnuatly at the moment the library is is included as a shared library, so it is necessary to put the shared library next to the exectutable or in your system libaray path. 
