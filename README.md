@@ -13,7 +13,7 @@ This enables a new artificial layering technique to be applied on the incoming s
 
 Scyclone provides an intuitive signal flow, empowering the user to seamlessly influence the neural audio synthesis of the models with pre-processing effects:
 
-- Transient Designer: Shape the attack and sustain of the audio and tailoring it to your preferences
+- Transient Controller: Shape the attack and sustain of the audio and tailoring it to your preferences
 - Low-/High-Cut Filter: Refine the frequency range of your input audio for a more focused sound
  
 After the synthesis, you can further enrich the audio with these additional options:
@@ -53,6 +53,7 @@ cmake --build cmake-build --config Release
 **Note:** If you use apple silicon you need to download the prebuild onnxruntime library (version 1.12.1) manually. The CMake script downloads the x64 version automatically, if no library is found in the modules path. Therefore follow the steps below before building the plugin with CMake.
 
 **Note:** CMake should automatically download the prebuild onnxruntime library (version 1.12.1). **If the script fails**, download the library manually:
+
 - Download [onnx v1.12.1](https://github.com/microsoft/onnxruntime/releases/tag/v1.12.1) (Select your required prebuild)
 - Extract the file and rename to the folder ```onnxruntime-1.12.1```
 - Copy to folder to ```path/to/Scyclone/modules/```
