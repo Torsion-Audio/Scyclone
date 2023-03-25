@@ -1,4 +1,4 @@
 [submodule "modules/JUCE"]
 	path = modules/JUCE
-	url = https://github.com/juce-framework/JUCE
+	url = https://github.com/juce-framework/JUCE.git
 	shallow = true
