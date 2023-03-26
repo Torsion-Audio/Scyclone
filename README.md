@@ -69,6 +69,6 @@ cmake --build cmake-build --config Release
 
 ## License
 This project is subject to multiple licenses. The primary license for the entire project is the GNU General Public License version 3 (GPLv3), which is the most restrictive of all the licenses applied herein.
- - The Granular Delay module located at ```modules/RnboExport/``` is licensed under the GPLv3.
- - All pretrained onnx models located at ```assets/models/``` are licensed under the Creative Commons Attribution-NonCommercial 4.0 International License 
+ - The Granular Delay module located at ```modules/RnboExport/``` is licensed under the [GPLv3](https://support.cycling74.com/hc/en-us/articles/10730637742483-RNBO-Export-Licensing-FAQ)
+ - All pretrained onnx models located at ```assets/models/``` are licensed under the [Creative Commons Attribution-NonCommercial 4.0 International License](https://github.com/acids-ircam/RAVE/blob/master/LICENSE) 
  - All other code within this project is licensed under the MIT License.
