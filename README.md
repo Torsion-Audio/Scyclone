@@ -23,8 +23,10 @@ After the synthesis, you can further enrich the output with these additional mod
 - Post-Compressor: Control the dynamics of the out-going signal and glue the sounds together
 
 **Trained models**:
-- Funk Drums: This model is trained on four hours of data inspired by the captivating sounds of vintage drum-breaks
-- Djembe: Trained on five hours of carefully compiled Djembe dataset (Three hours of djembe solo performances and two hours of one-shot recordings)
+Scyclone runs on **onnx** format. We have provided two pre-trained models in this repository, accessible under **assets/models** directory.
+
+- **Funk Drums**: This model is trained on four hours of data inspired by the captivating sounds of vintage drum-breaks
+- **Djembe**: Trained on five hours of carefully compiled Djembe dataset (Three hours of djembe solo performances and two hours of one-shot recordings)
 
 ## Installation
 The plugin uses the onnxruntime libary to inference our neural networks. Unfortnuatly at the moment the library is is included as a shared library, so it is necessary to put the shared library next to the exectutable or in your system libaray path. 
