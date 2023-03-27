@@ -36,6 +36,10 @@ Detailed instructions can be found here:
 - [Mac Guide](docs/install_instructions_mac.md).
 
 ## Build instruction
+If you are on macOS you need to install the onnxruntime v1.12.1 library via homebrew:
+```bash
+brew install faressc/scyclone/onnxruntime@1.12.1
+```
 Build with CMake
 ```bash
 # clone the repository
@@ -48,13 +52,9 @@ git submodule update --init --recursive
 # build plugin
 cmake . -B cmake-build
 cmake --build cmake-build --config Release
-
-# build should be here: /cmake-build/Scyclone_artefacts/Release/
 ```
 
-**Note:** If you use apple silicon you need to download the prebuild onnxruntime library (version 1.12.1) manually. The CMake script downloads the x64 version automatically, if no library is found in the modules path. Therefore follow the steps below before building the plugin with CMake.
-
-**Note:** CMake should automatically download the prebuild onnxruntime library (version 1.12.1). **If the script fails**, download the library manually:
+**Note:** On Windows CMake should automatically download the prebuild onnxruntime library (version 1.12.1). **If the script fails**, download the library manually:
 
 - Download [onnx v1.12.1](https://github.com/microsoft/onnxruntime/releases/tag/v1.12.1) (Select your required prebuild)
 - Extract the file and rename to the folder ```onnxruntime-1.12.1```
