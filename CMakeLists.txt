@@ -40,10 +40,21 @@ endif (MSVC)
 option(ONNXRUNTIME_ROOTDIR "onnxruntime root dir")
 
 if(NOT ONNXRUNTIME_ROOTDIR)
-	include(cmake/Onnx.cmake)
-	set(ONNXRUNTIME_ROOTDIR ${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime-${LIBONNXRUNTIME_VERSION})
+	if (APPLE)
+		message(STATUS ${CMAKE_HOST_SYSTEM_PROCESSOR})
+		if (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
+			set (ONNXRUNTIME_ROOTDIR /usr/local/opt/onnxruntime@1.12.1)
+		elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
+			set (ONNXRUNTIME_ROOTDIR /opt/homebrew/opt/onnxruntime@1.12.1)
+		else()
+			message(FATAL_ERROR "Check README.md for build instructions on macOS. CMAKE_HOST_SYSTEM_PROCESSOR not defined.")
+		endif()
+		message(STATUS "Set onnxruntime directory to: ${ONNXRUNTIME_ROOTDIR}")
+	else()
+		include(cmake/Onnx.cmake)
+		set(ONNXRUNTIME_ROOTDIR ${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime-${LIBONNXRUNTIME_VERSION})
+	endif()
 endif()
-
 
 include_directories(
 		"${ONNXRUNTIME_ROOTDIR}/include"
