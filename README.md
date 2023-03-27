@@ -49,8 +49,8 @@ cd Scyclone/
 # initialize and set up submodules
 git submodule update --init --recursive
 
-# build plugin
-cmake . -B cmake-build
+# build plugin (on macOS specify the processor type with the flag -DCMAKE_HOST_SYSTEM_PROCESSOR)
+cmake . -B cmake-build (-DCMAKE_HOST_SYSTEM_PROCESSOR=x86_64 or arm64)
 cmake --build cmake-build --config Release
 ```
 
