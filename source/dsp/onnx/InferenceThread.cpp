@@ -70,7 +70,6 @@ void InferenceThread::run() {
     char *outputName = session.GetOutputName(0, ort_alloc);
     const std::array<const char *, 1> inputNames = {inputName};
     const std::array<const char *, 1> outputNames = {outputName};
-    ort_alloc.Free(inputName);
 
     // run inference
     try {
@@ -89,6 +88,7 @@ void InferenceThread::run() {
     }
 
     onNewProcessedBuffer(processedBuffer);
+    ort_alloc.Free(inputName);
 }
 
 void InferenceThread::setExternalModel(juce::File modelPath) {

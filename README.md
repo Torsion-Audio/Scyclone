@@ -49,8 +49,8 @@ cd Scyclone/
 # initialize and set up submodules
 git submodule update --init --recursive
 
-# build plugin (on macOS specify the processor type with the flag -DCMAKE_HOST_SYSTEM_PROCESSOR)
-cmake . -B cmake-build (-DCMAKE_HOST_SYSTEM_PROCESSOR=x86_64 or arm64)
+# on macOS you might need to specify the processor type with -DCMAKE_HOST_SYSTEM_PROCESSOR=x86_64 or arm64
+cmake . -B cmake-build
 cmake --build cmake-build --config Release
 ```
 
@@ -60,6 +60,10 @@ cmake --build cmake-build --config Release
 - Extract the file and rename to the folder ```onnxruntime-1.12.1```
 - Copy to folder to ```path/to/Scyclone/modules/```
 - Now you sould have the following file structes ```Scyclone/modules/onnxruntime-1.12.1/include```
+
+## Further notes
+- (On macOS) The binaries are not notarized yet, therefore check your security settings when you run the application or build the plugin/standalone yourself.
+- (On apple silicon systems) The apple silicon builds are not fully functional yet.
 
 ## References
 
