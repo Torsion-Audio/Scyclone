@@ -24,7 +24,7 @@ void IIRCutoffFilter::updateLPFilterParams(double freq, double q)
     filterParamsLP.freq = freq;
     filterParamsLP.q = q;
     filterParamsLP.enabled = (freq < 20000);
-    *lowPassFilter.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate,
+    *lowPassFilter.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(currentSpec.sampleRate,
                                                                           (float)freq,
                                                                           (float)q);
 }
@@ -34,20 +34,20 @@ void IIRCutoffFilter::updateHPFilterParams(double freq, double q)
     filterParamsHP.freq = freq;
     filterParamsHP.q = q;
     filterParamsHP.enabled = (freq > 20);
-    *highPassFilter.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate,
+    *highPassFilter.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(currentSpec.sampleRate,
                                                                             (float)freq,
                                                                             (float)q);
 }
 
 void IIRCutoffFilter::prepare(const juce::dsp::ProcessSpec &spec)
 {
+    currentSpec = spec;
+    
     lowPassFilter.reset();
     lowPassFilter.prepare(spec);
 
     highPassFilter.reset();
     highPassFilter.prepare(spec);
-
-    sampleRate = spec.sampleRate;
 }
 
 void IIRCutoffFilter::updateFilterParams(const float yPos)
@@ -96,6 +96,14 @@ void IIRCutoffFilter::processLPFilter(juce::AudioBuffer<float>& buffer) {
 }
 
 void IIRCutoffFilter::processFilters(juce::AudioBuffer<float> &buffer) {
+    for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+            for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
+                float sampleToCheck = buffer.getSample(channel, sample);
+                if (isnan(sampleToCheck)) {
+                    return;
+                }
+            }
+        }
     processHPFilter(buffer);
     processLPFilter(buffer);
 }

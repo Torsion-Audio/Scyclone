@@ -42,9 +42,8 @@ private:
         bool enabled = false;
     };
 
-    double sampleRate = 48000;
+    juce::dsp::ProcessSpec currentSpec = {48000, 512, 1};
     FILTER_PARAMS filterParamsHP, filterParamsLP;
-    
 };
 
 

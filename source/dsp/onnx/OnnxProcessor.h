@@ -24,8 +24,6 @@ public:
     std::function<void(bool initLoading, juce::String modelName)> onOnnxModelLoad;
 
 private:
-    static void stereoToMono(juce::AudioBuffer<float>& targetMonoBlock, juce::AudioBuffer<float>& sourceBlock);
-    static void monoToStereo(juce::AudioBuffer<float>& targetStereoBlock, juce::AudioBuffer<float>& sourceBlock);
     void processOutput(juce::AudioBuffer<float>& buffer, int numSamples);
     void calculateLatency(int maxSamplesPerBuffer);
 

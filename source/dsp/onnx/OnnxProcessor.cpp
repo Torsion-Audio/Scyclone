@@ -54,43 +54,8 @@ void OnnxProcessor::prepare(const juce::dsp::ProcessSpec &spec) {
 
 void OnnxProcessor::processBlock(juce::AudioBuffer<float> &buffer) {
     const int numSamples = buffer.getNumSamples();
-
-    stereoToMono(monoBuffer, buffer);
-
-    inferenceThread.sendAudio(monoBuffer);
-    processOutput(monoBuffer, numSamples);
-    monoToStereo(buffer, monoBuffer);
-}
-
-void OnnxProcessor::stereoToMono(juce::AudioBuffer<float> &targetMonoBlock, juce::AudioBuffer<float> &sourceBlock) {
-    if (sourceBlock.getNumChannels() == 1) {
-        targetMonoBlock.makeCopyOf(sourceBlock);
-    } else {
-        auto nSamples = sourceBlock.getNumSamples();
-
-        auto monoWrite = targetMonoBlock.getWritePointer(0);
-        auto lRead = sourceBlock.getReadPointer(0);
-        auto rRead = sourceBlock.getReadPointer(1);
-
-        juce::FloatVectorOperations::copy(monoWrite, lRead, nSamples);
-        juce::FloatVectorOperations::add(monoWrite, rRead, nSamples);
-        juce::FloatVectorOperations::multiply(monoWrite, 0.5f, nSamples);
-    }
-}
-
-void OnnxProcessor::monoToStereo(juce::AudioBuffer<float> &targetStereoBlock, juce::AudioBuffer<float> &sourceBlock) {
-    if (sourceBlock.getNumChannels() == 2) {
-        targetStereoBlock.makeCopyOf(sourceBlock);
-    } else {
-        auto nSamples = sourceBlock.getNumSamples();
-
-        auto lWrite = targetStereoBlock.getWritePointer(0);
-        auto rWrite = targetStereoBlock.getWritePointer(1);
-        auto monoRead = sourceBlock.getReadPointer(0);
-
-        juce::FloatVectorOperations::copy(lWrite, monoRead, nSamples);
-        juce::FloatVectorOperations::copy(rWrite, monoRead, nSamples);
-    }
+    inferenceThread.sendAudio(buffer);
+    processOutput(buffer, numSamples);
 }
 
 void OnnxProcessor::processOutput(juce::AudioBuffer<float> &buffer, const int numSamples) {

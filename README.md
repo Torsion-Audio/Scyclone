@@ -63,7 +63,7 @@ cmake --build cmake-build --config Release
 
 ## Further notes
 - (On macOS) The binaries are not notarized yet, therefore check your security settings when you run the application or build the plugin/standalone yourself.
-- (On apple silicon systems) The apple silicon builds are not fully functional yet.
+- Apple's arm64 processors are supported with the latest update.
 
 ## References
 

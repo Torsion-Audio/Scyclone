@@ -32,7 +32,7 @@ static juce::OpenGLShaderProgram::Uniform* createUniform (juce::OpenGLContext& c
      OpenGLShaderProgram::Uniform name matches the uniform names in your
      GLSL shader programs.
      */
-    jassert (uniformNameFoundInShaderProgram);
+//    jassert (uniformNameFoundInShaderProgram);
 #endif
     
     if (!uniformNameFoundInShaderProgram)

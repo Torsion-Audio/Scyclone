@@ -30,8 +30,6 @@ public:
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     using AudioProcessor::processBlock;
 
-    void stereoToMono(juce::AudioBuffer<float>& targetMonoBlock, juce::AudioBuffer<float>& sourceBlock);
-
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
@@ -71,27 +69,27 @@ public:
     void setInitialMuteParameters();
     void initialiseRnbo();
     void loadExternalModel(juce::File path, int id) {
-        if (id == 1) onnxProcessor1->loadExternalModel(path);
-        if (id == 2) onnxProcessor2->loadExternalModel(path);
+        if (id == 1) onnxProcessor1.loadExternalModel(path);
+        if (id == 2) onnxProcessor2.loadExternalModel(path);
     }
 
 private:
     void parameterChanged (const juce::String& parameterID, float newValue) override;
+    static void stereoToMono(juce::AudioBuffer<float>& targetMonoBlock, juce::AudioBuffer<float>& sourceBlock);
+    static void monoToStereo(juce::AudioBuffer<float>& targetStereoBlock, juce::AudioBuffer<float>& sourceBlock);
 
-    void copyBuffer(juce::AudioBuffer<float>& target, juce::AudioBuffer<float>& source);
 private:
     juce::AudioProcessorValueTreeState parameters;
 
     ProcessorGain inputGain;
     ProcessorGain outputGain;
 
-    std::unique_ptr<ProcessorTransientSplitter> processorTransientSplitter1;
-    std::unique_ptr<ProcessorTransientSplitter> processorTransientSplitter2;
+    ProcessorTransientSplitter processorTransientSplitter1;
+    ProcessorTransientSplitter processorTransientSplitter2;
     
-    std::unique_ptr<IIRCutoffFilter> iirCutoffFilter1;
-    std::unique_ptr<IIRCutoffFilter> iirCutoffFilter2;
+    IIRCutoffFilter iirCutoffFilter1;
+    IIRCutoffFilter iirCutoffFilter2;
 
-    juce::AudioBuffer<float> dryBuffer;
     juce::AudioBuffer<float> fadeBuffer;
     juce::AudioBuffer<float> network1Buffer;
     juce::AudioBuffer<float> network2Buffer;
@@ -106,17 +104,17 @@ private:
     DryWetMixer grain1DryWetMixer;
     DryWetMixer grain2DryWetMixer;
 
-    std::unique_ptr<OnnxProcessor> onnxProcessor1;
-    std::unique_ptr<OnnxProcessor> onnxProcessor2;
+    OnnxProcessor onnxProcessor1;
+    OnnxProcessor onnxProcessor2;
 
-    std::unique_ptr<ProcessorCompressor> processorCompressor;
+    ProcessorCompressor processorCompressor;
     
     AudioVisualiser audioVisualiser;
     LevelAnalyser levelAnalyser;
     ProcessorGain processorGain;
 
-    std::unique_ptr<GrainDelay> grainDelay1;
-    std::unique_ptr<GrainDelay> grainDelay2;
+    GrainDelay grainDelay1;
+    GrainDelay grainDelay2;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
