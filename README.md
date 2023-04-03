@@ -29,7 +29,7 @@ Scyclone runs on **onnx** format. We have provided two pre-trained models in thi
 - **Djembe**: Trained on five hours of carefully compiled Djembe dataset (Three hours of djembe solo performances and two hours of one-shot recordings)
 
 ## Installation
-The plugin uses the onnxruntime libary to inference our neural networks. At the present time the library is included as a shared library, so it is necessary to put the shared library next to the exectutable or in your system libaray path. 
+The plugin uses the onnxruntime library to inference our neural networks. At the present time the library is included as a shared library, so it is necessary to put the shared library next to the exectutable or in your system libaray path. 
 
 Detailed instructions can be found here:
 - [Windows Guide](docs/install_instructions_windows.md).
