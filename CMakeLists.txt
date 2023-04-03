@@ -247,7 +247,7 @@ target_compile_definitions(${target_name}
 		JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
 		JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
 		JUCE_VST3_CAN_REPLACE_VST2=0
-		JUCE_DISPLAY_SPLASH_SCREEN=0
+		JUCE_DISPLAY_SPLASH_SCREEN=1
 		DONT_SET_USING_JUCE_NAMESPACE=1
 		)
 
