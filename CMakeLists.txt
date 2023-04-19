@@ -28,42 +28,6 @@ else()
 	set (formats VST3 Standalone)
 endif()
 
-if (MSVC)
-	if (EXISTS "C:/Program Files (x86)/Intel/oneAPI/mkl/2023.0.0/lib/intel64")
-		link_directories("C:/Program Files (x86)/Intel/oneAPI/mkl/2023.0.0/lib/intel64")
-		get_directory_property(_my_link_dirs LINK_DIRECTORIES)
-		message(STATUS "_my_link_dirs = ${_my_link_dirs}")
-	endif()
-endif (MSVC)
-
-#onnxruntime providers
-option(ONNXRUNTIME_ROOTDIR "onnxruntime root dir")
-
-if(NOT ONNXRUNTIME_ROOTDIR)
-	if (APPLE)
-		message(STATUS ${CMAKE_HOST_SYSTEM_PROCESSOR})
-		if (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
-			set (ONNXRUNTIME_ROOTDIR /usr/local/opt/onnxruntime@1.12.1)
-		elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
-			set (ONNXRUNTIME_ROOTDIR /opt/homebrew/opt/onnxruntime@1.12.1)
-		else()
-			message(FATAL_ERROR "Check README.md for build instructions on macOS. CMAKE_HOST_SYSTEM_PROCESSOR not defined.")
-		endif()
-		message(STATUS "Set onnxruntime directory to: ${ONNXRUNTIME_ROOTDIR}")
-	else()
-		include(cmake/Onnx.cmake)
-		set(ONNXRUNTIME_ROOTDIR ${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime-${LIBONNXRUNTIME_VERSION})
-	endif()
-endif()
-
-include_directories(
-		"${ONNXRUNTIME_ROOTDIR}/include"
-		"${ONNXRUNTIME_ROOTDIR}/include/onnxruntime/core/session"
-		"${CMAKE_CURRENT_SOURCE_DIR}/modules/RnboExport/rnbo"
-		"${CMAKE_CURRENT_SOURCE_DIR}/modules/RnboExport/rnbo/common"
-)
-link_directories("${ONNXRUNTIME_ROOTDIR}/lib")
-
 # If you've installed JUCE somehow (via a package manager, or directly using the CMake install
 # target), you'll need to tell this project that it depends on the installed copy of JUCE. If you've
 # included JUCE directly in your source tree (perhaps as a submodule), you'll need to tell CMake to
@@ -109,7 +73,6 @@ juce_add_plugin(${target_name}
 		PRODUCT_NAME "Scyclone"			            # The name of the final executable, which can differ from the target name
 		)
 
-
 # `juce_generate_juce_header` will create a JuceHeader.h for a given target, which will be generated
 # into your build tree. This should be included with `#include <JuceHeader.h>`. The include path for
 # this header will be automatically added to the target. The main function of the JuceHeader is to
@@ -118,121 +81,27 @@ juce_add_plugin(${target_name}
 
 juce_generate_juce_header(${target_name})
 
-# `target_sources` adds source files to a target. We pass the target that needs the sources as the
-# first argument, then a visibility parameter for the sources which should normally be PRIVATE.
-# Finally, we supply a list of source files that will be built into the target. This is a standard
-# CMake command.
+add_subdirectory(modules/RnboExport)
 
-file(GLOB_RECURSE NO_COMPILER_WARNINGS_DIR
-		"modules/RnboExport/*h"
-		)
-set_source_files_properties(
-		${NO_COMPILER_WARNINGS_DIR}
-		PROPERTIES
-		COMPILE_FLAGS "-w"
-)
+# Add all source files to file list
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/source/*.h)
+list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_LIST_DIR}/source/ui/CustomComponents/OpenGLBackground/OpenGLUtil/OpenGLUtil.h)
 
+# Add all sources to target
+target_sources(${target_name} PRIVATE ${SOURCES} ${RNBO_SOURCES})
 
+# Add include directories for all folders in the source
+file(GLOB_RECURSE source_dirs LIST_DIRECTORIES true ${CMAKE_CURRENT_LIST_DIR}/source/*)
 
-target_sources(${target_name}
-		PRIVATE
-		source/PluginEditor.cpp
-		source/PluginEditor.h
-		source/PluginProcessor.cpp
-		source/PluginProcessor.h
-		source/PluginParameters.cpp
-		source/PluginParameters.h
+foreach (dir ${source_dirs})
+    if (IS_DIRECTORY ${dir})
+        target_include_directories(${target_name} PRIVATE ${dir})
+    endif ()
+endforeach ()
 
-		#utils
-		source/utils/colors.h
-
-		#look&feel
-		source/ui/LookAndFeel/SliderLookAndFeel.cpp
-
-		#XY Pad
-		source/ui/CustomComponents/XYPad/XYPad.cpp
-		source/ui/CustomComponents/XYPad/XYKnob.cpp
-		source/ui/CustomComponents/XYPad/Arrow.cpp
-		source/ui/CustomComponents/XYPad/ArrowButton.cpp
-
-		#Transient Viewer
-		source/ui/CustomComponents/TransientViewer/TransientViewer.cpp
-		source/ui/CustomComponents/TransientViewer/TransientGrid.cpp
-
-		#ui
-		source/ui/CustomComponents/ParameterControl/ParameterControl.cpp
-		source/ui/CustomComponents/ParameterControl/Slider/CustomSliderComponent.cpp
-		source/ui/CustomComponents/ParameterControl/Slider/CustomComponents/CustomSlider.cpp
-		source/ui/CustomComponents/ParameterControl/Slider/CustomComponents/CustomLabel.cpp
-
-		#opengl
-		source/ui/CustomComponents/OpenGLBackground/OpenGLBackground.cpp
-		source/ui/CustomComponents/OpenGLBackground/OpenGLBackground.h
-		source/ui/CustomComponents/OpenGLBackground/ShapeVertices.h
-		source/ui/CustomComponents/OpenGLBackground/OpenGLUtil/OpenGLUtil.h
-
-		#dry-wet-mixer
-		source/dsp/mixer/DryWetMixer.cpp
-		source/dsp/mixer/DryWetMixer.h
-
-		#gain
-		source/dsp/gain/ProcessorGain.cpp
-
-		#grainDelay
-		source/dsp/grainDelay/GrainDelay.cpp
-		source/dsp/grainDelay/GrainDelay.h
-
-		#analyser
-		source/dsp/analyser/AudioVisualiser.cpp
-		source/dsp/analyser/LevelAnalyser.cpp
-
-		#AdvancedParameterControl
-		source/ui/CustomComponents/AdvancedParameterControl/AdvancedParameterControl.h
-		source/ui/CustomComponents/AdvancedParameterControl/AdvancedParameterControl.cpp
-
-		#Texture
-		source/ui/CustomComponents/Texture/TextureComponent.cpp
-
-		source/ui/CustomComponents/Header/HeaderComponent.cpp
-
-		#onnx
-		source/dsp/onnx/InferenceThread.cpp
-		source/dsp/onnx/InferenceThread.h
-		source/dsp/onnx/OnnxProcessor.cpp
-		source/dsp/onnx/OnnxProcessor.h
-		source/dsp/onnx/RingBuffer.cpp
-		source/dsp/onnx/RingBuffer.h
-
-		#Filter
-		source/dsp/Filter/IIRCutoffFilter.h
-		source/dsp/Filter/IIRCutoffFilter.cpp
-
-		#compressor
-		source/dsp/compressor/Compressor.cpp
-		source/dsp/compressor/Compressor.h
-		source/dsp/compressor/ProcessorCompressor.cpp
-		source/dsp/compressor/ProcessorCompressor.h
-
-		#transientSplitter
-		source/dsp/transientSplitter/TransientSplitter.cpp
-		source/dsp/transientSplitter/TransientSplitter.h
-		source/dsp/transientSplitter/ProcessorTransientSplitter.cpp
-		source/dsp/transientSplitter/ProcessorTransientSplitter.h
-
-		#utils
-		source/dsp/utils/utils.cpp
-		source/dsp/utils/utils.h
-		source/dsp/utils/Envelope.cpp
-		source/dsp/utils/Envelope.h
-
-		#RNBO
-		modules/RnboExport/rnbo/RNBO.h
-		modules/RnboExport/rnbo/RNBO.cpp
-		modules/RnboExport/rnbo_granular.cpp
-
-		#other
-		README.md
-		)
+# Make the folder structure visible in the IDE
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/source PREFIX "" FILES ${SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/modules PREFIX "" FILES ${RNBO_SOURCES})
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use
@@ -251,6 +120,24 @@ target_compile_definitions(${target_name}
 		DONT_SET_USING_JUCE_NAMESPACE=1
 		)
 
+# Add the onnxruntime library
+add_library(onnxruntime STATIC IMPORTED)
+
+if (APPLE)
+	message(STATUS ${CMAKE_HOST_SYSTEM_PROCESSOR})
+	if (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
+		set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-osx-x64.a)
+	elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
+		# set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-osx-x64.a) TODO
+	else()
+		message(FATAL_ERROR "CMAKE_HOST_SYSTEM_PROCESSOR not defined.")
+	endif()
+elseif (MSVC)
+	# set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-osx-x64.a) TODO
+endif()
+
+target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
+
 # If your target needs extra binary assets, you can add them here. The first argument is the name of
 # a new static library target that will include all the binary resources. There is an optional
 # `NAMESPACE` argument that can specify the namespace of the generated binary data class. Finally,
@@ -266,17 +153,8 @@ add_subdirectory(assets)
 # linked automatically. If we'd generated a binary data target above, we would need to link to it
 # here too. This is a standard CMake command.
 
-# Automatically bundle libtorch into the targets
-
-target_link_options(${target_name} PRIVATE -static)
-
 set_property(TARGET ${target_name} PROPERTY CXX_STANDARD 17)
 set_property(TARGET ${target_name} PROPERTY CXX_STANDARD_REQUIRED ON)
-
-# used to hotfix linking problem on unix
-if (UNIX)
-	set_property(TARGET BinaryData PROPERTY POSITION_INDEPENDENT_CODE ON)
-endif (UNIX)
 
 target_link_libraries(${target_name}
 		PRIVATE
@@ -293,4 +171,4 @@ target_link_libraries(${target_name}
 		juce::juce_recommended_config_flags
 		juce::juce_recommended_lto_flags
 		juce::juce_recommended_warning_flags
-		)
+)

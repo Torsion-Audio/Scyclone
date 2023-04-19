@@ -66,10 +66,10 @@ void InferenceThread::run() {
 
     Ort::AllocatorWithDefaultOptions ort_alloc;
 
-    char *inputName = session.GetInputName(0, ort_alloc);
-    char *outputName = session.GetOutputName(0, ort_alloc);
-    const std::array<const char *, 1> inputNames = {inputName};
-    const std::array<const char *, 1> outputNames = {outputName};
+    Ort::AllocatedStringPtr inputName = session.GetInputNameAllocated(0, ort_alloc);
+    Ort::AllocatedStringPtr outputName = session.GetOutputNameAllocated(0, ort_alloc);
+    const std::array<const char *, 1> inputNames = {(char*) inputName.get()};
+    const std::array<const char *, 1> outputNames = {(char*) outputName.get()};
 
     // run inference
     try {
@@ -88,7 +88,7 @@ void InferenceThread::run() {
     }
 
     onNewProcessedBuffer(processedBuffer);
-    ort_alloc.Free(inputName);
+//    ort_alloc.Free(inputName.get());
 }
 
 void InferenceThread::setExternalModel(juce::File modelPath) {
@@ -164,14 +164,14 @@ void InferenceThread::loadInternalModel(RaveModel modelToLoad) {
             //not implemented
         case FunkDrum:
             session = Ort::Session(env,
-                                   BinaryData::funk_drums_onnx,
-                                   BinaryData::funk_drums_onnxSize,
+                                   BinaryData::funk_drums_ort,
+                                   BinaryData::funk_drums_ortSize,
                                    sessionOptions);
             break;
         case Djembe:
             session = Ort::Session(env,
-                                   BinaryData::djembe_onnx,
-                                   BinaryData::djembe_onnxSize,
+                                   BinaryData::djembe_ort,
+                                   BinaryData::djembe_ortSize,
                                    sessionOptions);
             break;
     }

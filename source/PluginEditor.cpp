@@ -119,7 +119,7 @@ void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &param
 
 void AudioPluginAudioProcessorEditor::openFileChooser(int networkID) {
     fc = std::make_unique<juce::FileChooser> ("Choose a file to open...", juce::File::getSpecialLocation(juce::File::SpecialLocationType::userHomeDirectory),
-                                              "*.onnx", true);
+                                              "*.ort", true);
 
     fc->launchAsync (juce::FileBrowserComponent::openMode
                      | juce::FileBrowserComponent::canSelectFiles,
