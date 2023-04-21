@@ -1,8 +1,8 @@
 cmake-build*
 CMakeFiles/*
 modules/*
-!modules/RnboExport
-!modules/RnboExport/*
+!modules/RnboExport/
+!modules/onnxruntime/
 Builds
 BinaryData.h
 BinaryData*.cpp
