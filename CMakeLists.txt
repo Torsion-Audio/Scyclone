@@ -28,6 +28,9 @@ else()
 	set (formats VST3 Standalone)
 endif()
 
+#static linking runtime library in Windows (for onnxruntime)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 # If you've installed JUCE somehow (via a package manager, or directly using the CMake install
 # target), you'll need to tell this project that it depends on the installed copy of JUCE. If you've
 # included JUCE directly in your source tree (perhaps as a submodule), you'll need to tell CMake to
@@ -120,6 +123,8 @@ target_compile_definitions(${target_name}
 		DONT_SET_USING_JUCE_NAMESPACE=1
 		)
 
+target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
+
 # Add the onnxruntime library
 add_library(onnxruntime STATIC IMPORTED)
 
@@ -133,10 +138,19 @@ if (APPLE)
 		message(FATAL_ERROR "CMAKE_HOST_SYSTEM_PROCESSOR not defined.")
 	endif()
 elseif (MSVC)
-	# set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-osx-x64.a) TODO
+	set_property(TARGET onnxruntime APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+
+	set_target_properties(onnxruntime PROPERTIES
+			IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "CXX"
+			IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-win-x64.lib"
+			)
+	set_target_properties(onnxruntime PROPERTIES
+			MAP_IMPORTED_CONFIG_DEBUG Release
+			MAP_IMPORTED_CONFIG_MINSIZEREL Release
+			MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
+			)
 endif()
 
-target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
 
 # If your target needs extra binary assets, you can add them here. The first argument is the name of
 # a new static library target that will include all the binary resources. There is an optional
