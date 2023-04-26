@@ -10,6 +10,14 @@
 
 cmake_minimum_required(VERSION 3.24)
 
+# Sets the minimum macOS version
+if (APPLE)
+	set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum version of the target platform" FORCE) 
+	if(CMAKE_OSX_DEPLOYMENT_TARGET)
+		message("The minimum macOS version is set to " $CACHE{CMAKE_OSX_DEPLOYMENT_TARGET}.)
+	endif()
+endif ()
+
 # The top-level CMakeLists.txt file for a project must contain a literal, direct call to the
 # `project()` command. `project()` sets up some helpful variables that describe source/binary
 # directories, and the current project version. This is a standard CMake command.
