@@ -23,7 +23,7 @@ endif ()
 # directories, and the current project version. This is a standard CMake command.
 
 project(Scyclone VERSION 0.0.1)
-set (target_name ${PROJECT_NAME})
+set (TARGET_NAME ${PROJECT_NAME})
 
 ##### Compilation options
 if(NOT CMAKE_BUILD_TYPE)
@@ -31,9 +31,9 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(APPLE)
-	set (formats AU VST3 Standalone)
+	set (FORMATS_TO_BUILD AU VST3 Standalone)
 else()
-	set (formats VST3 Standalone)
+	set (FORMATS_TO_BUILD VST3 Standalone)
 endif()
 
 #static linking runtime library in Windows (for onnxruntime)
@@ -60,7 +60,7 @@ add_subdirectory(modules/JUCE)                    # If you've put JUCE in a subd
 # the formats specified by the FORMATS arguments. This function accepts many optional arguments.
 # Check the readme at `docs/CMake API.md` in the JUCE repo for the full list.
 
-juce_add_plugin(${target_name}
+juce_add_plugin(${TARGET_NAME}
 		# VERSION ...                               # Set this if the plugin version is different to the project version
 		# ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
 		# ICON_SMALL ...
@@ -76,11 +76,13 @@ juce_add_plugin(${target_name}
 		# GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
 
 		if(APPLE)
+			HARDENED_RUNTIME_ENABLED TRUE
+			HARDENED_RUNTIME_OPTIONS "com.apple.security.device.audio-input"
 			MICROPHONE_PERMISSION_ENABLED TRUE
 			MICROPHONE_PERMISSION_TEXT "Need access to your audio interface"
 		endif()
 
-		FORMATS VST3 Standalone                     # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
+		FORMATS ${FORMATS_TO_BUILD}                    # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
 		PRODUCT_NAME "Scyclone"			            # The name of the final executable, which can differ from the target name
 		)
 
@@ -90,7 +92,7 @@ juce_add_plugin(${target_name}
 # include all your JUCE module headers; if you're happy to include module headers directly, you
 # probably don't need to call this.
 
-juce_generate_juce_header(${target_name})
+juce_generate_juce_header(${TARGET_NAME})
 
 add_subdirectory(modules/RnboExport)
 
@@ -99,14 +101,14 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*
 list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_LIST_DIR}/source/ui/CustomComponents/OpenGLBackground/OpenGLUtil/OpenGLUtil.h)
 
 # Add all sources to target
-target_sources(${target_name} PRIVATE ${SOURCES} ${RNBO_SOURCES})
+target_sources(${TARGET_NAME} PRIVATE ${SOURCES} ${RNBO_SOURCES})
 
 # Add include directories for all folders in the source
 file(GLOB_RECURSE source_dirs LIST_DIRECTORIES true ${CMAKE_CURRENT_LIST_DIR}/source/*)
 
 foreach (dir ${source_dirs})
     if (IS_DIRECTORY ${dir})
-        target_include_directories(${target_name} PRIVATE ${dir})
+        target_include_directories(${TARGET_NAME} PRIVATE ${dir})
     endif ()
 endforeach ()
 
@@ -121,7 +123,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/modules PREFIX "" FILES ${RNBO_SOU
 # definitions will be visible both to your code, and also the JUCE module code, so for new
 # definitions, pick unique names that are unlikely to collide! This is a standard CMake command.
 
-target_compile_definitions(${target_name}
+target_compile_definitions(${TARGET_NAME}
 		PUBLIC
 		# JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
 		JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
@@ -131,7 +133,7 @@ target_compile_definitions(${target_name}
 		DONT_SET_USING_JUCE_NAMESPACE=1
 		)
 
-target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
+target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
 
 # Add the onnxruntime library
 add_library(onnxruntime STATIC IMPORTED)
@@ -175,10 +177,10 @@ add_subdirectory(assets)
 # linked automatically. If we'd generated a binary data target above, we would need to link to it
 # here too. This is a standard CMake command.
 
-set_property(TARGET ${target_name} PROPERTY CXX_STANDARD 17)
-set_property(TARGET ${target_name} PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 17)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
-target_link_libraries(${target_name}
+target_link_libraries(${TARGET_NAME}
 		PRIVATE
 		BinaryData
 		juce::juce_audio_utils

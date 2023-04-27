@@ -1,5 +1,5 @@
 # Include the rnbo directory to the target
-target_include_directories(${target_name} PRIVATE
+target_include_directories(${TARGET_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/rnbo
 		${CMAKE_CURRENT_SOURCE_DIR}/rnbo/common
 )
