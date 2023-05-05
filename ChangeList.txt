@@ -1,0 +1,17 @@
+== Scyclone features and updates ==
+
+Version 0.0.3
+  - static linking of onnx
+        - switched to onnxruntime (.ort) models
+        - only necessary layers supported from now on (small build)
+        - easier installation process for everyone
+  - improved OpenGL shader
+  - AU plugin format now supported
+  - macOS builds notarized
+
+Version 0.0.2
+  - macOS arm64 builds are now supported
+  - fixed early bugs
+
+Version 0.0.1
+  - alpha release of Scyclone
