@@ -12,7 +12,7 @@ cmake_minimum_required(VERSION 3.24)
 
 # Sets the minimum macOS version
 if (APPLE)
-	set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum version of the target platform" FORCE) 
+	set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum version of the target platform" FORCE) 
 	if(CMAKE_OSX_DEPLOYMENT_TARGET)
 		message("The minimum macOS version is set to " $CACHE{CMAKE_OSX_DEPLOYMENT_TARGET}.)
 	endif()
@@ -89,11 +89,15 @@ juce_add_plugin(${TARGET_NAME}
 
 juce_generate_juce_header(${TARGET_NAME})
 
+# Sets the cpp language minimum
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 17)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
+
 add_subdirectory(modules/RnboExport)
 
 # Add all source files to file list
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/source/*.h)
-list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_LIST_DIR}/source/ui/CustomComponents/OpenGLBackground/OpenGLUtil/OpenGLUtil.h)
+# list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_LIST_DIR}/source/ui/CustomComponents/OpenGLBackground/OpenGLUtil/OpenGLUtil.h)
 
 # Add all sources to target
 target_sources(${TARGET_NAME} PRIVATE ${SOURCES} ${RNBO_SOURCES})
@@ -108,8 +112,8 @@ foreach (dir ${source_dirs})
 endforeach ()
 
 # Make the folder structure visible in the IDE
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/source PREFIX "" FILES ${SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/modules PREFIX "" FILES ${RNBO_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/source PREFIX "source" FILES ${SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/modules PREFIX "modules" FILES ${RNBO_SOURCES})
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use
@@ -171,9 +175,6 @@ add_subdirectory(assets)
 # dependencies are resolved automatically, so `juce_core`, `juce_events` and so on will also be
 # linked automatically. If we'd generated a binary data target above, we would need to link to it
 # here too. This is a standard CMake command.
-
-set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 17)
-set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 target_link_libraries(${TARGET_NAME}
 		PRIVATE

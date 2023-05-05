@@ -60,7 +60,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     //setResizable(false, false);
     // dirty work around to make the blobs appear correctly from the beginning
-    auto fadeParam = parameters.getParameter(PluginParameters::FADE_ID);
+    auto fadeParam = parameters.getParameter(PluginParameters::FADE_ID.getParamID());
     auto fadeStatus = fadeParam->getValue();
     fadeParam->setValueNotifyingHost(0.5f*fadeStatus);
     fadeParam->setValueNotifyingHost(fadeStatus);
@@ -110,9 +110,9 @@ void AudioPluginAudioProcessorEditor::resized()
 
 void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &parameterID, float newValue) {
     parameterControl.parameterChanged(parameterID, newValue);
-    if (parameterID == PluginParameters::SELECT_NETWORK1_ID && newValue == 1.f) {
+    if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && newValue == 1.f) {
         openFileChooser(1);
-    } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID && newValue == 1.f) {
+    } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && newValue == 1.f) {
         openFileChooser(2);
     }
 }
@@ -142,7 +142,7 @@ void AudioPluginAudioProcessorEditor::openFileChooser(int networkID) {
                          if (chosen.getSize() != 0) {
                              processorRef.loadExternalModel(chosen.getFullPathName(), networkID);
                          } else {
-                             auto param = (networkID == 1) ? PluginParameters::SELECT_NETWORK1_ID : PluginParameters::SELECT_NETWORK2_ID;
+                             auto param = (networkID == 1) ? PluginParameters::SELECT_NETWORK1_ID.getParamID() : PluginParameters::SELECT_NETWORK2_ID.getParamID();
                              apvts.getParameter(param)->setValueNotifyingHost(0.f);
                          }
 

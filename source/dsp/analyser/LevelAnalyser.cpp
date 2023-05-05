@@ -4,7 +4,7 @@
 
 #include "LevelAnalyser.h"
 
-void LevelAnalyser::process(juce::AudioBuffer<float> &buffer) {
+void LevelAnalyser::processBlock(juce::AudioBuffer<float> &buffer) {
     switch (levelType)
     {
         case PEAK:

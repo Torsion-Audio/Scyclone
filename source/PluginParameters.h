@@ -9,93 +9,100 @@
 
 class PluginParameters {
 public:
+    
+    inline static const juce::ParameterID
+    
+            INPUT_GAIN_ID = {"param_input_gain", 1},
+    
+            TRAN_ATTACK_TIME_NETWORK1_ID = {"param_tran_attack_time_1", 1},
+            TRAN_ATTACK_TIME_NETWORK2_ID = {"param_tran_attack_time_2", 1},
+    
+            TRAN_SHAPER_NETWORK1_ID = {"tran_shaper_network1", 1},
+            FILTER_NETWORK1_ID = {"filter_network1", 1},
+            TRAN_SHAPER_NETWORK2_ID = {"tran_shaper_network2", 1},
+            FILTER_NETWORK2_ID = {"filter_network2", 1},
+    
+            SELECT_NETWORK1_ID = {"select_network1", 1},
+            GRAIN_ON_OFF_NETWORK1_ID = {"grain_on_off_network1", 1},
+            ON_OFF_NETWORK1_ID = {"on_off_network1", 1},
+            SELECT_NETWORK2_ID = {"select_network2", 1},
+            GRAIN_ON_OFF_NETWORK2_ID = {"grain_on_off_network2", 1},
+            ON_OFF_NETWORK2_ID = {"on_off_network2", 1},
+    
+            GRAIN_NETWORK1_INTERVAL_ID = {"interval_grain_network_1", 1},
+            GRAIN_NETWORK1_SIZE_ID = {"size_grain_network_1", 1},
+            GRAIN_NETWORK1_PITCH_ID = {"pitch_grain_network_1", 1},
+            GRAIN_NETWORK1_MIX_ID = {"mix_grain_network_1", 1},
+            GRAIN_NETWORK2_INTERVAL_ID = {"interval_grain_network_2", 1},
+            GRAIN_NETWORK2_SIZE_ID = {"size_grain_network_2", 1},
+            GRAIN_NETWORK2_PITCH_ID = {"pitch_grain_network_2", 1},
+            GRAIN_NETWORK2_MIX_ID = {"mix_grain_network_2", 1},
+    
+            FADE_ID = {"param_fade", 1},
+    
+            COMP_DRY_WET_ID = {"param_dynamic", 1},
+            COMP_THRESHOLD_ID = {"param_comp_threshold", 1},
+            COMP_RATIO_ID = {"param_comp_ratio", 1},
+            COMP_MAKEUPGAIN_ID = {"param_comp_makeup", 1},
+    
+            OUTPUT_GAIN_ID = {"param_output_gain", 1},
+            DRY_WET_ID = {"param_mix", 1}
+            ;
+    
     inline static const juce::String
-            INPUT_GAIN_ID = "param_input_gain",
+    
             INPUT_GAIN_NAME = "Input Gain",
 
-            TRAN_ATTACK_TIME_NETWORK1_ID = "param_tran_attack_time_1",
             TRAN_ATTACK_TIME_NETWORK1_NAME = "Transient Attack Time Network 1",
-            TRAN_ATTACK_TIME_NETWORK2_ID = "param_tran_attack_time_2",
             TRAN_ATTACK_TIME_NETWORK2_NAME = "Transient Attack Time Network 2",
 
-            // XY-Knobs
-            TRAN_SHAPER_NETWORK1_ID = "tran_shaper_network1",
             TRAN_SHAPER_NETWORK1_NAME = "Transient Shaper Network 1",
-            FILTER_NETWORK1_ID = "filter_network1",
             FILTER_NETWORK1_NAME = "Filter Network 1",
-            TRAN_SHAPER_NETWORK2_ID = "tran_shaper_network2",
             TRAN_SHAPER_NETWORK2_NAME = "Transient Shaper Network 2",
-            FILTER_NETWORK2_ID = "filter_network2",
             FILTER_NETWORK2_NAME = "Filter Network 2",
 
-            // Arrow Knobs
-            SELECT_NETWORK1_ID = "select_network1",
             SELECT_NETWORK1_NAME = "Select Network 1",
-            GRAIN_ON_OFF_NETWORK1_ID = "grain_on_off_network1",
             GRAIN_ON_OFF_NETWORK1_NAME = "Grain On Off Network 1",
-            ON_OFF_NETWORK1_ID = "on_off_network1",
             ON_OFF_NETWORK1_NAME = "On Off Network 1",
-            SELECT_NETWORK2_ID = "select_network2",
             SELECT_NETWORK2_NAME = "Select Network 2",
-            GRAIN_ON_OFF_NETWORK2_ID = "grain_on_off_network2",
             GRAIN_ON_OFF_NETWORK2_NAME = "Grain On Off Network 2",
-            ON_OFF_NETWORK2_ID = "on_off_network2",
             ON_OFF_NETWORK2_NAME = "On Off Network 2",
 
-            // Grain
-            GRAIN_NETWORK1_INTERVAL_ID = "interval_grain_network_1",
             GRAIN_NETWORK1_INTERVAL_NAME = "Grain Interval Network 1",
-            GRAIN_NETWORK1_SIZE_ID = "size_grain_network_1",
             GRAIN_NETWORK1_SIZE_NAME = "Grain Size Network 1",
-            GRAIN_NETWORK1_PITCH_ID = "pitch_grain_network_1",
             GRAIN_NETWORK1_PITCH_NAME = "Grain Pitch Network 1",
-            GRAIN_NETWORK1_MIX_ID = "mix_grain_network_1",
             GRAIN_NETWORK1_MIX_NAME = "Grain Mix Network 1",
 
-            GRAIN_NETWORK2_INTERVAL_ID = "interval_grain_network_2",
             GRAIN_NETWORK2_INTERVAL_NAME = "Grain Interval Network 2",
-            GRAIN_NETWORK2_SIZE_ID = "size_grain_network_2",
             GRAIN_NETWORK2_SIZE_NAME = "Grain Size Network 2",
-            GRAIN_NETWORK2_PITCH_ID = "pitch_grain_network_2",
             GRAIN_NETWORK2_PITCH_NAME = "Grain Pitch Network 2",
-            GRAIN_NETWORK2_MIX_ID = "mix_grain_network_2",
             GRAIN_NETWORK2_MIX_NAME = "Grain Mix Network 2",
 
-            FADE_ID = "param_fade",
             FADE_NAME = "Fade",
-
-            COMP_DRY_WET_ID = "param_dynamic",
+            
             COMP_DRY_WET_NAME = "Dynamic",
-            COMP_THRESHOLD_ID = "param_comp_threshold",
             COMP_THRESHOLD_NAME = "Comp Threshold",
-            COMP_RATIO_ID = "param_comp_ratio",
             COMP_RATIO_NAME = "Comp Ratio",
-            COMP_MAKEUPGAIN_ID = "param_comp_makeup",
             COMP_MAKEUPGAIN_NAME = "Comp Makeup",
 
-            OUTPUT_GAIN_ID = "param_output_gain",
             OUTPUT_GAIN_NAME = "Output Gain",
 
-            DRY_WET_ID = "param_mix",
             DRY_WET_NAME = "Global Mix",
-
+    
             // not automatable parameters
-            ADVANCED_PARAMETER_CONTROL_VISIBLE_ID = "advanced_parameter_control_visible",
-            NETWORK1_NAME_ID = "network1_name",
-            NETWORK2_NAME_ID = "network2_name"
-    ;
-
-
+            ADVANCED_PARAMETER_CONTROL_VISIBLE_NAME = "advanced_parameter_control_visible",
+            NETWORK1_NAME_NAME = "network1_name",
+            NETWORK2_NAME_NAME = "network2_name"
+            ;
 
     static juce::StringArray getPluginParameterList();
-    static juce::ValueTree getNotAutomatableSettings();
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     static juce::ValueTree createNotAutomatableParameterLayout();
+    static void removeNotAutomatableParameterLayout(juce::ValueTree notAutomatableParameters);
 
 private:
 
     inline static juce::StringArray parameterList;
-    inline static juce::ValueTree notAutomatableParameters;
     
     inline static juce::NormalisableRange<float> dryWetRange {0.0f, 1.0f, 0.01f};
     inline static juce::NormalisableRange<float> fadeRange{0.0f, 1.0f, 0.01f};
@@ -187,11 +194,13 @@ private:
             .withValueFromStringFunction ([] (const juce::String& x) { return x.getFloatValue() / 100; });
 
 
-    inline static juce::ValueTreePropertyWithDefault network1NameProperty = juce::ValueTreePropertyWithDefault(notAutomatableParameters, NETWORK1_NAME_ID,
-                                                                                                               nullptr, "Funk");
-
-    inline static juce::ValueTreePropertyWithDefault network2NameProperty = juce::ValueTreePropertyWithDefault(notAutomatableParameters, NETWORK1_NAME_ID,
-                                                                                                               nullptr, "Djembe");
+//    inline static juce::ValueTreePropertyWithDefault network1NameProperty = juce::ValueTreePropertyWithDefault(notAutomatableParameters, NETWORK1_NAME_NAME,
+//                                                                                                               nullptr, "Funk");
+//
+//    inline static juce::ValueTreePropertyWithDefault network2NameProperty = juce::ValueTreePropertyWithDefault(notAutomatableParameters, NETWORK1_NAME_NAME,
+//                                                                                                   nullptr, "Djembe");
+    
+    JUCE_HEAVYWEIGHT_LEAK_DETECTOR (PluginParameters)
 };
 
 #endif //AUDIO_PLUGIN_EXAMPLE_PLUGINPARAMETERS_H

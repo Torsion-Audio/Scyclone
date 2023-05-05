@@ -21,21 +21,21 @@ OnnxProcessor::OnnxProcessor(juce::AudioProcessorValueTreeState &apvts, int no, 
 }
 
 void OnnxProcessor::parameterChanged(const juce::String &parameterID, float newValue) {
-    if (parameterID == PluginParameters::SELECT_NETWORK1_ID && number == 1) {
+    if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && number == 1) {
         auto newValueBool = (bool) newValue;
         if (!newValueBool) {
             onOnnxModelLoad(true, "");
             inferenceThread.setInternalModel();
         }
-    } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID && number == 2) {
+    } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && number == 2) {
         auto newValueBool = (bool) newValue;
         if (!newValueBool) {
             onOnnxModelLoad(true, "");
             inferenceThread.setInternalModel();
         }
-    } else if (parameterID == PluginParameters::ON_OFF_NETWORK1_ID && number == 1) {
+    } else if (parameterID == PluginParameters::ON_OFF_NETWORK1_ID.getParamID() && number == 1) {
 //        setMuted(!(bool) newValue);
-    } else if (parameterID == PluginParameters::ON_OFF_NETWORK2_ID && number == 2) {
+    } else if (parameterID == PluginParameters::ON_OFF_NETWORK2_ID.getParamID() && number == 2) {
 //        setMuted(!(bool)newValue);
     }
 }

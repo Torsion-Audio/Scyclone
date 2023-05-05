@@ -3,12 +3,12 @@
 XYPad::XYPad(juce::AudioProcessorValueTreeState& parameters, AudioPluginAudioProcessor& p) :
         parameters(parameters),
         processor(p),
-        network1SelectButton(1, *parameters.getParameter(PluginParameters::SELECT_NETWORK1_ID)),
-        network1GrainButton(2, *parameters.getParameter(PluginParameters::GRAIN_ON_OFF_NETWORK1_ID)),
-        network1OnOffButton(3, *parameters.getParameter(PluginParameters::ON_OFF_NETWORK1_ID)),
-        network2SelectButton(1, *parameters.getParameter(PluginParameters::SELECT_NETWORK2_ID)),
-        network2GrainButton(2, *parameters.getParameter(PluginParameters::GRAIN_ON_OFF_NETWORK2_ID)),
-        network2OnOffButton(3, *parameters.getParameter(PluginParameters::ON_OFF_NETWORK2_ID)),
+        network1SelectButton(1, *parameters.getParameter(PluginParameters::SELECT_NETWORK1_ID.getParamID())),
+        network1GrainButton(2, *parameters.getParameter(PluginParameters::GRAIN_ON_OFF_NETWORK1_ID.getParamID())),
+        network1OnOffButton(3, *parameters.getParameter(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())),
+        network2SelectButton(1, *parameters.getParameter(PluginParameters::SELECT_NETWORK2_ID.getParamID())),
+        network2GrainButton(2, *parameters.getParameter(PluginParameters::GRAIN_ON_OFF_NETWORK2_ID.getParamID())),
+        network2OnOffButton(3, *parameters.getParameter(PluginParameters::ON_OFF_NETWORK2_ID.getParamID())),
         knob1(parameters, 1, arrow1, network1SelectButton, network1GrainButton, network1OnOffButton),
         knob2(parameters, 2, arrow2, network2SelectButton, network2GrainButton, network2OnOffButton),
         arrow2(parameters, 1),
@@ -18,9 +18,9 @@ XYPad::XYPad(juce::AudioProcessorValueTreeState& parameters, AudioPluginAudioPro
 	setComponentID("xyPad");
 	// create Drawables from Binary
 	octagon = juce::Drawable::createFromImageData(BinaryData::Octagon_svg, BinaryData::Octagon_svgSize);
-    parameters.addParameterListener(PluginParameters::FADE_ID, this);
-    parameters.addParameterListener(PluginParameters::SELECT_NETWORK1_ID, this);
-    parameters.addParameterListener(PluginParameters::SELECT_NETWORK2_ID, this);
+    parameters.addParameterListener(PluginParameters::FADE_ID.getParamID(), this);
+    parameters.addParameterListener(PluginParameters::SELECT_NETWORK1_ID.getParamID(), this);
+    parameters.addParameterListener(PluginParameters::SELECT_NETWORK2_ID.getParamID(), this);
 
 	knob1.setComponentID("knob1");
 	knob2.setComponentID("knob2");
@@ -55,10 +55,10 @@ XYPad::XYPad(juce::AudioProcessorValueTreeState& parameters, AudioPluginAudioPro
     setArrowAndButtonsVisible(false, 2);
 
     // find and connect audio parameters to automatable gui objects
-    auto x1 = parameters.getParameter(PluginParameters::TRAN_SHAPER_NETWORK1_ID);
-    auto y1 = parameters.getParameter(PluginParameters::FILTER_NETWORK1_ID);
-    auto x2 = parameters.getParameter(PluginParameters::TRAN_SHAPER_NETWORK2_ID);
-    auto y2 = parameters.getParameter(PluginParameters::FILTER_NETWORK2_ID);
+    auto x1 = parameters.getParameter(PluginParameters::TRAN_SHAPER_NETWORK1_ID.getParamID());
+    auto y1 = parameters.getParameter(PluginParameters::FILTER_NETWORK1_ID.getParamID());
+    auto x2 = parameters.getParameter(PluginParameters::TRAN_SHAPER_NETWORK2_ID.getParamID());
+    auto y2 = parameters.getParameter(PluginParameters::FILTER_NETWORK2_ID.getParamID());
     connectParameters(*x1, *y1, *x2, *y2);
 
     processor.onNetwork1NameChange = [this](juce::String newName){knob1.setName(newName);};
@@ -92,25 +92,24 @@ void XYPad::resized()
 
 void XYPad::parameterChanged(const juce::String& parameterID, float newValue)
 {
-    if (parameterID == PluginParameters::SELECT_NETWORK1_ID && newValue == 0.f) {
+    if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && newValue == 0.f) {
         updateKnobName(1, network1Name);
-    } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID && newValue == 0.f) {
+    } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && newValue == 0.f) {
         updateKnobName(2, network2Name);
     }
-
-    juce::ignoreUnused(parameterID, newValue);
+    
     /*
     int newDiameter1 = calcCurrentButtonDiameters(1);
     int newDiameter2 = calcCurrentButtonDiameters(2);
 
-    if (parameterID == PluginParameters::FADE_ID){
+    if (parameterID == PluginParameters::FADE_ID.getParamID()){
         setKnobButtonDiameter(newDiameter1, 1);
         setKnobButtonDiameter(newDiameter2, 2);
     }
      */
 
-    if (parameterID == PluginParameters::FADE_ID){
-        float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID)->load();
+    if (parameterID == PluginParameters::FADE_ID.getParamID()){
+        float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load();
         onModelMixChange(fadeValue);
     }
 }
@@ -275,10 +274,10 @@ void XYPad::moveButton(XYKnob* knob, int knobNumber)
 {
     int knobButtonDiameter = knobButtonNeutralDiameter;
 
-    float x1Norm = *parameters.getRawParameterValue(PluginParameters::TRAN_SHAPER_NETWORK1_ID);
-	float y1Norm = *parameters.getRawParameterValue(PluginParameters::FILTER_NETWORK1_ID);
-	float x2Norm = *parameters.getRawParameterValue(PluginParameters::TRAN_SHAPER_NETWORK2_ID);
-	float y2Norm = *parameters.getRawParameterValue(PluginParameters::FILTER_NETWORK2_ID);
+    float x1Norm = *parameters.getRawParameterValue(PluginParameters::TRAN_SHAPER_NETWORK1_ID.getParamID());
+	float y1Norm = *parameters.getRawParameterValue(PluginParameters::FILTER_NETWORK1_ID.getParamID());
+	float x2Norm = *parameters.getRawParameterValue(PluginParameters::TRAN_SHAPER_NETWORK2_ID.getParamID());
+	float y2Norm = *parameters.getRawParameterValue(PluginParameters::FILTER_NETWORK2_ID.getParamID());
 
 	auto xPixel = (float) normToPixelWidth(x1Norm);
 	auto yPixel = (float) normToPixelHeight(y1Norm);
@@ -500,7 +499,7 @@ void XYPad::setKnobButtonDiameter(int newDiameter, int buttonNumber) {
 }
 
 int XYPad::calcCurrentButtonDiameters(int buttonNumber) {
-    float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID)->load();
+    float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load();
 
 
     if (buttonNumber == 1)
@@ -515,7 +514,7 @@ int XYPad::calcCurrentButtonDiameters(int buttonNumber) {
 
 
 bool XYPad::shouldKnobBeMuted(int knobNumber) {
-    float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID)->load();
+    float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load();
 
 
     //int buttonToBeMuted = 0;

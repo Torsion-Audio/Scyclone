@@ -62,7 +62,7 @@ public:
 public:
     juce::AudioVisualiserComponent& getAudioVisualiser1();
     juce::AudioVisualiserComponent& getAudioVisualiser2();
-    float getCurrentLevel();
+    float getCurrentLevel(int index);
     void setLevelType(LevelType newLevelType);
 
     std::function<void(int modelID, juce::String& modelName)> setExternalModelName;
@@ -110,12 +110,13 @@ private:
     ProcessorCompressor processorCompressor;
     
     AudioVisualiser audioVisualiser;
-    LevelAnalyser levelAnalyser;
+    LevelAnalyser levelAnalyser1;
+    LevelAnalyser levelAnalyser2;
     ProcessorGain processorGain;
 
     GrainDelay grainDelay1;
     GrainDelay grainDelay2;
 
     //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
+    JUCE_HEAVYWEIGHT_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };

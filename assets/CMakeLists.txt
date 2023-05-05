@@ -33,9 +33,6 @@ juce_add_binary_data(BinaryData SOURCES
 	  	svg/NeuralTransfer.svg
 	  	svg/Logo.svg
 
-        openGLShaderPrograms/BasicFragment.glsl
         openGLShaderPrograms/BasicVertex.glsl
-        openGLShaderPrograms/BasicVertex-2.glsl
         openGLShaderPrograms/blob-4.glsl
-		openGLShaderPrograms/blob-3.glsl
 )

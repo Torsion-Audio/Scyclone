@@ -77,7 +77,6 @@ void XYKnob::mouseDown(const juce::MouseEvent &)
 {
     isMouseDown = true;
     repaint();
-    DBG("knob clicked");
 }
 
 void XYKnob::mouseUp(const juce::MouseEvent &)

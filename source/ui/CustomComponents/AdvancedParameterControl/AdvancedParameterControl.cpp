@@ -5,24 +5,24 @@
 AdvancedParameterControl::AdvancedParameterControl(juce::AudioProcessorValueTreeState &parameters)
 {
 
-    transientSplitter1.addSliderAttachment(parameters, PluginParameters::TRAN_ATTACK_TIME_NETWORK1_ID);
-    transientSplitter2.addSliderAttachment(parameters, PluginParameters::TRAN_ATTACK_TIME_NETWORK2_ID);
-    raveFade.addSliderAttachment(parameters, PluginParameters::FADE_ID);
-    compThreshold.addSliderAttachment(parameters, PluginParameters::COMP_THRESHOLD_ID);
-    compRatio.addSliderAttachment(parameters, PluginParameters::COMP_RATIO_ID);
-    compMakeup.addSliderAttachment(parameters, PluginParameters::COMP_MAKEUPGAIN_ID);
-    compMix.addSliderAttachment(parameters, PluginParameters::COMP_DRY_WET_ID);
-    masterMixParam.addSliderAttachment(parameters, PluginParameters::DRY_WET_ID);
+    transientSplitter1.addSliderAttachment(parameters, PluginParameters::TRAN_ATTACK_TIME_NETWORK1_ID.getParamID());
+    transientSplitter2.addSliderAttachment(parameters, PluginParameters::TRAN_ATTACK_TIME_NETWORK2_ID.getParamID());
+    raveFade.addSliderAttachment(parameters, PluginParameters::FADE_ID.getParamID());
+    compThreshold.addSliderAttachment(parameters, PluginParameters::COMP_THRESHOLD_ID.getParamID());
+    compRatio.addSliderAttachment(parameters, PluginParameters::COMP_RATIO_ID.getParamID());
+    compMakeup.addSliderAttachment(parameters, PluginParameters::COMP_MAKEUPGAIN_ID.getParamID());
+    compMix.addSliderAttachment(parameters, PluginParameters::COMP_DRY_WET_ID.getParamID());
+    masterMixParam.addSliderAttachment(parameters, PluginParameters::DRY_WET_ID.getParamID());
 
-    grainDelay1Param1.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK1_INTERVAL_ID);
-    grainDelay1Param2.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK1_SIZE_ID);
-    grainDelay1Param3.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK1_PITCH_ID);
-    grainDelay1Param4.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK1_MIX_ID);
+    grainDelay1Param1.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK1_INTERVAL_ID.getParamID());
+    grainDelay1Param2.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK1_SIZE_ID.getParamID());
+    grainDelay1Param3.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK1_PITCH_ID.getParamID());
+    grainDelay1Param4.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK1_MIX_ID.getParamID());
 
-    grainDelay2Param1.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK2_INTERVAL_ID);
-    grainDelay2Param2.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK2_SIZE_ID);
-    grainDelay2Param3.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK2_PITCH_ID);
-    grainDelay2Param4.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK2_MIX_ID);
+    grainDelay2Param1.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK2_INTERVAL_ID.getParamID());
+    grainDelay2Param2.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK2_SIZE_ID.getParamID());
+    grainDelay2Param3.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK2_PITCH_ID.getParamID());
+    grainDelay2Param4.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK2_MIX_ID.getParamID());
 
     // make things visible
     for (int i = 0; i<numberOfSliders; i++)

@@ -6,8 +6,9 @@ uniform float iDisplayScaleFactor;
 uniform vec2 iKnobPos1;
 uniform vec2 iKnobPos2;
 uniform float iTime;
-uniform float iAudioLevel;
 uniform float iModelMix;
+uniform float iAudioLevel1;
+uniform float iAudioLevel2;
 out vec4 fragColor;
 
 
@@ -147,12 +148,10 @@ vec3 blob(vec2 fragCoord, float modelMix, vec2 uv, float time, float audioLevel,
     }
     if (switchRB == 1)
     {
-        color = vec3(color.z*0.6, color.y*.1, color.x);
-        col_circle_edge = vec3(col_circle_edge.x * 0.1, col_circle_edge.y*.3, col_circle_edge.x);
-        color.g = color.b - (mainNoise(fragCoord*0.3, time)*0.17);
-        color.r = color.r +((circle_w_edge+(circle*0.8))*fbm(uv_distorted, vec2(1), 0, 2, 0.421, time)*(sin(0.1*time)+0.4)*0.641*(uv_distorted.x+sin(time+0.6))*(uv_distorted.y+sin(time+0.17)));
-        color.r = color.r - (mainNoise(fragCoord*0.23, time)*0.22);
-        color.g = color.g - ((circle_w_edge+(circle*0.8))*fbm(uv_distorted, vec2(2), 0, 2, 0.421, 0.17*time)*(sin(0.1*time)+0.4)*0.141*(uv_distorted.x+sin(time+0.3))*(uv_distorted.y+sin(time+0.17)));
+        color.r = color.b - (mainNoise(fragCoord*0.3, time)*0.17);
+        color.b = color.r + ((circle_w_edge+(circle*0.8))*fbm(uv_distorted, vec2(1), 0, 2, 0.421, time)*(sin(0.1*time)+0.4)*0.641*(uv_distorted.x+sin(time+0.6))*(uv_distorted.y+sin(time+0.17)));
+        color.b = color.r - (mainNoise(fragCoord*0.23, time)*0.22);
+        color.g = color.g + ((circle_w_edge+(circle*0.8))*fbm(uv_distorted, vec2(2), 0, 2, 0.421, 0.17*time)*(sin(0.1*time)+0.4)*0.141*(uv_distorted.x+sin(time+0.3))*(uv_distorted.y+sin(time+0.17)));
     }
     return color;
 }
@@ -176,7 +175,8 @@ void main()
     float modelMix = iModelMix;
     vec2 knobPos1 = iKnobPos1;
     vec2 knobPos2 = iKnobPos2;
-    float audioLevel = 1.0;
+    float audioLevel1 = iAudioLevel1;
+    float audioLevel2 = iAudioLevel2;
 
     float displayScaleFactor = iDisplayScaleFactor;
     vec2 resolution = iResolution.xy * displayScaleFactor;
@@ -205,11 +205,11 @@ void main()
     vec2 uv_2 = calcKnobPosUV(knobPos2, resolution, uv, aspect);
 
     // Generate Blobs
-    vec3 blob_1 = blob(fragCoord, model1, uv_1, time, audioLevel, 0);
-    vec3 blob_2 = blob(fragCoord, model2, uv_2, time, audioLevel, 1);
+    vec3 blob_1 = blob(fragCoord, model1, uv_1, time, audioLevel1, 0);
+    vec3 blob_2 = blob(fragCoord, model2, uv_2, time, audioLevel2, 1);
 
-    blob_1 = vec3(blob_1.x * 0.3, blob_1.yz);
-    blob_2 = vec3(blob_2.xy, blob_2.z);
+    blob_1 = vec3(blob_1.x * 0.3, blob_1.y*0.34, blob_1.z);
+    blob_2 = vec3(blob_2.x, blob_2.y*0.34, blob_2.z);
 
     vec3 color = blob_1 + blob_2;
 

@@ -11,8 +11,8 @@ IIRCutoffFilter::IIRCutoffFilter(const juce::AudioProcessorValueTreeState &apvts
     targetFreqRangeLPF = {100.0, 20000.0};
     targetFreqRangeHPF.setSkewForCentre(500.0);
     targetFreqRangeLPF.setSkewForCentre(500.0);
-    if (index == 1) updateFilterParams(apvts.getRawParameterValue(PluginParameters::FILTER_NETWORK1_ID)->load());
-    if (index == 2) updateFilterParams(apvts.getRawParameterValue(PluginParameters::FILTER_NETWORK2_ID)->load());
+    if (index == 1) updateFilterParams(apvts.getRawParameterValue(PluginParameters::FILTER_NETWORK1_ID.getParamID())->load());
+    if (index == 2) updateFilterParams(apvts.getRawParameterValue(PluginParameters::FILTER_NETWORK2_ID.getParamID())->load());
 }
 
 IIRCutoffFilter::~IIRCutoffFilter()
@@ -109,13 +109,13 @@ void IIRCutoffFilter::processFilters(juce::AudioBuffer<float> &buffer) {
 }
 
 void IIRCutoffFilter::parameterChanged(const juce::String &parameterID, float newValue) {
-    if (parameterID == PluginParameters::FILTER_NETWORK1_ID && index == 1) {
+    if (parameterID == PluginParameters::FILTER_NETWORK1_ID.getParamID() && index == 1) {
         updateFilterParams(newValue);
-    } else if (parameterID == PluginParameters::FILTER_NETWORK2_ID && index == 2) {
+    } else if (parameterID == PluginParameters::FILTER_NETWORK2_ID.getParamID() && index == 2) {
         updateFilterParams(newValue);
-    } else if (parameterID == PluginParameters::ON_OFF_NETWORK1_ID && index == 1) {
+    } else if (parameterID == PluginParameters::ON_OFF_NETWORK1_ID.getParamID() && index == 1) {
         setMuted((bool)!newValue);
-    } else if (parameterID == PluginParameters::ON_OFF_NETWORK2_ID && index == 2) {
+    } else if (parameterID == PluginParameters::ON_OFF_NETWORK2_ID.getParamID() && index == 2) {
         setMuted((bool)!newValue);
     }
 }

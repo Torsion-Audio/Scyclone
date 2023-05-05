@@ -2,21 +2,23 @@
 
 ## Installation Guide
 
-- if you have not installed homebrew yet, run the following line in the Terminal and follow the instructions
+Open the dmg from the latest release and copy the plugins or standalone you need in the respective system folders. Make sure you download the correct release for you system: *Scyclone-v.0.0.3-osx-arm64.dmg* for macs with the new apple silicon processors (Apple M1 and up) or *Scyclone-v.0.0.3-osx-x64.dmg* for older macs with intel processors. The minimum macOS version supported is 10.13.
 
-```/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"```
+|     Standalone    | ```/Applications/``` |
+|---------------------|-----------------------------------------------------------------------------------------------|
+|     VST3 plugin     | ```/Library/Audio/Plug-Ins/VST3/``` |
+|     AU plugin     | ```/Library/Audio/Plug-Ins/Components/``` |
 
-- to install v1.12.1 of the onnxruntime library with homebrew run
-
- ```brew install faressc/scyclone/onnxruntime@1.12.1``` 
- 
-- copy vst3 binary to your system vst3 folder: ```/Library/Audio/Plug-Ins/VST3```
-- optionally you can also use the standalone version
+<br>
 
 **Own Build** <br />
 
-|     vst3 plugin     | ```Scyclone/cmake-build/Scyclone_artefacts/Release/VST3/Scyclone.vst3``` |
-|---------------------|-----------------------------------------------------------------------------------------------|
-| onnxruntime library (x86_64) | ```/usr/local/opt/onnxruntime@1.12.1/lib/libonnxruntime.1.12.1.dylib```                                 |
-| onnxruntime library (arm64) | ```/opt/homebrew/opt/onnxruntime@1.12.1/lib/libonnxruntime.1.12.1.dylib```                                 |
+If you build the plugins yourself, you can find the binaries in the following folders:
 
+
+|     Standalone    | ```Scyclone/cmake-build/Scyclone_artefacts/Release/Standalone/Scyclone``` |
+|---------------------|-----------------------------------------------------------------------------------------------|
+|     VST3 plugin     | ```Scyclone/cmake-build/Scyclone_artefacts/Release/VST3/Scyclone.vst3``` |
+|     AU plugin     | ```Scyclone/cmake-build/Scyclone_artefacts/Release/VST3/Scyclone.component``` |
+
+Copy those files in the folders.

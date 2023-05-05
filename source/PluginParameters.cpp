@@ -171,17 +171,19 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginParameters::createPara
 
 juce::ValueTree PluginParameters::createNotAutomatableParameterLayout()
 {
-    notAutomatableParameters = juce::ValueTree("Settings");
-    notAutomatableParameters.setProperty(ADVANCED_PARAMETER_CONTROL_VISIBLE_ID, juce::var(false), nullptr);
-    notAutomatableParameters.setProperty(NETWORK1_NAME_ID, juce::var("Funk"), nullptr);
-    notAutomatableParameters.setProperty(NETWORK2_NAME_ID, juce::var("Djembe"), nullptr);
+    juce::ValueTree notAutomatableParameters = juce::ValueTree("Settings");
+    notAutomatableParameters.setProperty(ADVANCED_PARAMETER_CONTROL_VISIBLE_NAME, juce::var(false), nullptr);
+    notAutomatableParameters.setProperty(NETWORK1_NAME_NAME, juce::var("Funk"), nullptr);
+    notAutomatableParameters.setProperty(NETWORK2_NAME_NAME, juce::var("Djembe"), nullptr);
     return notAutomatableParameters;
+}
+
+void PluginParameters::removeNotAutomatableParameterLayout(juce::ValueTree notAutomatableParameters) {
+    notAutomatableParameters.removeProperty(ADVANCED_PARAMETER_CONTROL_VISIBLE_NAME, nullptr);
+    notAutomatableParameters.removeProperty(NETWORK1_NAME_NAME, nullptr);
+    notAutomatableParameters.removeProperty(NETWORK2_NAME_NAME, nullptr);
 }
 
 juce::StringArray PluginParameters::getPluginParameterList() {
     return parameterList;
-}
-
-juce::ValueTree PluginParameters::getNotAutomatableSettings(){
-    return notAutomatableParameters;
 }

@@ -11,7 +11,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        ),
-        parameters (*this, nullptr, juce::Identifier ("VAESynth"), PluginParameters::createParameterLayout()),
+        parameters (*this, nullptr, juce::Identifier ("Scyclone"), PluginParameters::createParameterLayout()),
         processorTransientSplitter1(parameters, 1),
         processorTransientSplitter2(parameters, 2),
         iirCutoffFilter1(parameters, 1),
@@ -32,9 +32,9 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
 
     parameters.state.addChild(PluginParameters::createNotAutomatableParameterLayout(), 0, nullptr);
     
-    dryWetMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::DRY_WET_ID)->load());
-    compMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::COMP_DRY_WET_ID)->load());
-    fadeMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::FADE_ID)->load());
+    dryWetMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::DRY_WET_ID.getParamID())->load());
+    compMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::COMP_DRY_WET_ID.getParamID())->load());
+    fadeMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load());
     
     onnxProcessor1.onOnnxModelLoad = [this] (bool initLoading, juce::String modelName) {
         this->suspendProcessing(initLoading);
@@ -59,6 +59,8 @@ AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {
     for (auto & parameterID : PluginParameters::getPluginParameterList()) {
         parameters.removeParameterListener(parameterID, this);
     }
+    PluginParameters::removeNotAutomatableParameterLayout(parameters.state.getChild(0));
+    parameters.state.removeChild(0, nullptr);
 }
 
 //==============================================================================
@@ -211,6 +213,8 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     onnxProcessor1.processBlock(network1Buffer);
     onnxProcessor2.processBlock(network2Buffer);
 
+    levelAnalyser1.processBlock(network1Buffer);
+    levelAnalyser2.processBlock(network2Buffer);
 
     grain1DryBuffer.makeCopyOf(network1Buffer);
     grain1DryWetMixer.setDrySamples(grain1DryBuffer);
@@ -222,9 +226,9 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     grainDelay2.processBlock(network2Buffer);
     grain2DryWetMixer.setWetSamples(network2Buffer);
 
-    if (parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID)->load() == 0.f)
+    if (parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load() == 0.f)
         network1Buffer.clear();
-    if (parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK2_ID)->load() == 0.f)
+    if (parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK2_ID.getParamID())->load() == 0.f)
         network2Buffer.clear();
 
     monoBuffer.makeCopyOf(network1Buffer);
@@ -247,12 +251,15 @@ juce::AudioVisualiserComponent &AudioPluginAudioProcessor::getAudioVisualiser2()
     return audioVisualiser.getAudioVisualiser(2);
 }
 
-float AudioPluginAudioProcessor::getCurrentLevel() {
-    return levelAnalyser.getCurrentLevel();
+float AudioPluginAudioProcessor::getCurrentLevel(int index) {
+    if (index == 1) return levelAnalyser1.getCurrentLevel();
+    else if (index == 2) return levelAnalyser2.getCurrentLevel();
+    else return (levelAnalyser1.getCurrentLevel() + levelAnalyser2.getCurrentLevel()) / 2.f;
 }
 
 void AudioPluginAudioProcessor::setLevelType(LevelType newLevelType) {
-    levelAnalyser.setLevelType(newLevelType);
+    levelAnalyser1.setLevelType(newLevelType);
+    levelAnalyser2.setLevelType(newLevelType);
 }
 
 //==============================================================================
@@ -262,7 +269,7 @@ bool AudioPluginAudioProcessor::hasEditor() const {
 
 juce::AudioProcessorEditor* AudioPluginAudioProcessor::createEditor() {
     return new AudioPluginAudioProcessorEditor (*this, parameters);
-    //return new juce::GenericAudioProcessorEditor (*this);
+//    return new juce::GenericAudioProcessorEditor (*this);
 }
 
 //==============================================================================
@@ -278,11 +285,11 @@ void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeI
         if (xmlState->hasTagName(parameters.state.getType())) {
             parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
             advancedParameterControlVisible.referTo(parameters.state.getChildWithName("Settings")
-            .getPropertyAsValue(PluginParameters::ADVANCED_PARAMETER_CONTROL_VISIBLE_ID, nullptr));
+            .getPropertyAsValue(PluginParameters::ADVANCED_PARAMETER_CONTROL_VISIBLE_NAME, nullptr));
             network1Name.referTo(parameters.state.getChildWithName("Settings")
-                                                            .getPropertyAsValue(PluginParameters::NETWORK1_NAME_ID, nullptr));
+                                                            .getPropertyAsValue(PluginParameters::NETWORK1_NAME_NAME, nullptr));
             network2Name.referTo(parameters.state.getChildWithName("Settings")
-                                                            .getPropertyAsValue(PluginParameters::NETWORK2_NAME_ID, nullptr));
+                                                            .getPropertyAsValue(PluginParameters::NETWORK2_NAME_NAME, nullptr));
         }
 }
 
@@ -298,41 +305,41 @@ void AudioPluginAudioProcessor::parameterChanged(const juce::String &parameterID
     processorTransientSplitter1.parameterChanged(parameterID, newValue);
     processorTransientSplitter2.parameterChanged(parameterID, newValue);
 
-    if (parameterID == PluginParameters::DRY_WET_ID) {
+    if (parameterID == PluginParameters::DRY_WET_ID.getParamID()) {
         dryWetMixer.parameterChanged(parameterID, newValue);
-    } else if (parameterID == PluginParameters::COMP_DRY_WET_ID) {
+    } else if (parameterID == PluginParameters::COMP_DRY_WET_ID.getParamID()) {
         compMixer.parameterChanged(parameterID, newValue);
-    } else if (parameterID == PluginParameters::FADE_ID) {
+    } else if (parameterID == PluginParameters::FADE_ID.getParamID()) {
         fadeMixer.parameterChanged(parameterID, newValue);
-    } else if (parameterID == PluginParameters::GRAIN_NETWORK1_MIX_ID){
+    } else if (parameterID == PluginParameters::GRAIN_NETWORK1_MIX_ID.getParamID()){
         grain1DryWetMixer.setDryWetProportion(newValue);
-    } else if (parameterID == PluginParameters::GRAIN_NETWORK2_MIX_ID){
+    } else if (parameterID == PluginParameters::GRAIN_NETWORK2_MIX_ID.getParamID()){
         grain2DryWetMixer.setDryWetProportion(newValue);
     }
 }
 
 void AudioPluginAudioProcessor::setInitialMuteParameters() {
-    auto onOffGrain1 = parameters.getRawParameterValue(PluginParameters::GRAIN_ON_OFF_NETWORK1_ID)->load();
-    auto onOffGrain2 = parameters.getRawParameterValue(PluginParameters::GRAIN_ON_OFF_NETWORK2_ID)->load();
+    auto onOffGrain1 = parameters.getRawParameterValue(PluginParameters::GRAIN_ON_OFF_NETWORK1_ID.getParamID())->load();
+    auto onOffGrain2 = parameters.getRawParameterValue(PluginParameters::GRAIN_ON_OFF_NETWORK2_ID.getParamID())->load();
 
-    auto onOffNetwork1 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID)->load();
-    auto onOffNetwork2 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID)->load();
+    auto onOffNetwork1 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load();
+    auto onOffNetwork2 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load();
 
 
-    parameterChanged(PluginParameters::ON_OFF_NETWORK1_ID, onOffNetwork1);
-    parameterChanged(PluginParameters::ON_OFF_NETWORK2_ID, onOffNetwork2);
+    parameterChanged(PluginParameters::ON_OFF_NETWORK1_ID.getParamID(), onOffNetwork1);
+    parameterChanged(PluginParameters::ON_OFF_NETWORK2_ID.getParamID(), onOffNetwork2);
 
-    parameterChanged(PluginParameters::GRAIN_ON_OFF_NETWORK1_ID, onOffGrain1);
-    parameterChanged(PluginParameters::GRAIN_ON_OFF_NETWORK2_ID, onOffGrain2);
+    parameterChanged(PluginParameters::GRAIN_ON_OFF_NETWORK1_ID.getParamID(), onOffGrain1);
+    parameterChanged(PluginParameters::GRAIN_ON_OFF_NETWORK2_ID.getParamID(), onOffGrain2);
 }
 
 void AudioPluginAudioProcessor::initialiseRnbo(){
-    grainDelay1.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK1_PITCH_ID), 2);
-    grainDelay1.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK1_INTERVAL_ID), 3);
-    grainDelay1.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK1_SIZE_ID), 1);
-    grainDelay2.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK2_PITCH_ID), 2);
-    grainDelay2.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK2_INTERVAL_ID), 3);
-    grainDelay2.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK2_SIZE_ID), 1);
+    grainDelay1.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK1_PITCH_ID.getParamID()), 2);
+    grainDelay1.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK1_INTERVAL_ID.getParamID()), 3);
+    grainDelay1.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK1_SIZE_ID.getParamID()), 1);
+    grainDelay2.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK2_PITCH_ID.getParamID()), 2);
+    grainDelay2.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK2_INTERVAL_ID.getParamID()), 3);
+    grainDelay2.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK2_SIZE_ID.getParamID()), 1);
 }
 
 void AudioPluginAudioProcessor::stereoToMono(juce::AudioBuffer<float> &targetMonoBlock, juce::AudioBuffer<float> &sourceBlock) {

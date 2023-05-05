@@ -30,17 +30,13 @@ We have provided two pre-trained models (presets) accessible under **assets/mode
 - **Djembe**: Trained on five hours of carefully compiled Djembe dataset (Three hours of Djembe solo performances and two hours of one-shot recordings)
 
 ## Installation
-Scyclone uses the onnxruntime library to inference the neural networks. At the present time, the library is included as a shared library, therefore it is necessary to move the shared library and place itnext to the exectutable or to your system library path. 
 
 Detailed instructions can be found here:
 - [Windows Guide](docs/install_instructions_windows.md).
 - [Mac Guide](docs/install_instructions_mac.md).
 
 ## Build instruction
-If you are on macOS you need to install the onnxruntime v1.12.1 library via homebrew:
-```bash
-brew install faressc/scyclone/onnxruntime@1.12.1
-```
+
 Build with CMake
 ```bash
 # clone the repository
@@ -55,16 +51,10 @@ cmake . -B cmake-build
 cmake --build cmake-build --config Release
 ```
 
-**Note:** On Windows, CMake should automatically download the prebuild onnxruntime library (version 1.12.1). **If the script fails**, manually download the library following the instructions below:
-
-- Download [onnx v1.12.1](https://github.com/microsoft/onnxruntime/releases/tag/v1.12.1) (Select the required prebuild)
-- Extract the file and rename the folder to```onnxruntime-1.12.1```
-- Copy the folder to ```path/to/Scyclone/modules/```
-- Now you sould have the following file structure ```Scyclone/modules/onnxruntime-1.12.1/include```
-
-## Further notes
-- (On macOS) The binaries are not notarized yet, therefore check your system's security setting when you run the application or build the plugin/standalone yourself.
-- Apple's arm64 processors are supported with the latest update.
+**Notes:** 
+- The onnx library is now linked statically. No more need to download the onnx library via homebrew or via the github repository. Also the binaries are now notarized.
+- For Windows at the moment only release builds are supported. Debug builds will be supported with future updates.
+- The AU plugin has not been tested with Logic yet. Logic support will come in futher updates.
 
 ## References
 

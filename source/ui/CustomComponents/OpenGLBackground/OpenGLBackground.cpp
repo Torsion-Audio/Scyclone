@@ -39,7 +39,7 @@ OpenGLBackground::OpenGLBackground(juce::AudioProcessorValueTreeState& parameter
     resolution_juce.add((float) getHeight());
 
     // dirty work around to make the blobs appear correctly from the beginning
-    auto fadeParam = parameters.getParameter(PluginParameters::FADE_ID);
+    auto fadeParam = parameters.getParameter(PluginParameters::FADE_ID.getParamID());
     auto fadeStatus = fadeParam->getValue();
     fadeParam->setValueNotifyingHost(0.5f*fadeStatus);
     fadeParam->setValueNotifyingHost(fadeStatus);
@@ -101,32 +101,31 @@ void OpenGLBackground::renderOpenGL()
     const float renderingScale = (float) openGLContext.getRenderingScale();
     juce::gl::glViewport (0, 0, juce::roundToInt (renderingScale * getWidth()), juce::roundToInt (renderingScale * getHeight()));
 
-    // Set background color
-//    OpenGLHelpers::clear (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
-
-//    // Select shader program
+    // Select shader program
     shaderProgram->use();
-//
-//    // Setup the Uniforms for use in the Shader
+
+    // Setup the Uniforms for use in the Shader
     if (resolution) resolution->set(resolution_juce[0], resolution_juce[1]);
     if (displayScaleFactor) displayScaleFactor->set(displayScaleFactor_juce);
     if (backgroundColor) backgroundColor->set(static_cast<GLfloat>(backgroundColor_juce.getFloatRed()), static_cast<GLfloat>(backgroundColor_juce.getFloatGreen()), static_cast<GLfloat>(backgroundColor_juce.getFloatBlue()));
     if (time){
         const auto time_juce = juce::Time::getMillisecondCounter();
         auto currentTimeSeconds = float(time_juce/1000.0);
-        //        std::cout << "Time: " << currentTimeSeconds << std::endl;
         time->set(currentTimeSeconds);
     }
     if (modelMix) modelMix->set(modelMix_juce);
     if (knobPos1) knobPos1->set(knobPos1_juce.xPosition,knobPos1_juce.yPosition);
     if (knobPos2) knobPos2->set(knobPos2_juce.xPosition,knobPos2_juce.yPosition);
-    if (audioLevel){
-        audioLevel_juce = processorRef.getCurrentLevel();
-        audioLevel->set(static_cast<GLfloat>(audioLevel_juce));
+    if (audioLevel1){
+        audioLevel1_juce = processorRef.getCurrentLevel(1);
+        audioLevel1->set(static_cast<GLfloat>(audioLevel1_juce));
+    }
+    if (audioLevel2){
+        audioLevel2_juce = processorRef.getCurrentLevel(2);
+        audioLevel2->set(static_cast<GLfloat>(audioLevel2_juce));
     }
     
-//
-//    // Draw Vertices
+    // Draw Vertices
     openGLContext.extensions.glBindVertexArray (VAO);
     juce::gl::glDrawArrays (juce::gl::GL_TRIANGLES, 0, (int) vertices.size());
     openGLContext.extensions.glBindVertexArray (0);
@@ -188,10 +187,12 @@ void OpenGLBackground::compileOpenGLShaderProgram()
         modelMix.disconnectFromShaderProgram();
         knobPos1.disconnectFromShaderProgram();
         knobPos2.disconnectFromShaderProgram();
-        audioLevel.disconnectFromShaderProgram();
+        audioLevel1.disconnectFromShaderProgram();
+        audioLevel2.disconnectFromShaderProgram();
         
         shaderProgram.reset (shaderProgramAttempt.release());
 
+//        std::cout << "ShaderProgram: " << shaderProgram->getProgramID() << std::endl;
 //        std::cout << "UniformLocation: " << juce::gl::glGetUniformLocation(shaderProgram->getProgramID(), "resolution") << std::endl;
         
         resolution.connectToShaderProgram (openGLContext, *shaderProgram);
@@ -201,7 +202,8 @@ void OpenGLBackground::compileOpenGLShaderProgram()
         modelMix.connectToShaderProgram(openGLContext, *shaderProgram);
         knobPos1.connectToShaderProgram(openGLContext, *shaderProgram);
         knobPos2.connectToShaderProgram(openGLContext, *shaderProgram);
-        audioLevel.connectToShaderProgram(openGLContext, *shaderProgram);
+        audioLevel1.connectToShaderProgram(openGLContext, *shaderProgram);
+        audioLevel2.connectToShaderProgram(openGLContext, *shaderProgram);
         
         openGLStatusText = "GLSL: v" + juce::String (juce::OpenGLShaderProgram::getLanguageVersion(), 2);
         

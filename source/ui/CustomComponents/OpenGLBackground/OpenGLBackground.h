@@ -82,7 +82,8 @@ private:
     OpenGLUtil::UniformWrapper knobPos1 {"iKnobPos1"};
     OpenGLUtil::UniformWrapper knobPos2 {"iKnobPos2"};
     OpenGLUtil::UniformWrapper modelMix {"iModelMix"};
-    OpenGLUtil::UniformWrapper audioLevel {"iAudioLevel"};
+    OpenGLUtil::UniformWrapper audioLevel1 {"iAudioLevel1"};
+    OpenGLUtil::UniformWrapper audioLevel2 {"iAudioLevel2"};
     // Fade aus ValueTreeState
     // On Off pro source
     
@@ -92,7 +93,8 @@ private:
     juce::Array<GLfloat> resolution_juce;
     GLfloat displayScaleFactor_juce;
     juce::Colour backgroundColor_juce;
-    float audioLevel_juce;
+    float audioLevel1_juce;
+    float audioLevel2_juce;
     AudioPluginAudioProcessor& processorRef;
     
     // GUI Mouse Drag Interaction

@@ -14,7 +14,7 @@ enum LevelType{
 
 class LevelAnalyser {
 public:
-    void process(juce::AudioBuffer<float>& buffer);
+    void processBlock(juce::AudioBuffer<float>& buffer);
     void setLevelType(LevelType newLevelType);
     float getCurrentLevel();
 

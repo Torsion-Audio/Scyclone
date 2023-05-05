@@ -8,9 +8,9 @@
 #include "ProcessorCompressor.h"
 
 ProcessorCompressor::ProcessorCompressor(juce::AudioProcessorValueTreeState &apvts): compressor(){
-    compressor.setThreshold(apvts.getRawParameterValue(PluginParameters::COMP_THRESHOLD_ID)->load());
-    compressor.setRatio(apvts.getRawParameterValue(PluginParameters::COMP_RATIO_ID)->load());
-    compressor.setMakeUpGain(apvts.getRawParameterValue(PluginParameters::COMP_MAKEUPGAIN_ID)->load());
+    compressor.setThreshold(apvts.getRawParameterValue(PluginParameters::COMP_THRESHOLD_ID.getParamID())->load());
+    compressor.setRatio(apvts.getRawParameterValue(PluginParameters::COMP_RATIO_ID.getParamID())->load());
+    compressor.setMakeUpGain(apvts.getRawParameterValue(PluginParameters::COMP_MAKEUPGAIN_ID.getParamID())->load());
 }
 
 ProcessorCompressor::~ProcessorCompressor() = default;
@@ -24,11 +24,11 @@ void ProcessorCompressor::processBlock(juce::AudioBuffer<float>& buffer){
 }
 
 void ProcessorCompressor::parameterChanged(const juce::String &parameterID, float newValue){
-    if (parameterID == PluginParameters::COMP_THRESHOLD_ID) {
+    if (parameterID == PluginParameters::COMP_THRESHOLD_ID.getParamID()) {
         compressor.setThreshold(newValue);
-    } else if (parameterID == PluginParameters::COMP_RATIO_ID) {
+    } else if (parameterID == PluginParameters::COMP_RATIO_ID.getParamID()) {
         compressor.setRatio(newValue);
-    } else if (parameterID == PluginParameters::COMP_MAKEUPGAIN_ID) {
+    } else if (parameterID == PluginParameters::COMP_MAKEUPGAIN_ID.getParamID()) {
         if (newValue == -0.1f){
             compressor.setAutoMakeUpGain(true);
         }
