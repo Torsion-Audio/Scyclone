@@ -25,11 +25,6 @@ endif ()
 project(Scyclone VERSION 0.0.1)
 set (TARGET_NAME ${PROJECT_NAME})
 
-##### Compilation options
-if(NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE "Release")
-endif()
-
 if(APPLE)
 	set (FORMATS_TO_BUILD AU VST3 Standalone)
 else()
