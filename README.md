@@ -47,6 +47,7 @@ cd Scyclone/
 git submodule update --init --recursive
 
 # on macOS you might need to specify the processor type with -DCMAKE_HOST_SYSTEM_PROCESSOR=x86_64 or arm64
+# on Windows currently only Release build works (add your own onnx static debug build in order to use debug)
 cmake . -B cmake-build
 cmake --build cmake-build --config Release
 ```
@@ -61,6 +62,7 @@ cmake --build cmake-build --config Release
 - RAVE Paper - [RAVE: A variational autoencoder for fast and high-quality neural audio synthesis](https://arxiv.org/abs/2111.05011)
 - RAVE Scripts - [RAVE Github Repository](https://github.com/acids-ircam/RAVE)
 - RNBO Tutorial - [JUCE & RNBO C++ Export](https://kengo.dev/posts/jr-granular)
+- ONNX static library builder - [ort-builder](https://github.com/olilarkin/ort-builder)
 
 ## Licenses
 This project is subject to multiple licenses. The primary license for the entire project is the GNU General Public License version 3 (GPLv3), which is the most restrictive of all the licenses applied herein.
