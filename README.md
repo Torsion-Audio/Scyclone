@@ -58,7 +58,8 @@ cmake --build cmake-build --config Release
 - The AU plugin has not been tested with Logic yet. Logic support will come in futher updates.
 
 ## Training
-Discover how to train your own RAVE-Models for Scyclone with our comprehensive step-by-step guide: [Scyclone-AI](https://github.com/Torsion-Audio/Scyclone-AI/)
+Discover how to train your own RAVE-Models for Scyclone with our comprehensive step-by-step guide: 
+- [Scyclone-AI](https://github.com/Torsion-Audio/Scyclone-AI/)
 
 ## References
 
