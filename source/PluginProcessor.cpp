@@ -30,7 +30,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         parameters.addParameterListener(parameterID, this);
     }
 
-    parameters.state.addChild(PluginParameters::createNotAutomatableParameterLayout(), 0, nullptr);
+    parameters.state.addChild(PluginParameters::createNotAutomatableValueTree(), 0, nullptr);
     
     dryWetMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::DRY_WET_ID.getParamID())->load());
     compMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::COMP_DRY_WET_ID.getParamID())->load());
@@ -59,7 +59,7 @@ AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {
     for (auto & parameterID : PluginParameters::getPluginParameterList()) {
         parameters.removeParameterListener(parameterID, this);
     }
-    PluginParameters::removeNotAutomatableParameterLayout(parameters.state.getChild(0));
+    PluginParameters::clearNotAutomatableValueTree(parameters.state.getChild(0));
     parameters.state.removeChild(0, nullptr);
 }
 

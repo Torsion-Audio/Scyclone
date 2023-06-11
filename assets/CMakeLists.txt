@@ -35,4 +35,5 @@ juce_add_binary_data(BinaryData SOURCES
 
         openGLShaderPrograms/BasicVertex.glsl
         openGLShaderPrograms/blob-4.glsl
+        openGLShaderPrograms/blob-5.glsl
 )

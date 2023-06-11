@@ -161,15 +161,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginParameters::createPara
 
 
 
-
-    for (const auto & param : params) {
-        parameterList.add(param->getParameterID());
+    if (parameterList.isEmpty()) {
+        for (const auto & param : params) {
+            parameterList.add(param->getParameterID());
+        }
     }
 
     return { params.begin(), params.end() };
 }
 
-juce::ValueTree PluginParameters::createNotAutomatableParameterLayout()
+juce::ValueTree PluginParameters::createNotAutomatableValueTree()
 {
     juce::ValueTree notAutomatableParameters = juce::ValueTree("Settings");
     notAutomatableParameters.setProperty(ADVANCED_PARAMETER_CONTROL_VISIBLE_NAME, juce::var(false), nullptr);
@@ -178,7 +179,7 @@ juce::ValueTree PluginParameters::createNotAutomatableParameterLayout()
     return notAutomatableParameters;
 }
 
-void PluginParameters::removeNotAutomatableParameterLayout(juce::ValueTree notAutomatableParameters) {
+void PluginParameters::clearNotAutomatableValueTree(juce::ValueTree notAutomatableParameters) {
     notAutomatableParameters.removeProperty(ADVANCED_PARAMETER_CONTROL_VISIBLE_NAME, nullptr);
     notAutomatableParameters.removeProperty(NETWORK1_NAME_NAME, nullptr);
     notAutomatableParameters.removeProperty(NETWORK2_NAME_NAME, nullptr);

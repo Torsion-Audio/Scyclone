@@ -36,16 +36,12 @@ CustomSliderComponent::CustomSliderComponent(juce::String sliderName, CustomSlid
 }
 
 CustomSliderComponent::~CustomSliderComponent() {
-    setLookAndFeel(nullptr);
+    slider.setLookAndFeel(nullptr);
 }
 
 void CustomSliderComponent::addSliderAttachment(juce::AudioProcessorValueTreeState &state, const juce::String &parameterID) {
     attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(state, parameterID, slider);
-    juce::ignoreUnused(attachment);
     parameter = std::make_unique<juce::RangedAudioParameter*>(state.getParameter(parameterID));
-
-    state.getParameter(parameterID)->getNormalisableRange();
-
     updateValueLabel();
 }
 
@@ -111,12 +107,11 @@ void CustomSliderComponent::resized() {
 void CustomSliderComponent::setCustomColour(CustomSliderColourID colourId, juce::Colour colour) {
     if (sliderType == normal) {
         customSliderLookAndFeel.setCustomColour(colourId, colour);
-        slider.setLookAndFeel(&customSliderLookAndFeel);
     }
     else{
         customCrossfadeSliderLookAndFeel.setCustomColour(colourId, colour);
-        slider.setLookAndFeel(&customCrossfadeSliderLookAndFeel);
     }
+    slider.repaint();
 }
 
 void CustomSliderComponent::setDoubleClickReturnValue(double valueToSetOnDoubleClick) {
