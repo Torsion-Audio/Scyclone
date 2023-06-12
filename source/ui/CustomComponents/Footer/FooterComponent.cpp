@@ -25,7 +25,7 @@ FooterComponent::FooterComponent(AudioPluginAudioProcessor &p, juce::AudioProces
 
 FooterComponent::~FooterComponent() {
     stopTimer();
-    juce::LookAndFeel::setDefaultLookAndFeel (nullptr);
+    setLookAndFeel(nullptr);
 }
 
 
