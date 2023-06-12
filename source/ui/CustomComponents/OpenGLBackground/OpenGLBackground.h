@@ -44,10 +44,6 @@ public:
     // Component Callbacks =====================================================
     void paint (juce::Graphics& g) override;
     void resized () override;
-
-    // Used to connect Draggable3DOrientation to mouse movements
-    void mouseDown (const juce::MouseEvent& e) override;
-    void mouseDrag (const juce::MouseEvent& e) override;
     
     // AsyncUpdater Callback ===================================================
     /** If the OpenGLRenderer thread needs to update some form JUCE GUI object
@@ -103,9 +99,6 @@ private:
     float audioLevel2_juce;
     AudioPluginAudioProcessor& processorRef;
     
-    // GUI Mouse Drag Interaction
-    juce::Draggable3DOrientation draggableOrientation;
-    
     // GUI overlay status text
     juce::String openGLStatusText;
     juce::Label openGLStatusLabel;
@@ -114,8 +107,6 @@ private:
     KnobPos knobPos1_juce;
     KnobPos knobPos2_juce;
     float modelMix_juce;
-    float sharpnesParamActive1_juce;
-    float sharpnesParamActive2_juce;
     void xyButtonMoved(float x, float y, int modelID);
     void xyModelMixChanged(float modelMix);
     OpenGLTextureComponent openGlTextureComponent;

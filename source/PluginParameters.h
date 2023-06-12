@@ -97,8 +97,8 @@ public:
 
     static juce::StringArray getPluginParameterList();
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-    static juce::ValueTree createNotAutomatableParameterLayout();
-    static void removeNotAutomatableParameterLayout(juce::ValueTree notAutomatableParameters);
+    static juce::ValueTree createNotAutomatableValueTree();
+    static void clearNotAutomatableValueTree(juce::ValueTree notAutomatableParameters);
 
 private:
 
@@ -112,8 +112,8 @@ private:
     inline static juce::NormalisableRange<float> compThresholdRange {-60.f, 0.0f, 0.1f};
     inline static juce::NormalisableRange<float> compRatioRange {1.0f, 10.f, 0.1f};
     inline static juce::NormalisableRange<float> compMakeupRange {-0.1f, 12.f, 0.1f};
-    inline static juce::NormalisableRange<float> filterRange{ -1.0f, 1.0f, 0.001f };
-    inline static juce::NormalisableRange<float> tranShaperRange{ -1.0f, 1.0f, 0.001f };
+    inline static juce::NormalisableRange<float> filterRange{ 0.f, 1.0f, 0.001f };
+    inline static juce::NormalisableRange<float> tranShaperRange{ 0.f, 1.0f, 0.001f };
     inline static juce::NormalisableRange<float> tranAttackTimeRange {0.05f, 2.0f, 0.001f};
     inline static juce::NormalisableRange<float> grainPitchRange{-12.f, 12.f, 0.01f};
     inline static juce::NormalisableRange<float> grainIntervalRange{.001f, 2.f, .0001f };

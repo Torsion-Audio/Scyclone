@@ -14,9 +14,6 @@ OpenGLBackground::OpenGLBackground(juce::AudioProcessorValueTreeState& parameter
     // Sets the OpenGL version to 3.2
     openGLContext.setOpenGLVersionRequired (juce::OpenGLContext::OpenGLVersion::openGL3_2);
 
-    // Set default 3D orientation for the draggable GUI tool
-    draggableOrientation.reset ({ 0.0, 1.0, 0.0 });
-
     // Attach the OpenGL context
     openGLContext.setRenderer (this);
     openGLContext.attachTo (*this);
@@ -80,8 +77,7 @@ void OpenGLBackground::newOpenGLContextCreated()
 //
 //
 //    // Define that our vertices are laid out as groups of 3 GLfloats
-    openGLContext.extensions.glVertexAttribPointer (0, 3, juce::gl::GL_FLOAT, juce::gl::GL_FALSE,
-                                                    3 * sizeof (GLfloat), NULL);
+    openGLContext.extensions.glVertexAttribPointer (0, 3, juce::gl::GL_FLOAT, juce::gl::GL_FALSE, 3 * sizeof (GLfloat), NULL);
     openGLContext.extensions.glEnableVertexAttribArray (0);
     
     
@@ -144,28 +140,19 @@ void OpenGLBackground::paint (juce::Graphics&)
 
 void OpenGLBackground::resized ()
 {
-    resolution_juce = {static_cast<GLfloat>(getWidth()),static_cast<GLfloat>(getHeight())};
-    displayScaleFactor_juce = static_cast<GLfloat>(juce::Desktop::getInstance().getDisplays().displays.getFirst().scale);
     DBG(displayScaleFactor_juce);
-    draggableOrientation.setViewport (getLocalBounds());
-    xyPad.setBounds(120, 59, 500, 500);
-    backgroundColor_juce = juce::Colour::fromString(ColorPallete::BG);
-    openGLStatusLabel.setBounds (getLocalBounds().reduced (4).removeFromTop (75));
+    // These bounds are not absolute but relativ to the patent component
+    auto xyPadBounds = juce::Rectangle<int>(120, 94, 500, 500);
     openGlTextureComponent.setBounds(getLocalBounds());
-    labels.attack.setBounds(50, 300, 70, 19);
-    labels.sharp.setBounds(347, 25, 70, 19);
-    labels.sustain.setBounds(636, 300, 70, 19);
-    labels.smooth.setBounds(340, 570, 70, 19);
-}
-
-void OpenGLBackground::mouseDown (const juce::MouseEvent& e)
-{
-    draggableOrientation.mouseDown (e.getPosition());
-}
-
-void OpenGLBackground::mouseDrag (const juce::MouseEvent& e)
-{
-    draggableOrientation.mouseDrag (e.getPosition());
+    xyPad.setBounds(xyPadBounds);
+    openGLStatusLabel.setBounds (getLocalBounds().reduced (4).removeFromTop (75));
+    backgroundColor_juce = juce::Colour::fromString(ColorPallete::BG);
+    displayScaleFactor_juce = static_cast<GLfloat>(juce::Desktop::getInstance().getDisplays().displays.getFirst().scale);
+    resolution_juce = {static_cast<GLfloat>(xyPadBounds.getWidth()),static_cast<GLfloat>(xyPadBounds.getHeight())};
+    labels.attack.setBounds(50, 335, 70, 19);
+    labels.sharp.setBounds(347, 60, 70, 19);
+    labels.sustain.setBounds(636, 335, 70, 19);
+    labels.smooth.setBounds(340, 605, 70, 19);
 }
 
 void OpenGLBackground::handleAsyncUpdate()
@@ -225,23 +212,15 @@ void OpenGLBackground::xyButtonMoved(float x, float y, int modelID) {
     x = x + 0.05f;
     if (modelID == 1)
     {
-        if (x >= 0.15f && x <= 0.9f) knobPos1_juce.xPosition = x;
-        else if (x < 0.15f) knobPos1_juce.xPosition = 0.15f;
-        else knobPos1_juce.xPosition = 0.9f;
-        if (y >= 0.15f && y <= 0.9f) knobPos1_juce.yPosition = y;
-        else if (y < 0.15f) knobPos1_juce.yPosition = 0.15f;
-        else knobPos1_juce.yPosition = 0.9f;
-//        std::cout << knobPos1_juce.xPosition << ", " << knobPos1_juce.yPosition << std::endl;
+        knobPos1_juce.xPosition = x;
+        knobPos1_juce.yPosition = y;
+//        std::cout << "Knob Position 1: " << knobPos1_juce.xPosition << ", " << knobPos1_juce.yPosition << std::endl;
     }
     else if (modelID == 2)
     {
-        if (x >= 0.15f && x <= 0.9f) knobPos2_juce.xPosition = x;
-        else if (x < 0.15f) knobPos2_juce.xPosition = 0.15f;
-        else knobPos2_juce.xPosition = 0.9f;
-        if (y >= 0.15f && y <= 0.9f) knobPos2_juce.yPosition = y;
-        else if (y < 0.15f) knobPos2_juce.yPosition = 0.15f;
-        else knobPos2_juce.yPosition = 0.9f;
-//        std::cout << knobPos2_juce.xPosition << ", " << knobPos2_juce.yPosition << std::endl;
+        knobPos2_juce.xPosition = x;
+        knobPos2_juce.yPosition = y;
+//        std::cout << "Knob Position 2: " << knobPos2_juce.xPosition << ", " << knobPos2_juce.yPosition << std::endl;
     }
 }
 

@@ -90,6 +90,8 @@ void XYPad::paint(juce::Graphics& g)
 	g.setColour(juce::Colour::fromString(ColorPallete::OCTAGON));
     int lineWidth = 3;
     octagon->drawWithin(g, getLocalBounds().reduced(lineWidth).toFloat(), juce::RectanglePlacement::centred, 1.0);
+    // for calibration
+//    g.fillAll(juce::Colour::fromRGBA(200, 200, 10, 80));
 }
 
 void XYPad::resized()
@@ -319,13 +321,13 @@ void XYPad::moveButton(XYKnob* knob, int knobNumber)
     }
 	else if (!xInside && yInside) {
         knob->setBounds(knob->getX(), (int) yPixel - knobButtonDiameter / 2, knobButtonDiameter, knobButtonDiameter);
-        if (knobNumber == 1) onButtonMove(x1Norm, y1Norm, 1);
-        else if (knobNumber == 2) onButtonMove(x2Norm, y2Norm, 2);
+        if (knobNumber == 1) onButtonMove(pixelToNormWidth(knob->getX() + knobButtonDiameter / 2), y1Norm, 1);
+        else if (knobNumber == 2) onButtonMove(pixelToNormWidth(knob->getX() + knobButtonDiameter / 2), y2Norm, 2);
     }
 	else if (xInside && !yInside){
         knob->setBounds((int) xPixel - knobButtonDiameter / 2, (int) knob->getY(), knobButtonDiameter, knobButtonDiameter);
-        if (knobNumber == 1) onButtonMove(x1Norm, y1Norm, 1);
-        else if (knobNumber == 2) onButtonMove(x2Norm, y2Norm, 2);
+        if (knobNumber == 1) onButtonMove(x1Norm, pixelToNormHeight(knob->getY() + knobButtonDiameter / 2), 1);
+        else if (knobNumber == 2) onButtonMove(x2Norm, pixelToNormHeight(knob->getY() + knobButtonDiameter / 2), 2);
     }
 	repaint();
 }
