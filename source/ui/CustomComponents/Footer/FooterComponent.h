@@ -12,7 +12,7 @@
 
 class FooterComponent : public juce::Component, juce::Timer {
 public:
-    FooterComponent::FooterComponent(AudioPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parameters);
+    FooterComponent(AudioPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parameters);
     ~FooterComponent();
 
     void resized() override;
