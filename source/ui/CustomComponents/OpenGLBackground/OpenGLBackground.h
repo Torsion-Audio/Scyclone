@@ -106,6 +106,8 @@ private:
     XYPad xyPad;
     KnobPos knobPos1_juce;
     KnobPos knobPos2_juce;
+    float sharpnesParamActive1_juce;
+    float sharpnesParamActive2_juce;
     float modelMix_juce;
     void xyButtonMoved(float x, float y, int modelID);
     void xyModelMixChanged(float modelMix);
