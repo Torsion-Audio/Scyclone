@@ -21,12 +21,6 @@ struct KnobPos {
     float yPosition;
 };
 
-struct Labels{
-    juce::Label sharp;
-    juce::Label attack;
-    juce::Label smooth;
-    juce::Label sustain;
-} ;
 
 /** A custom JUCE Component which renders using OpenGL. You can use this class
     as a template for any Component you want to create which renders OpenGL inside
@@ -61,6 +55,18 @@ public:
     void externalModelLoaded(int modelID, juce::String modelName) {
         xyPad.updateKnobName(modelID, modelName);
     }
+
+    XYPad* getXYPad();
+
+
+    struct Labels{
+        juce::Label sharp;
+        juce::Label attack;
+        juce::Label smooth;
+        juce::Label sustain;
+    } ;
+
+    Labels* getLabels() {   return &labels; };
 
 private:
     

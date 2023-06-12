@@ -4,10 +4,24 @@ juce_add_binary_data(BinaryData SOURCES
 
         pictures/Gradient.png
         pictures/Gradient_OpenGL.png
+	pictures/social_preview.png
 
         fonts/Inter-Bold.ttf
         fonts/Inter-Regular.ttf
         fonts/Inter-Medium.ttf
+	fonts/BaiJamjuree-Bold.ttf
+	fonts/BaiJamjuree-BoldItalic.ttf
+	fonts/BaiJamjuree-ExtraLight.ttf
+	fonts/BaiJamjuree-ExtraLightItalic.ttf	
+	fonts/BaiJamjuree-Italic.ttf
+	fonts/BaiJamjuree-Light.ttf
+	fonts/BaiJamjuree-LightItalic.ttf
+	fonts/BaiJamjuree-Medium.ttf
+	fonts/BaiJamjuree-MediumItalic.ttf
+	fonts/BaiJamjuree-Regular.ttf
+	fonts/BaiJamjuree-SemiBold.ttf
+	fonts/BaiJamjuree-SemiBoldItalic.ttf
+	
 
         svg/ui_background.svg
         svg/Octagon.svg

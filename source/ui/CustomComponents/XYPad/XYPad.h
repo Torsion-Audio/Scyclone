@@ -12,7 +12,7 @@ class XYPad : public juce::Component, public juce::Timer, private juce::AudioPro
 private:
 
 public:
-    explicit XYPad(juce::AudioProcessorValueTreeState& parameters, AudioPluginAudioProcessor& p);
+    XYPad(juce::AudioProcessorValueTreeState& parameters, AudioPluginAudioProcessor& p);
 	~XYPad() override;
 
 	void paint(juce::Graphics& g) override;
@@ -29,13 +29,10 @@ public:
     void mouseEnter(const juce::MouseEvent& e) override;
     void mouseExit(const juce::MouseEvent&) override;
 
-
     void connectParameters(juce::RangedAudioParameter& x1,
 						   juce::RangedAudioParameter& y1, 
 						   juce::RangedAudioParameter& x2, 
 						   juce::RangedAudioParameter& y2);
-
-
 
 	float pixelToNormWidth(int pixelValue);
 	float pixelToNormHeight(int pixelValue);
@@ -65,6 +62,7 @@ public:
 
     const int knobButtonNeutralDiameter = 108;
 
+    juce::Component** getTooltipPointers();
 private:
 
 	juce::AudioProcessorValueTreeState& parameters;
@@ -95,14 +93,6 @@ private:
     const juce::String network1Name;
     const juce::String network2Name;
 
-    /*
-	std::unique_ptr<juce::ParameterAttachment> knob1Button1Attachment;
-	std::unique_ptr<juce::ParameterAttachment> knob1Button2Attachment;
-	std::unique_ptr<juce::ParameterAttachment> knob1Button3Attachment;
-	std::unique_ptr<juce::ParameterAttachment> knob2Button1Attachment;
-	std::unique_ptr<juce::ParameterAttachment> knob2Button2Attachment;
-	std::unique_ptr<juce::ParameterAttachment> knob2Button3Attachment;
-    */
 	enum KnobOnDrag { noKnobOnDrag, knob1OnDrag, knob2OnDrag};
     int knobOnDrag{};
     enum KnobOnHover { noKnobOnHover, knob1OnHover, knob2OnHover};
@@ -110,10 +100,11 @@ private:
 
 	enum Quadrant {upLeft, upRight, downLeft, downRight};
 
-
     void setArrowAndButtonsVisible(bool newState, int buttonNumber);
     int timerCounter = 0;
 
     std::unique_ptr<juce::ComponentAnimator> componentAnimator;
+
+    juce::Component* componentArray[8];
 };
 

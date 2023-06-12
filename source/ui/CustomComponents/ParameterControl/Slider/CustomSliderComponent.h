@@ -20,6 +20,8 @@ public:
     void setCustomColour(CustomSliderColourID colourId, juce::Colour colour);
     void setDoubleClickReturnValue(double valueToSetOnDoubleClick);
 
+    juce::Component** getSliderComponents()  {   return componentArray;  };
+
 private:
     void sliderChanged();
     void openManualValueBox ();
@@ -33,10 +35,10 @@ private:
 
     CustomSliderType sliderType;
 
-    juce::Label titelLabel;
+    juce::Label titleLabel;
     CustomLabel valueLabel;
-
     CustomSlider slider;
+    juce::Component* componentArray[3];
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
     std::unique_ptr<juce::RangedAudioParameter*> parameter;

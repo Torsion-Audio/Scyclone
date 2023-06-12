@@ -39,7 +39,6 @@ XYPad::XYPad(juce::AudioProcessorValueTreeState& parameters, AudioPluginAudioPro
     network2GrainButton.setComponentID("network2GrainButton");
     network2OnOffButton.setComponentID("network2OnOffButton");
 
-
     addAndMakeVisible(knob1);
     addAndMakeVisible(arrow1);
     addAndMakeVisible(network1SelectButton);
@@ -61,14 +60,23 @@ XYPad::XYPad(juce::AudioProcessorValueTreeState& parameters, AudioPluginAudioPro
     auto y2 = parameters.getParameter(PluginParameters::FILTER_NETWORK2_ID.getParamID());
     connectParameters(*x1, *y1, *x2, *y2);
 
-    processor.onNetwork1NameChange = [this](juce::String newName){knob1.setName(newName);};
-    processor.onNetwork2NameChange = [this](juce::String newName){knob2.setName(newName);};
+    processor.onNetwork1NameChange = [this](juce::String newName){  knob1.setName(newName); };
+    processor.onNetwork2NameChange = [this](juce::String newName){  knob2.setName(newName); };
 
     componentAnimator = std::make_unique<juce::ComponentAnimator>();
     juce::String n1Name = processor.network1Name.toString();
     knob1.setName(n1Name);
     juce::String n2Name = processor.network2Name.toString();
     knob2.setName(n2Name);
+
+    componentArray[0] = knob1.getLabel();
+    componentArray[1] = &network1SelectButton;
+    componentArray[2] = &network1GrainButton;
+    componentArray[3] = &network1OnOffButton;
+    componentArray[4] = knob2.getLabel();
+    componentArray[5] = &network2SelectButton;
+    componentArray[6] = &network2GrainButton;
+    componentArray[7] = &network2OnOffButton;
 }
 
 XYPad::~XYPad() {
@@ -99,16 +107,6 @@ void XYPad::parameterChanged(const juce::String& parameterID, float newValue)
     } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && newValue == 0.f) {
         updateKnobName(2, network2Name);
     }
-    
-    /*
-    int newDiameter1 = calcCurrentButtonDiameters(1);
-    int newDiameter2 = calcCurrentButtonDiameters(2);
-
-    if (parameterID == PluginParameters::FADE_ID.getParamID()){
-        setKnobButtonDiameter(newDiameter1, 1);
-        setKnobButtonDiameter(newDiameter2, 2);
-    }
-     */
 
     if (parameterID == PluginParameters::FADE_ID.getParamID()){
         float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load();
@@ -476,26 +474,6 @@ void XYPad::connectParameters(juce::RangedAudioParameter& x1,
 
 void XYPad::setKnobButtonDiameter(int newDiameter, int buttonNumber) {
    juce::ignoreUnused(newDiameter);
-   if (buttonNumber == 1){
-       //knobButton1Diameter = newDiameter;
-       /*
-       if (shouldKnobBeMuted(buttonNumber))
-           knob1.setVisible(false);
-       else
-           knob1.setVisible(true);
-           */
-   }
-   else if (buttonNumber == 2){
-       //knobButton2Diameter = newDiameter;
-       /*
-
-       if (shouldKnobBeMuted(2))
-           knob2.setVisible(false);
-       else
-           knob2.setVisible(true);
-           */
-
-   }
    moveButton(&knob1, 1);
    moveButton(&knob2, 2);
 }
@@ -503,14 +481,12 @@ void XYPad::setKnobButtonDiameter(int newDiameter, int buttonNumber) {
 int XYPad::calcCurrentButtonDiameters(int buttonNumber) {
     float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load();
 
-
     if (buttonNumber == 1)
         return int((float)knobButtonNeutralDiameter + (fadeValue * 100 / 2));
     else if (buttonNumber ==2)
         return int((float)knobButtonNeutralDiameter - (fadeValue * 100 / 2));
     else
         return knobButtonNeutralDiameter;
-
 }
 
 
@@ -518,13 +494,14 @@ int XYPad::calcCurrentButtonDiameters(int buttonNumber) {
 bool XYPad::shouldKnobBeMuted(int knobNumber) {
     float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load();
 
-
-    //int buttonToBeMuted = 0;
     if ((knobNumber == 1 && fadeValue == -1.0) || (knobNumber == 2 && fadeValue == 1.0))
         return true;
     else
         return false;
+}
 
+juce::Component** XYPad::getTooltipPointers() {
+    return componentArray;
 }
 
 

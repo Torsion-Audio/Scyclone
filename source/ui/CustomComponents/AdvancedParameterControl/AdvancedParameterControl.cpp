@@ -55,6 +55,23 @@ AdvancedParameterControl::AdvancedParameterControl(juce::AudioProcessorValueTree
             sliders[i]->setCustomColour(CustomSliderColourID::gradientColourBottomId, juce::Colour{0xffFD8263});
         }
     }
+
+    componentArray[0] = *transientSplitter1.getSliderComponents();
+    componentArray[1] = *transientSplitter2.getSliderComponents();
+    componentArray[2] = *raveFade.getSliderComponents();
+    componentArray[3] = *compThreshold.getSliderComponents();
+    componentArray[4] = *compRatio.getSliderComponents();
+    componentArray[5] = *compMakeup.getSliderComponents();
+    componentArray[6] = *compMix.getSliderComponents();
+    componentArray[7] = *masterMixParam.getSliderComponents();
+    componentArray[8] = *grainDelay1Param1.getSliderComponents();
+    componentArray[9] = *grainDelay1Param2.getSliderComponents();
+    componentArray[10] = *grainDelay1Param3.getSliderComponents();
+    componentArray[11] = *grainDelay1Param4.getSliderComponents();
+    componentArray[12] = *grainDelay2Param1.getSliderComponents();
+    componentArray[13] = *grainDelay2Param2.getSliderComponents();
+    componentArray[14] = *grainDelay2Param3.getSliderComponents();
+    componentArray[15] = *grainDelay2Param4.getSliderComponents();
 }
 
 AdvancedParameterControl::~AdvancedParameterControl()

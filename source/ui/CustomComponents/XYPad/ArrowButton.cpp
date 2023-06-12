@@ -4,11 +4,9 @@ ArrowButtons::ArrowButtons(int type, juce::RangedAudioParameter& param):
                                                                         buttonType(type),
                                                                         juce::DrawableButton("Test", juce::DrawableButton::ButtonStyle::ImageStretched),
                                                                         buttonAttachment(param, *this, nullptr)
-
 {
 	setToggleable(true);
 	setClickingTogglesState(true);
-
 
 	knobButton1_normal = juce::Drawable::createFromImageData(BinaryData::knobButton1normal_svg, BinaryData::knobButton1normal_svgSize);
 	knobButton1_over = juce::Drawable::createFromImageData(BinaryData::knobButton1over_svg, BinaryData::knobButton1over_svgSize);
@@ -50,7 +48,6 @@ ArrowButtons::ArrowButtons(int type, juce::RangedAudioParameter& param):
 	default:
 		break;
 	}
-    //buttonAttachment.sendInitialUpdate();
 }
 ArrowButtons::~ArrowButtons()
 = default;

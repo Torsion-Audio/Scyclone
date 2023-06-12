@@ -17,12 +17,23 @@ ParameterControl::ParameterControl(juce::AudioProcessorValueTreeState &parameter
 
     addAndMakeVisible(mixSlider);
     mixSlider.addSliderAttachment(parameters, PluginParameters::DRY_WET_ID.getParamID());
-    //mixSlider.setCustomColour(CustomSliderColourID::gradientColourTopId, juce::Colour {0xffF6EFE8});
-    //mixSlider.setCustomColour(CustomSliderColourID::gradientColourBottomId, juce::Colour {0xff00467F} );
     mixSlider.setDoubleClickReturnValue(10.0);
 
     parameterChanged(PluginParameters::ON_OFF_NETWORK1_ID.getParamID(), parameters.getParameterAsValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID()).getValue());
     parameterChanged(PluginParameters::ON_OFF_NETWORK2_ID.getParamID(), parameters.getParameterAsValue(PluginParameters::ON_OFF_NETWORK2_ID.getParamID()).getValue());
+
+    componentArray[0] = fadeSlider.getSliderComponents()[0];
+    componentArray[1] = fadeSlider.getSliderComponents()[1];
+    componentArray[2] = fadeSlider.getSliderComponents()[2];
+
+    componentArray[3] = dynamicSlider.getSliderComponents()[0];
+    componentArray[4] = dynamicSlider.getSliderComponents()[1];
+    componentArray[5] = dynamicSlider.getSliderComponents()[2];
+
+    componentArray[6] = mixSlider.getSliderComponents()[0];
+    componentArray[7] = mixSlider.getSliderComponents()[1];
+    componentArray[8] = mixSlider.getSliderComponents()[2];
+
 }
 
 void ParameterControl::resized() {
@@ -62,4 +73,8 @@ void ParameterControl::handleNetworkEnablementChange() {
         fadeSlider.setCustomColour(CustomSliderColourID::gradientColourTopId, juce::Colours::grey);
         fadeSlider.setCustomColour(CustomSliderColourID::gradientColourBottomId, juce::Colours::grey);
     }
+}
+
+juce::Component** ParameterControl::getTooltipPointers() {
+    return componentArray;
 }

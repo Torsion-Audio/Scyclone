@@ -6,7 +6,6 @@ Arrow::Arrow(const juce::AudioProcessorValueTreeState& , int)
 	arrowUpRight = juce::Drawable::createFromImageData(BinaryData::arrowUpRight_svg, BinaryData::arrowUpRight_svgSize);
 	arrowDownLeft = juce::Drawable::createFromImageData(BinaryData::arrowDownLeft_svg, BinaryData::arrowDownLeft_svgSize);
 	arrowDownRight = juce::Drawable::createFromImageData(BinaryData::arrowDownRight_svg, BinaryData::arrowDownRight_svgSize);
-
 }
 
 Arrow::~Arrow()

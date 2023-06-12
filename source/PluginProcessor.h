@@ -73,6 +73,7 @@ public:
         if (id == 2) onnxProcessor2.loadExternalModel(path);
     }
 
+    float getCpuLoad();
 private:
     void parameterChanged (const juce::String& parameterID, float newValue) override;
     static void stereoToMono(juce::AudioBuffer<float>& targetMonoBlock, juce::AudioBuffer<float>& sourceBlock);
@@ -116,6 +117,11 @@ private:
 
     GrainDelay grainDelay1;
     GrainDelay grainDelay2;
+
+    float cpuLoad;
+    juce::AudioProcessLoadMeasurer measurer;
+
+    float latency;
 
     //==============================================================================
     JUCE_HEAVYWEIGHT_LEAK_DETECTOR (AudioPluginAudioProcessor)
