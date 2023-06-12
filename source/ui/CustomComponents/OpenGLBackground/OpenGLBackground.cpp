@@ -43,6 +43,11 @@ OpenGLBackground::OpenGLBackground(juce::AudioProcessorValueTreeState& parameter
     auto fadeStatus = fadeParam->getValue();
     fadeParam->setValueNotifyingHost(0.5f*fadeStatus);
     fadeParam->setValueNotifyingHost(fadeStatus);
+
+    labels.sustain.setComponentID("sustain");
+    labels.sharp.setComponentID("sharp");
+    labels.smooth.setComponentID("smooth");
+    labels.attack.setComponentID("attack");
 }
 
 OpenGLBackground::~OpenGLBackground()
@@ -143,14 +148,14 @@ void OpenGLBackground::resized ()
     displayScaleFactor_juce = static_cast<GLfloat>(juce::Desktop::getInstance().getDisplays().displays.getFirst().scale);
     DBG(displayScaleFactor_juce);
     draggableOrientation.setViewport (getLocalBounds());
-    xyPad.setBounds(120, 94, 500, 500);
+    xyPad.setBounds(120, 59, 500, 500);
     backgroundColor_juce = juce::Colour::fromString(ColorPallete::BG);
     openGLStatusLabel.setBounds (getLocalBounds().reduced (4).removeFromTop (75));
     openGlTextureComponent.setBounds(getLocalBounds());
-    labels.attack.setBounds(50, 335, 70, 19);
-    labels.sharp.setBounds(347, 60, 70, 19);
-    labels.sustain.setBounds(636, 335, 70, 19);
-    labels.smooth.setBounds(340, 605, 70, 19);
+    labels.attack.setBounds(50, 300, 70, 19);
+    labels.sharp.setBounds(347, 25, 70, 19);
+    labels.sustain.setBounds(636, 300, 70, 19);
+    labels.smooth.setBounds(340, 570, 70, 19);
 }
 
 void OpenGLBackground::mouseDown (const juce::MouseEvent& e)
@@ -288,4 +293,8 @@ void OpenGLBackground::setSharpnessParamActive(bool active, int modelID){
     }
 
     juce::ignoreUnused(sharpnesParamActive1_juce, sharpnesParamActive2_juce);
+}
+
+XYPad* OpenGLBackground::getXYPad() {
+    return &xyPad;
 }

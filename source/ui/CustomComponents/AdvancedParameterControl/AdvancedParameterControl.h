@@ -20,6 +20,8 @@ public:
     void resized() override;
     void paint(juce::Graphics &g) override;
 
+    juce::Component** getTooltipPointers() {    return componentArray; };
+
 private:
     // Sliders
     CustomSliderComponent transientSplitter1{"Split 1"}; //ms
@@ -57,6 +59,8 @@ private:
                                          &grainDelay2Param2,
                                          &grainDelay2Param3,
                                          &grainDelay2Param4};
+
+    juce::Component* componentArray[16];
     int numberOfSliders = 16;
 
     // Geometry

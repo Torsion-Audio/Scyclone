@@ -18,12 +18,16 @@ public:
     void parameterChanged(const juce::String &parameterID, float newValue);
     void handleNetworkEnablementChange();
 
+    juce::Component** getTooltipPointers();
+
 private:
     CustomSliderComponent fadeSlider {"Fade", crossfade};
     CustomSliderComponent dynamicSlider {"Dynamic"};
     CustomSliderComponent mixSlider {"Mix"};
 
     juce::AudioProcessorValueTreeState& parameters;
+
+    juce::Component* componentArray[9];
 };
 
 

@@ -1,8 +1,7 @@
 #include "XYKnob.h"
 
-XYKnob::XYKnob(const juce::AudioProcessorValueTreeState& , int idx, Arrow& a, ArrowButtons& b1, ArrowButtons& b2, ArrowButtons& b3) : index(idx)
+XYKnob::XYKnob(const juce::AudioProcessorValueTreeState&, int idx, Arrow& a, ArrowButtons& b1, ArrowButtons& b2, ArrowButtons& b3) : index(idx)
 {
-    addMouseListener(this, true);
     juce::ignoreUnused(index);
 
 	ownedArrow = &a;
@@ -15,16 +14,11 @@ XYKnob::XYKnob(const juce::AudioProcessorValueTreeState& , int idx, Arrow& a, Ar
     nameLabel.setFont(CustomFontLookAndFeel::getCustomFontBold().withHeight(16));
 
 	if (idx == 1)
-	{
-		//nameLabel.setText("Voice", juce::dontSendNotification);
 		nameLabel.setComponentID("nameLabel1");
-	}
 	else if (idx == 2)
-	{
-		//nameLabel.setText("Acid", juce::dontSendNotification);
 		nameLabel.setComponentID("nameLabel2");
-	}
     addAndMakeVisible(nameLabel);
+    addMouseListener(this, true);
 }
 
 XYKnob::~XYKnob()
@@ -39,8 +33,6 @@ void XYKnob::paint(juce::Graphics& g)
         g.setColour(juce::Colours::aquamarine);
         g.drawEllipse(1.f, 1.f, (float) getWidth() - 2.f, (float) getHeight() - 2.f, 2.f);
     }
-
-    scycloneLogo->drawWithin(g, getLocalBounds().toFloat(), juce::RectanglePlacement::centred, 0);
 }
 void XYKnob::resized()
 {
@@ -84,22 +76,7 @@ void XYKnob::mouseUp(const juce::MouseEvent &)
     isMouseDown = false;
     repaint();
 }
-/*
-void XYKnob::connectXtoParameter(juce::RangedAudioParameter& p)
-{
-	xAttachment = std::make_unique<juce::ParameterAttachment>(p, [this](float newValue)
-		{
 
-		});
-	xAttachment->sendInitialUpdate();
+void XYKnob::mouseEnter(const juce::MouseEvent &event) {
+    //std::cout << "Knob enter\n";
 }
-
-void XYKnob::connectYtoParameter(juce::RangedAudioParameter& p)
-{
-	yAttachment = std::make_unique<juce::ParameterAttachment>(p, [this](float newValue)
-		{
-
-		});
-	yAttachment->sendInitialUpdate();
-}
-*/

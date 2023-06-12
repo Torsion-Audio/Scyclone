@@ -18,16 +18,14 @@ public:
 	void setName(juce::String& name);
 
 	juce::String getLabelID();
+    juce::Label* getLabel() {   return &nameLabel;   };
 
 	Arrow* getOwnedArrow();
 	ArrowButtons* getOwnedArrowButtons();
 
     void mouseDown (const juce::MouseEvent &event) override;
     void mouseUp (const juce::MouseEvent &event) override;
-
-
-	//void connectXtoParameter(juce::RangedAudioParameter& p);
-	//void connectYtoParameter(juce::RangedAudioParameter& p);
+    void mouseEnter(const juce::MouseEvent & event) override;
 
 private:
 	int index;
@@ -38,21 +36,6 @@ private:
 	ArrowButtons* ownedArrowButton2;
 	ArrowButtons* ownedArrowButton3;
 
-    std::unique_ptr<juce::Drawable> scycloneLogo = juce::Drawable::createFromImageData(BinaryData::Logo_svg, BinaryData::Logo_svgSize);
-
-    /*
-	juce::Rectangle<float> knobSection;	
-	juce::Rectangle<float> arrowSection;
-	juce::Rectangle<float> knobButton1Section;
-	juce::Rectangle<float> knobButton2Section;
-	juce::Rectangle<float> knobButton3Section;
-	*/
-
 	juce::Label nameLabel;
-
-	/*
-	std::unique_ptr<juce::ParameterAttachment> xAttachment;
-	std::unique_ptr<juce::ParameterAttachment> yAttachment;
-	*/
 };
 

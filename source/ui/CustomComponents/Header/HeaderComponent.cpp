@@ -71,6 +71,10 @@ HeaderComponent::HeaderComponent(AudioPluginAudioProcessor &p, juce::AudioProces
 
     detailButton.setColour(juce::DrawableButton::ColourIds::backgroundOnColourId, juce::Colours::transparentBlack);
     this->setInterceptsMouseClicks(true, true);
+
+    componentArray[0] = inputGainSlider.getChildComponent(0);
+    componentArray[1] = outputGainSlider.getChildComponent(0);
+    componentArray[2] = &detailButton;
 }
 
 HeaderComponent::~HeaderComponent() {
@@ -88,10 +92,15 @@ void HeaderComponent::resized() {
     detailButton.setBounds(getWidth() - 80, 24, 35, 19);
     scycloneTypoSection.setBounds(49.f, 21.f, 127.f, 30.f);
     neuralTransferTypoSection.setBounds(197.f, 21.f, 121.f, 30.f);
+    scycloneLogoSection.setBounds((int)((float)(getWidth()/2 - 72.5)), 21.f, 145.f, 30.f);
 }
 
 void HeaderComponent::paint(juce::Graphics &g) {
-    //scycloneLogo1->drawAt(g, getWidth() - (int)((float)scycloneLogo1->getWidth())/2, 21, 100);
+    scycloneLogo->drawWithin(g, scycloneLogoSection, juce::RectanglePlacement::yBottom, 100);
     scycloneTypo->drawWithin(g, scycloneTypoSection, juce::RectanglePlacement::yBottom, 100);
     neuralTransferTypo->drawWithin(g, neuralTransferTypoSection, juce::RectanglePlacement::yBottom, 100);
+}
+
+juce::Component** HeaderComponent::getTooltipPointers() {
+    return componentArray;
 }

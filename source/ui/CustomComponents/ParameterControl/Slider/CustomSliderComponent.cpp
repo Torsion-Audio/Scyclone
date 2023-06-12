@@ -6,12 +6,13 @@
 
 CustomSliderComponent::CustomSliderComponent(juce::String sliderName, CustomSliderType type) : sliderType(type)
 {
+    setName("Custom Slider Component");
 
-    titelLabel.setJustificationType(juce::Justification::centred);
-    titelLabel.setFont(CustomFontLookAndFeel::getCustomFont());
-    titelLabel.setText(sliderName, juce::dontSendNotification);
-    titelLabel.setColour(juce::Label::ColourIds::textColourId, textColour);
-    addAndMakeVisible(titelLabel);
+    titleLabel.setJustificationType(juce::Justification::centred);
+    titleLabel.setFont(CustomFontLookAndFeel::getCustomFont());
+    titleLabel.setText(sliderName, juce::dontSendNotification);
+    titleLabel.setColour(juce::Label::ColourIds::textColourId, textColour);
+    addAndMakeVisible(titleLabel);
 
     if (type == normal)
         slider.setLookAndFeel(&customSliderLookAndFeel);
@@ -21,8 +22,8 @@ CustomSliderComponent::CustomSliderComponent(juce::String sliderName, CustomSlid
     slider.setSliderStyle(juce::Slider::SliderStyle::LinearBarVertical);
     slider.hideTextBox(true);
     slider.setTextBoxIsEditable(false);
-    slider.onValueChange = [this] {this->sliderChanged();};
-    slider.openManualValueBox = [this] {this->openManualValueBox();};
+    slider.onValueChange = [this] { this->sliderChanged();  };
+    slider.openManualValueBox = [this] {    this->openManualValueBox(); };
     addAndMakeVisible(slider);
 
     valueLabel.setJustificationType(juce::Justification::centred);
@@ -33,6 +34,11 @@ CustomSliderComponent::CustomSliderComponent(juce::String sliderName, CustomSlid
     };
     valueLabel.onTextChange = [this] { manuelValueBoxChanged(); };
     addAndMakeVisible(valueLabel);
+    valueLabel.addMouseListener(this, false);
+
+    componentArray[0] = slider.getChildComponent(0);
+    componentArray[1] = &titleLabel;
+    componentArray[2] = &valueLabel;
 }
 
 CustomSliderComponent::~CustomSliderComponent() {
@@ -93,7 +99,7 @@ void CustomSliderComponent::resized() {
     const int headerHeight = getHeight() / (int) fontSize + 10;
 
     valueLabel.setFont(valueLabel.getFont().withHeight(fontSizeLabel));
-    titelLabel.setFont(titelLabel.getFont().withHeight(fontSize));
+    titleLabel.setFont(titleLabel.getFont().withHeight(fontSize));
 
     const auto areaTitleLabel = area.removeFromTop(headerHeight);
 
@@ -103,9 +109,9 @@ void CustomSliderComponent::resized() {
     const auto areaSlider = sliderArea;
     const auto areaValueLabel = sliderArea.removeFromBottom(headerHeight);
 
-    titelLabel.setBounds(areaTitleLabel);
-    slider.setBounds(areaSlider);
+    titleLabel.setBounds(areaTitleLabel);
     valueLabel.setBounds(areaValueLabel);
+    slider.setBounds(areaSlider);
 }
 
 void CustomSliderComponent::setCustomColour(CustomSliderColourID colourId, juce::Colour colour) {

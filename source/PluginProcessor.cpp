@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <chrono>
+using namespace std::chrono;
 
 //==============================================================================
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
@@ -150,6 +152,7 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     audioVisualiser.prepare(monoSpec);
     grainDelay1.prepare(monoSpec);
     grainDelay2.prepare(monoSpec);
+    measurer.reset(sampleRate, samplesPerBlock);
 
     
     if (onnxProcessor1.getLatency() == onnxProcessor2.getLatency()) {
@@ -194,54 +197,62 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
 
 void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& ) {
-    dryWetMixer.setDrySamples(buffer);
-    stereoToMono(monoBuffer, buffer);
-    
-    processorGain.processInputBlock(monoBuffer);
+    juce::AudioProcessLoadMeasurer::ScopedTimer s(measurer);
+    {
 
-    network1Buffer.makeCopyOf(monoBuffer);
-    network2Buffer.makeCopyOf(monoBuffer);
+        dryWetMixer.setDrySamples(buffer);
+        stereoToMono(monoBuffer, buffer);
 
-    processorTransientSplitter1.processBlock(network1Buffer);
-    processorTransientSplitter2.processBlock(network2Buffer);
+        processorGain.processInputBlock(monoBuffer);
 
-    iirCutoffFilter1.processFilters(network1Buffer);
-    iirCutoffFilter2.processFilters(network2Buffer);
+        network1Buffer.makeCopyOf(monoBuffer);
+        network2Buffer.makeCopyOf(monoBuffer);
 
-    audioVisualiser.processSample(network1Buffer, network2Buffer);
+        processorTransientSplitter1.processBlock(network1Buffer);
+        processorTransientSplitter2.processBlock(network2Buffer);
 
-    onnxProcessor1.processBlock(network1Buffer);
-    onnxProcessor2.processBlock(network2Buffer);
+        iirCutoffFilter1.processFilters(network1Buffer);
+        iirCutoffFilter2.processFilters(network2Buffer);
 
-    levelAnalyser1.processBlock(network1Buffer);
-    levelAnalyser2.processBlock(network2Buffer);
+        audioVisualiser.processSample(network1Buffer, network2Buffer);
 
-    grain1DryBuffer.makeCopyOf(network1Buffer);
-    grain1DryWetMixer.setDrySamples(grain1DryBuffer);
-    grainDelay1.processBlock(network1Buffer);
-    grain1DryWetMixer.setWetSamples(network1Buffer);
+        onnxProcessor1.processBlock(network1Buffer);
+        onnxProcessor2.processBlock(network2Buffer);
 
-    grain2DryBuffer.makeCopyOf(network2Buffer);
-    grain2DryWetMixer.setDrySamples(grain2DryBuffer);
-    grainDelay2.processBlock(network2Buffer);
-    grain2DryWetMixer.setWetSamples(network2Buffer);
+        levelAnalyser1.processBlock(network1Buffer);
+        levelAnalyser2.processBlock(network2Buffer);
 
-    if (parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load() == 0.f)
-        network1Buffer.clear();
-    if (parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK2_ID.getParamID())->load() == 0.f)
-        network2Buffer.clear();
+        grain1DryBuffer.makeCopyOf(network1Buffer);
+        grain1DryWetMixer.setDrySamples(grain1DryBuffer);
+        grainDelay1.processBlock(network1Buffer);
+        grain1DryWetMixer.setWetSamples(network1Buffer);
 
-    monoBuffer.makeCopyOf(network1Buffer);
-    fadeMixer.setDrySamples(network2Buffer);
-    fadeMixer.setWetSamples(monoBuffer);
+        grain2DryBuffer.makeCopyOf(network2Buffer);
+        grain2DryWetMixer.setDrySamples(grain2DryBuffer);
+        grainDelay2.processBlock(network2Buffer);
+        grain2DryWetMixer.setWetSamples(network2Buffer);
 
-    compMixer.setDrySamples(monoBuffer);
-    processorCompressor.processBlock(monoBuffer);
-    compMixer.setWetSamples(monoBuffer);
+        if (parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load() == 0.f)
+            network1Buffer.clear();
+        if (parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK2_ID.getParamID())->load() == 0.f)
+            network2Buffer.clear();
 
-    processorGain.processOutputBlock(monoBuffer);
-    monoToStereo(buffer, monoBuffer);
-    dryWetMixer.setWetSamples(buffer);
+        monoBuffer.makeCopyOf(network1Buffer);
+        fadeMixer.setDrySamples(network2Buffer);
+        fadeMixer.setWetSamples(monoBuffer);
+
+        compMixer.setDrySamples(monoBuffer);
+        processorCompressor.processBlock(monoBuffer);
+        compMixer.setWetSamples(monoBuffer);
+
+        processorGain.processOutputBlock(monoBuffer);
+        monoToStereo(buffer, monoBuffer);
+        dryWetMixer.setWetSamples(buffer);
+    }
+    cpuLoad = measurer.getLoadAsPercentage();
+
+    // std::cout << "CPU: " << (int)(cpuLoad) << " %\n";
+    // std::cout << "latency: " << (latency*1000) << " ms\n";
 }
 
 juce::AudioVisualiserComponent &AudioPluginAudioProcessor::getAudioVisualiser1() {
@@ -371,6 +382,10 @@ void AudioPluginAudioProcessor::monoToStereo(juce::AudioBuffer<float> &targetSte
         juce::FloatVectorOperations::copy(lWrite, monoRead, nSamples);
         juce::FloatVectorOperations::copy(rWrite, monoRead, nSamples);
     }
+}
+
+float AudioPluginAudioProcessor::getCpuLoad() {
+    return cpuLoad;
 }
 
 //==============================================================================

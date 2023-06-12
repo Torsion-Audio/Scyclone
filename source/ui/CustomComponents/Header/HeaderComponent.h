@@ -24,6 +24,8 @@ public:
     juce::DrawableButton detailButton;
     std::function<void(bool newState)> onParameterControlViewChange;
 
+    juce::Component** getTooltipPointers();
+
 private:
     AudioPluginAudioProcessor& audioProcessor;
     juce::AudioProcessorValueTreeState& apvts;
@@ -36,7 +38,7 @@ private:
     std::unique_ptr<juce::Drawable> detailsButtonOff = juce::Drawable::createFromImageData (BinaryData::detailButtonOff_svg,
                                                                                       BinaryData::detailButtonOff_svgSize);
 
-    std::unique_ptr<juce::Drawable> scycloneLogo = juce::Drawable::createFromImageData(BinaryData::Logo_svg, BinaryData::Logo_svgSize);
+    std::unique_ptr<juce::Drawable> scycloneLogo = juce::Drawable::createFromImageData(BinaryData::social_preview_png, BinaryData::social_preview_pngSize);
     std::unique_ptr<juce::Drawable> scycloneTypo = juce::Drawable::createFromImageData(BinaryData::Scyclone_svg, BinaryData::Scyclone_svgSize);
     std::unique_ptr<juce::Drawable> neuralTransferTypo = juce::Drawable::createFromImageData(BinaryData::NeuralTransfer_svg, BinaryData::NeuralTransfer_svgSize);
 
@@ -57,6 +59,7 @@ private:
         juce::Label outputGainLabel;
     } labels;
 
+    juce::Component* componentArray[3];
 };
 
 #endif //VAESYNTH_HEADERCOMPONENT_H
