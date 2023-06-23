@@ -10,8 +10,11 @@ InferenceThread::InferenceThread(RaveModel raveModel) : juce::Thread("OnnxInfere
 }
 
 InferenceThread::~InferenceThread() {
-    session.release();
     stopThread(100);
+    while (isThreadRunning()) {
+        juce::Thread::sleep(1);
+    } 
+    session.release();
 }
 
 void InferenceThread::prepare(const juce::dsp::ProcessSpec &spec) {
@@ -114,10 +117,6 @@ void InferenceThread::loadExternalModel(juce::File modelPath) {
         }
     }
 
-    Ort::SessionOptions sessionOptions;
-
-
-
 #if JUCE_WINDOWS
     auto modelPathToLoad = modelPath.getFullPathName().toStdString();
     std::wstring modelWideStr = std::wstring(modelPathToLoad.begin(), modelPathToLoad.end());
@@ -127,6 +126,7 @@ void InferenceThread::loadExternalModel(juce::File modelPath) {
                        modelWideCStr,
                        sessionOptions);
 #else
+
     auto modelPathToLoad = modelPath.getFullPathName().toStdString();
     const char* modelCStr = modelPathToLoad.c_str();
 
@@ -156,8 +156,6 @@ void InferenceThread::loadInternalModel(RaveModel modelToLoad) {
             juce::Time::waitForMillisecondCounter(juce::Time::getMillisecondCounter() + 1);
         }
     }
-
-    Ort::SessionOptions sessionOptions;
 
     switch (modelToLoad) {
         default:

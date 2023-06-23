@@ -38,7 +38,7 @@ add_subdirectory(modules/JUCE)                    # If you've put JUCE in a subd
 # juce_set_aax_sdk_path(...)
 
 # `juce_add_plugin` adds a static library target with the name passed as the first argument
-# (VAESynth here). This target is a normal CMake target, but has a lot of extra properties set
+# (Scyclone here). This target is a normal CMake target, but has a lot of extra properties set
 # up by default. As well as this shared code static library, this function adds targets for each of
 # the formats specified by the FORMATS arguments. This function accepts many optional arguments.
 # Check the readme at `docs/CMake API.md` in the JUCE repo for the full list.
@@ -78,7 +78,7 @@ juce_add_plugin(${TARGET_NAME}
 juce_generate_juce_header(${TARGET_NAME})
 
 # Sets the cpp language minimum
-set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 17)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 20)
 set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(modules/RnboExport)
@@ -92,6 +92,7 @@ target_sources(${TARGET_NAME} PRIVATE ${SOURCES} ${RNBO_SOURCES})
 
 # Add include directories for all folders in the source
 file(GLOB_RECURSE source_dirs LIST_DIRECTORIES true ${CMAKE_CURRENT_LIST_DIR}/source/*)
+list(APPEND source_dirs ${CMAKE_CURRENT_LIST_DIR}/source)
 
 foreach (dir ${source_dirs})
     if (IS_DIRECTORY ${dir})
@@ -165,7 +166,7 @@ add_subdirectory(assets)
 # here too. This is a standard CMake command.
 
 target_link_libraries(${TARGET_NAME}
-		PRIVATE
+		PUBLIC
 		BinaryData
 		juce::juce_audio_utils
 		juce::juce_dsp
@@ -180,3 +181,94 @@ target_link_libraries(${TARGET_NAME}
 		juce::juce_recommended_lto_flags
 		juce::juce_recommended_warning_flags
 )
+
+# enable ctest
+enable_testing()
+
+
+# this is a test on application level starting the app and checking if it is running
+# add_test(NAME RegularUsage COMMAND "Scyclone_artefacts/Debug/Standalone/Scyclone.app/Contents/MacOS/Scyclone")
+# we can specify som REGEX to check the output of the application
+# set_tests_properties(RegularUsage
+#   PROPERTIES PASS_REGULAR_EXPRESSION "."
+#   )
+
+# get all test cpp and header files
+file(GLOB_RECURSE TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/test/*.h")
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test PREFIX "" FILES ${TestFiles})
+
+# This module enables populating content at configure time via any method supported by the ExternalProject module. Whereas ExternalProject_Add() downloads at build time, the FetchContent module makes content available immediately, allowing the configure step to use the content in commands like add_subdirectory(), include() or file() operations.
+include(FetchContent)
+
+# Externally provided libraries
+# Using zip files instead is faster
+FetchContent_Declare(googletest
+	URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip)
+
+FetchContent_Declare(benchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+    GIT_TAG v1.8.0)
+
+# This command ensures that each of the named dependencies are made available to the project by the time it returns. If the dependency has already been populated the command does nothing. Otherwise, the command populates the dependency and then calls add_subdirectory() on the result.
+FetchContent_MakeAvailable(googletest)
+
+# For benchmark we want to set the BENCMARK_ENABLE_TESTING to OFF therefore we cannot use FetchContent_MakeAvailable()
+# Check if population has already been performed
+FetchContent_GetProperties(benchmark)
+if(NOT benchmark_POPULATED)
+  # Fetch the content using previously declared details
+  FetchContent_Populate(benchmark)
+
+  # Set custom variables, policies, etc.
+  set(BENCHMARK_ENABLE_TESTING OFF)
+
+  # Bring the populated content into the build
+  add_subdirectory(${benchmark_SOURCE_DIR} ${benchmark_BINARY_DIR})
+endif()
+
+# Setup the test executable
+add_executable(tests ${TestFiles})
+set_property(TARGET tests PROPERTY CXX_STANDARD 20)
+
+# Our test executable also wants to know about our include directories
+foreach (dir ${source_dirs})
+    if (IS_DIRECTORY ${dir})
+        target_include_directories(tests PRIVATE ${dir})
+    endif ()
+endforeach ()
+
+# Link the test executable against gtest_main and google benchmark
+target_link_libraries(tests PRIVATE gtest_main benchmark::benchmark "${PROJECT_NAME}")
+
+# We can't link again to the shared juce target without ODL violations (https://github.com/sudara/pamplejuce)
+# However, we can steal its include dirs and compile definitions to use in tests!
+# Get the compile definitions from the main target
+get_target_property(compile_defs ${PROJECT_NAME} INTERFACE_COMPILE_DEFINITIONS)
+# Get the juce include directory (where the JuceHeader.h is located)
+get_target_property(juce_include_directory ${PROJECT_NAME} JUCE_GENERATED_SOURCES_DIRECTORY)
+
+# Set the compile definitions and include directories for the test executable
+target_compile_definitions(tests INTERFACE _compile_defs)
+target_include_directories(tests PRIVATE ${juce_include_directory})
+# Don't forget to include the other modules include directories
+target_include_directories(tests PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
+target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules/RnboExport/rnbo)
+target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules/RnboExport/rnbo/common)
+
+# Make an Xcode Scheme for the test executable so we can run tests in the IDE
+set_target_properties(tests PROPERTIES XCODE_GENERATE_SCHEME ON)
+
+# Organize the test source in the test/ folder in the IDE
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test PREFIX "" FILES ${TestFiles})
+
+# include Loads and runs CMake code from the file given. Loads and runs CMake code from the file given.
+include(GoogleTest)
+# gtest_discover_tests will register a CTest test for each gtest and run them all in parallel with the rest of the tests.
+gtest_discover_tests(tests)
+
+# Color our warnings and errors
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+   add_compile_options (-fdiagnostics-color=always)
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+   add_compile_options (-fcolor-diagnostics)
+endif ()
