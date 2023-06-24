@@ -2,6 +2,8 @@ name: Scyclone
 
 on:
   workflow_dispatch: # lets you run a build from github.com
+  push:
+    branches: [ develop]
 
 jobs:
   cmake-build:
