@@ -1,0 +1,13 @@
+name: Scyclone
+
+on:
+  workflow_dispatch: # lets you run a build from github.com
+
+jobs:
+  cmake-build:
+    name: CMake Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Test
+      run: echo "Hello World"
