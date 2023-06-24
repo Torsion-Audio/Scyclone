@@ -186,11 +186,11 @@ target_link_libraries(${TARGET_NAME}
 enable_testing()
 
 # this is a test on application level starting the app and checking if it is running
-add_test(NAME RegularUsage COMMAND "Scyclone_artefacts/Debug/Standalone/Scyclone.app/Contents/MacOS/Scyclone")
+# add_test(NAME RegularUsage COMMAND "Scyclone_artefacts/Debug/Standalone/Scyclone.app/Contents/MacOS/Scyclone")
 # we can specify som REGEX to check the output of the application
-set_tests_properties(RegularUsage
-  PROPERTIES FAIL_REGULAR_EXPRESSION "Custom Slider Component"
-  )
+# set_tests_properties(RegularUsage
+#   PROPERTIES FAIL_REGULAR_EXPRESSION "Custom Slider Component"
+#   )
 
 # get all test cpp and header files
 file(GLOB_RECURSE TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/test/*.h")

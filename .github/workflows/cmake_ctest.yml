@@ -3,7 +3,11 @@ name: Scyclone
 on:
   workflow_dispatch: # lets you run a build from github.com
   push:
-    branches: [ develop]
+    branches: [ develop ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
 
 jobs:
   cmake-build:
@@ -11,5 +15,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # The uses keyword tells the job to retrieve the action named actions/checkout. This is an action that checks out your repository and downloads it to the runner, allowing you to run actions against your code (such as testing tools). You must use the checkout action any time your workflow will run against the repository's code or you are using an action defined in the repository.
+    - uses: actions/checkout@v3
+
+    - name: Configure CMake
+    # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+    - name: Build
+      run: cmake --build build --config ${{ env.BUILD_TYPE }}
     - name: Test
-      run: echo "Hello World"
+      working-directory: ${{github.workspace}}/build
+      run: ctest --verbose
