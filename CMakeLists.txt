@@ -96,7 +96,7 @@ list(APPEND source_dirs ${CMAKE_CURRENT_LIST_DIR}/source)
 
 foreach (dir ${source_dirs})
     if (IS_DIRECTORY ${dir})
-        target_include_directories(${TARGET_NAME} PRIVATE ${dir})
+        target_include_directories(${TARGET_NAME} PUBLIC ${dir})
     endif ()
 endforeach ()
 
@@ -121,7 +121,7 @@ target_compile_definitions(${TARGET_NAME}
 		DONT_SET_USING_JUCE_NAMESPACE=1
 		)
 
-target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
+target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
 
 # Add the onnxruntime library
 add_library(onnxruntime STATIC IMPORTED)
@@ -185,13 +185,12 @@ target_link_libraries(${TARGET_NAME}
 # enable ctest
 enable_testing()
 
-
 # this is a test on application level starting the app and checking if it is running
-# add_test(NAME RegularUsage COMMAND "Scyclone_artefacts/Debug/Standalone/Scyclone.app/Contents/MacOS/Scyclone")
+add_test(NAME RegularUsage COMMAND "Scyclone_artefacts/Debug/Standalone/Scyclone.app/Contents/MacOS/Scyclone")
 # we can specify som REGEX to check the output of the application
-# set_tests_properties(RegularUsage
-#   PROPERTIES PASS_REGULAR_EXPRESSION "."
-#   )
+set_tests_properties(RegularUsage
+  PROPERTIES FAIL_REGULAR_EXPRESSION "Custom Slider Component"
+  )
 
 # get all test cpp and header files
 file(GLOB_RECURSE TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/test/*.h")
@@ -227,44 +226,37 @@ if(NOT benchmark_POPULATED)
 endif()
 
 # Setup the test executable
-add_executable(tests ${TestFiles})
-set_property(TARGET tests PROPERTY CXX_STANDARD 20)
-
-# Our test executable also wants to know about our include directories
-foreach (dir ${source_dirs})
-    if (IS_DIRECTORY ${dir})
-        target_include_directories(tests PRIVATE ${dir})
-    endif ()
-endforeach ()
+add_executable(Test ${TestFiles})
+set_property(TARGET Test PROPERTY CXX_STANDARD 20)
 
 # Link the test executable against gtest_main and google benchmark
-target_link_libraries(tests PRIVATE gtest_main benchmark::benchmark "${PROJECT_NAME}")
+target_link_libraries(Test PRIVATE gtest_main benchmark::benchmark "${PROJECT_NAME}")
 
 # We can't link again to the shared juce target without ODL violations (https://github.com/sudara/pamplejuce)
-# However, we can steal its include dirs and compile definitions to use in tests!
+# However, we can steal its include dirs and compile definitions to use in Test!
 # Get the compile definitions from the main target
 get_target_property(compile_defs ${PROJECT_NAME} INTERFACE_COMPILE_DEFINITIONS)
+# Get the interface include directories from the main target, these are the include directories that have been added to the main target using target_include_directories with the INTERFACE or PUBLIC option
+get_target_property(include_directories ${PROJECT_NAME} INTERFACE_INCLUDE_DIRECTORIES)
 # Get the juce include directory (where the JuceHeader.h is located)
 get_target_property(juce_include_directory ${PROJECT_NAME} JUCE_GENERATED_SOURCES_DIRECTORY)
 
-# Set the compile definitions and include directories for the test executable
-target_compile_definitions(tests INTERFACE _compile_defs)
-target_include_directories(tests PRIVATE ${juce_include_directory})
-# Don't forget to include the other modules include directories
-target_include_directories(tests PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
-target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules/RnboExport/rnbo)
-target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules/RnboExport/rnbo/common)
+# Set the compile definitions for the test executable
+target_compile_definitions(Test PRIVATE compile_defs)
+# Set all the include directories from the main target and add them to the test executable as PRIVATE includes since INTERFACE will only be added to the interface include directory and therfore not found by the test executable
+target_include_directories(Test PRIVATE include_directories)
+target_include_directories(Test PRIVATE ${juce_include_directory})
 
-# Make an Xcode Scheme for the test executable so we can run tests in the IDE
-set_target_properties(tests PROPERTIES XCODE_GENERATE_SCHEME ON)
+# Make an Xcode Scheme for the test executable so we can run Test in the IDE
+set_target_properties(Test PROPERTIES XCODE_GENERATE_SCHEME ON)
 
 # Organize the test source in the test/ folder in the IDE
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test PREFIX "" FILES ${TestFiles})
 
 # include Loads and runs CMake code from the file given. Loads and runs CMake code from the file given.
 include(GoogleTest)
-# gtest_discover_tests will register a CTest test for each gtest and run them all in parallel with the rest of the tests.
-gtest_discover_tests(tests)
+# gtest_discover_tests will register a CTest test for each gtest and run them all in parallel with the rest of the Test.
+gtest_discover_tests(Test)
 
 # Color our warnings and errors
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
