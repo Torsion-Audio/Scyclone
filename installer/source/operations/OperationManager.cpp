@@ -69,7 +69,11 @@ void OperationManager::repoInspectorFinished(bool status) {
     auto [downloadVersion, downloadUrl] = repoInspector.getLatestVersion();
 
     if (status && !downloadUrl.isEmpty()) {
-        juce::String downloadFileName = juce::String{"Scyclone-"} + downloadVersion + juce::String{".zip"};
+        #if JUCE_MAC
+            juce::String downloadFileName = juce::String{"Scyclone-"} + downloadVersion + juce::String{".dmg"};
+        #else
+            juce::String downloadFileName = juce::String{"Scyclone-"} + downloadVersion + juce::String{".zip"};
+        #endif
         juce::File targetFile = juce::File::getSpecialLocation(juce::File::SpecialLocationType::tempDirectory).getChildFile(downloadFileName);
         auto folderName = targetFile.getFileNameWithoutExtension();
         juce::File targetDirectory = targetFile.getParentDirectory().getChildFile(folderName);

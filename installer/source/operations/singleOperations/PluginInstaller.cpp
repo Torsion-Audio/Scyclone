@@ -39,13 +39,23 @@ void PluginInstaller::reset() {
 void PluginInstaller::copyFiles() {
     for (const auto& entry : source.findChildFiles(juce::File::findFiles, true))
     {
-        if (entry.getFileExtension() == ".exe" && standaloneTarget != nullptr) {
+        std::cout << entry.getFileName() << std::endl;
+        if (JUCE_MAC) {
+            if (entry.getFileExtension() == ".app" && standaloneTarget != nullptr) {
             auto targetFile = standaloneTarget->getChildFile(entry.getFileName());
             entry.copyFileTo(targetFile);
-        } else if (entry.getFileExtension() == ".vst3" && vst3Target != nullptr) {
+            }
+        }
+        else {
+            if (entry.getFileExtension() == ".exe" && standaloneTarget != nullptr) {
+                auto targetFile = standaloneTarget->getChildFile(entry.getFileName());
+                entry.copyFileTo(targetFile);
+            }
+        } 
+        if (entry.getFileExtension() == ".vst3" && vst3Target != nullptr) {
             auto targetFile = vst3Target->getChildFile(entry.getFileName());
             entry.copyFileTo(targetFile);
-        } else if (entry.getFileExtension() == ".au" && auTarget != nullptr) {
+        } else if (entry.getFileExtension() == ".component" && auTarget != nullptr) {
             auto targetFile = auTarget->getChildFile(entry.getFileName());
             entry.copyFileTo(targetFile);
         }
