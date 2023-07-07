@@ -182,6 +182,8 @@ target_link_libraries(${TARGET_NAME}
 		juce::juce_recommended_warning_flags
 )
 
+add_subdirectory(installer)
+
 # enable ctest
 enable_testing()
 
