@@ -81,6 +81,11 @@ juce_generate_juce_header(${TARGET_NAME})
 set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 20)
 set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
+# Export only public symbols
+# We set this option for all our libraries since the onnxruntime lib and the google benchmark lib are setup with hidden visibility this otherwise we get linker warnings that say ... means the weak symbol cannot be overridden at runtime. This was likely caused by different translation units being compiled with different visibility settings
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+
 add_subdirectory(modules/RnboExport)
 
 # Add all source files to file list
@@ -95,10 +100,12 @@ file(GLOB_RECURSE source_dirs LIST_DIRECTORIES true ${CMAKE_CURRENT_LIST_DIR}/so
 list(APPEND source_dirs ${CMAKE_CURRENT_LIST_DIR}/source)
 
 foreach (dir ${source_dirs})
-    if (IS_DIRECTORY ${dir})
-        target_include_directories(${TARGET_NAME} PUBLIC ${dir})
+if (IS_DIRECTORY ${dir})
+        target_include_directories(${TARGET_NAME} PRIVATE ${dir})
     endif ()
 endforeach ()
+
+target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
 
 # Make the folder structure visible in the IDE
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/source PREFIX "source" FILES ${SOURCES})
@@ -112,7 +119,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/modules PREFIX "modules" FILES ${R
 # definitions, pick unique names that are unlikely to collide! This is a standard CMake command.
 
 target_compile_definitions(${TARGET_NAME}
-		PUBLIC
+		PRIVATE
 		# JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
 		JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
 		JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
@@ -120,8 +127,6 @@ target_compile_definitions(${TARGET_NAME}
 		JUCE_DISPLAY_SPLASH_SCREEN=1
 		DONT_SET_USING_JUCE_NAMESPACE=1
 		)
-
-target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
 
 # Add the onnxruntime library
 add_library(onnxruntime STATIC IMPORTED)
@@ -132,6 +137,7 @@ if (APPLE)
 		set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-osx-x64.a)
 	elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
 		set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-osx-arm64.a)
+		set_property(TARGET onnxruntime PROPERTY CXX_VISIBILITY_PRESET default)
 	else()
 		message(FATAL_ERROR "CMAKE_HOST_SYSTEM_PROCESSOR not defined.")
 	endif()
@@ -166,7 +172,7 @@ add_subdirectory(assets)
 # here too. This is a standard CMake command.
 
 target_link_libraries(${TARGET_NAME}
-		PUBLIC
+		PRIVATE
 		BinaryData
 		juce::juce_audio_utils
 		juce::juce_dsp
@@ -232,22 +238,13 @@ add_executable(Test ${TestFiles})
 set_property(TARGET Test PROPERTY CXX_STANDARD 20)
 
 # Link the test executable against gtest_main and google benchmark
-target_link_libraries(Test PRIVATE gtest_main benchmark::benchmark "${PROJECT_NAME}")
+target_link_libraries(Test PRIVATE gtest_main benchmark::benchmark "${TARGET_NAME}")
 
-# We can't link again to the shared juce target without ODL violations (https://github.com/sudara/pamplejuce)
-# However, we can steal its include dirs and compile definitions to use in Test!
-# Get the compile definitions from the main target
-get_target_property(compile_defs ${PROJECT_NAME} INTERFACE_COMPILE_DEFINITIONS)
-# Get the interface include directories from the main target, these are the include directories that have been added to the main target using target_include_directories with the INTERFACE or PUBLIC option
-get_target_property(include_directories ${PROJECT_NAME} INTERFACE_INCLUDE_DIRECTORIES)
-# Get the juce include directory (where the JuceHeader.h is located)
-get_target_property(juce_include_directory ${PROJECT_NAME} JUCE_GENERATED_SOURCES_DIRECTORY)
-
-# Set the compile definitions for the test executable
-target_compile_definitions(Test PRIVATE compile_defs)
-# Set all the include directories from the main target and add them to the test executable as PRIVATE includes since INTERFACE will only be added to the interface include directory and therfore not found by the test executable
-target_include_directories(Test PRIVATE include_directories)
-target_include_directories(Test PRIVATE ${juce_include_directory})
+# We can't link again to the shared juce target without ODL violations (https://github.com/sudara/pamplejuce/issues/31, https://forum.juce.com/t/windows-linker-issue-on-develop/55524/2)
+# Therefore we steal the compile definitions and include directories from the main target and pass them to our test target
+# Since we linked the shared juce targets in PRIVATE mode, they are not linked to the test target again
+target_compile_definitions(Test PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},COMPILE_DEFINITIONS>)
+target_include_directories(Test PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},INCLUDE_DIRECTORIES>)
 
 # Make an Xcode Scheme for the test executable so we can run Test in the IDE
 set_target_properties(Test PROPERTIES XCODE_GENERATE_SCHEME ON)

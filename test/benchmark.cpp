@@ -5,7 +5,7 @@
 #include <ctime>
 #include <stdlib.h>
 #include <time.h>
-#include "PluginEditor.h"
+#include <PluginEditor.h>
 
 
 static void BM_processor(benchmark::State& state) {
