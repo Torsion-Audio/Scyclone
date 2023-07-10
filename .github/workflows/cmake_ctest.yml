@@ -38,7 +38,8 @@ jobs:
         run: brew install osxutils
       
       # The uses keyword tells the job to retrieve the action named actions/checkout. This is an action that checks out your repository and downloads it to the runner, allowing you to run actions against your code (such as testing tools). You must use the checkout action any time your workflow will run against the repository's code or you are using an action defined in the repository.
-      - uses: actions/checkout@v3
+      - name: get repo and submodules
+        uses: actions/checkout@v3
       # This will get the submodles on the runner
         with:
           submodules: true
@@ -47,9 +48,9 @@ jobs:
         shell: bash
         run: |
           echo "ARTEFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
-          echo "VST3_PATH=${{ env.ARTEFACTS_PATH }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
-          echo "AU_PATH=${{ env.ARTEFACTS_PATH }}/AU/${{ env.PROJECT_NAME }}.component" >> $GITHUB_ENV
-          echo "STANDALONE_PATH=${{ env.ARTEFACTS_PATH }}/Standalone" >> $GITHUB_ENV
+          echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
+          echo "AU_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}AU/${{ env.PROJECT_NAME }}.component" >> $GITHUB_ENV
+          echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
           echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
 
       - name: printout
@@ -75,7 +76,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: ctest --verbose
 
-      - name: Codesign (macOS)
+      - name: codesign (macOS)
         if: ${{ matrix.name == 'macOS' }}
         run: |
           # Check the code signitures
