@@ -112,12 +112,14 @@ jobs:
         if: ${{ matrix.name == 'macOS' }}
         run: |
           # codesign the zip
-          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.PRODUCT_NAME }}.zip --deep --strict --options=runtime --timestamp
+          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.PRODUCT_NAME }}.zip --deep --strict --preserve-metadata=entitlements --options=runtime --timestamp
           xcrun notarytool submit ${{ env.PRODUCT_NAME }}.zip --apple-id ${{ secrets.APPLE_DEV_ID }} --password ${{ secrets.APPLE_DEV_PWD }} --team-id ${{ secrets.TEAM_ID }} --wait
           unzip ${{ env.PRODUCT_NAME }}.zip && rm ${{ env.PRODUCT_NAME }}.zip
-          xcrun stapler staple ${{ env.PRODUCT_NAME }}/${{ env.PROJECT_NAME }}.vst3
-          xcrun stapler staple ${{ env.PRODUCT_NAME }}/${{ env.PROJECT_NAME }}.component
-          xcrun stapler staple ${{ env.PRODUCT_NAME }}/${{ env.PROJECT_NAME }}.app
+          cd ${{ env.PRODUCT_NAME }}
+          xcrun stapler staple ${{ env.PROJECT_NAME }}.vst3
+          xcrun stapler staple ${{ env.PROJECT_NAME }}.component
+          xcrun stapler staple ${{ env.PROJECT_NAME }}.app
+          cd ..
           zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
       
       - name: upload artifact (macOS)
