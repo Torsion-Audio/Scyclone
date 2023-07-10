@@ -81,3 +81,8 @@ jobs:
         with:
           name: ${{ env.PRODUCT_NAME }}.vst3
           path: ${{ env.VST3_PATH }}
+      
+      - name: download artifact (macOS)
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.PRODUCT_NAME }}.vst3
