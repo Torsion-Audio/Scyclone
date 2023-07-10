@@ -49,13 +49,16 @@ jobs:
       # This will get the submodles on the runner
         with:
           submodules: true
-
+      
+      - name: printout
+        run: echo "matrix.type: ${{ matrix.type }}"
+      
       - name: ccache
         uses: hendrikmuhs/ccache-action@main
         with:
           key: v3-${{ matrix.os }}-${{ env.BUILD_TYPE }}
           variant: ${{ matrix.ccache }}
-
+      
       - name: cmake configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }}
 
