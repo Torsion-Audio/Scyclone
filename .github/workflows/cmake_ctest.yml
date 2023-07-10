@@ -28,17 +28,8 @@ jobs:
           - name: macOS
             os: macos-latest
             ccache: ccache
-          - name: Windows
-            os: windows-latest
-            ccache: sccache
 
     steps:
-      # This lets us use sscache on Windows
-      # We need to install ccache here for Windows to grab the right version
-      - name: install Windows deps
-        if: ${{ matrix.name == 'Windows' }}
-        shell: bash
-        run: choco install ccache
 
       - name: install macOS deps
         if: ${{ matrix.name == 'macOS' }}
@@ -55,7 +46,6 @@ jobs:
           echo "os: ${{ matrix.os }}"
           echo "ccache: ${{ matrix.ccache }}"
           echo "BUILD_TYPE: ${{ env.BUILD_TYPE }}"
-          echo "matrix.type: ${{ matrix.type }}"
     
       - name: ccache
         uses: hendrikmuhs/ccache-action@main
