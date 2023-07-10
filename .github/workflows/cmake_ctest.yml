@@ -28,8 +28,8 @@ jobs:
     - name: ccache
       uses: hendrikmuhs/ccache-action@main
       with:
-        key: v3-macos-latest-${{ matrix.type }}
-        variant: ${{ matrix.ccache }}
+        key: v3-macos-latest-${{ env.BUILD_TYPE }}
+        variant: ccache
 
     - name: Configure CMake
     # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
