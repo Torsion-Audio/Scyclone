@@ -53,8 +53,8 @@ jobs:
       - name: ccache
         uses: hendrikmuhs/ccache-action@main
         with:
-          key: v3-macos-latest-${{ env.BUILD_TYPE }}
-          variant: ccache
+          key: v3-${{ matrix.os }}-${{ env.BUILD_TYPE }}
+          variant: ${{ matrix.ccache }}
 
       - name: cmake configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }}
