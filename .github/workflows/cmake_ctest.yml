@@ -80,14 +80,29 @@ jobs:
         if: ${{ matrix.name == 'macOS' }}
         run: |
           # Each plugin/standalone must be code signed
-          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
-          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
-          codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH_PATH }} --deep --strict --options=runtime --timestamp
+          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.VST3_PATH }}" --deep --strict --options=runtime --timestamp
+          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.AU_PATH }}" --deep --strict --options=runtime --timestamp
+          codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.STANDALONE_PATH_PATH }}" --deep --strict --options=runtime --timestamp
           # Check the code signitures
-          codesign -dv --verbose=4 ${{ env.VST3_PATH }}
-          codesign -dv --verbose=4 ${{ env.AU_PATH }}
-          codesign -dv --verbose=4 ${{ env.STANDALONE_PATH }}
-          
+          codesign -dv --verbose=4 "${{ env.VST3_PATH }}"
+          codesign -dv --verbose=4 "${{ env.AU_PATH }}"
+          codesign -dv --verbose=4 "${{ env.STANDALONE_PATH }}"
+      
+      # - name: zip artefacts (macOS)
+      #   if: ${{ matrix.name == 'macOS' }}
+      #   run: |
+      #     mkdir -p packaging/zip
+        
+      #   # Create directories for the dmg symlinks
+      #   mv "${{ env.ARTIFACTS_PATH }}/VST3/${{ env.PROJECT_NAME }}.vst3" packaging/zip
+      #   mv "${{ env.ARTIFACTS_PATH }}/AU/${{ env.PROJECT_NAME }}.component" packaging/dmg
+        
+      #   # Run appdmg to create the .dmg
+      #   cd packaging && appdmg dmg.json ${{ env.PRODUCT_NAME}}.dmg
+      #   codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.pamplejuce.pamplejuce --force ${{ env.PRODUCT_NAME }}.dmg
+      #   xcrun notarytool submit ${{ env.PRODUCT_NAME }}.dmg --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
+      #   xcrun stapler staple ${{ env.PRODUCT_NAME }}.dmg
+      
       - name: zip macOS
         if: ${{ matrix.name == 'macOS' }}
         working-directory: ${{ env.ARTEFACTS_PATH }}
