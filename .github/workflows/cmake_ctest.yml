@@ -74,9 +74,14 @@ jobs:
           echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone" >> $GITHUB_ENV
           echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
       
+      - name: zip macOS
+        if: ${{ matrix.name == 'macOS' }}
+        working-directory: ${{ env.STANDALONE_PATH }}
+        run: zip -vr Scyclone.zip Scyclone.app -x "*.DS_Store"
+      
       - name: upload artifact (macOS)
         if: ${{ matrix.name == 'macOS' }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.PRODUCT_NAME }}
-          path: ${{ env.STANDALONE_PATH }}
+          name: ${{ env.PRODUCT_NAME }}.zip
+          path: ${{ env.STANDALONE_PATH }}/Scyclone.zip
