@@ -89,7 +89,7 @@ jobs:
           # Each plugin/standalone must be code signed
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
-          codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH_PATH }} --deep --strict --options=runtime --timestamp
+          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH_PATH }} --preserve-metadata=entitlements --deep --strict --options=runtime --timestamp
           # Check the code signitures
           codesign -dv --verbose=4 ${{ env.VST3_PATH }}
           codesign -dv --verbose=4 ${{ env.AU_PATH }}
@@ -98,14 +98,19 @@ jobs:
       - name: zip artefacts (macOS)
         if: ${{ matrix.name == 'macOS' }}
         run: |
-          mkdir -p packaging/zip    
+          mkdir -p packaging/${{ env.PRODUCT_NAME }}    
           # Move the artefacts to the packaging folder
-          mv ${{ env.VST3_PATH }} packaging/zip
-          mv ${{ env.AU_PATH }} packaging/zip
-          mv ${{ env.STANDALONE_PATH }} packaging/zip
+          mv ${{ env.VST3_PATH }} packaging/${{ env.PRODUCT_NAME }}
+          mv ${{ env.AU_PATH }} packaging/${{ env.PRODUCT_NAME }}
+          mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
           # Create the zip
           cd packaging
-          zip -vr ${{ env.PRODUCT_NAME }}.zip zip/ -x "*.DS_Store"
+          zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
+
+      - name: notarize (macOS)
+        if: ${{ matrix.name == 'macOS' }}
+        run: |
+          codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.pamplejuce.pamplejuce --force ${{ env.PRODUCT_NAME }}.dmg
 
         #   # Run appdmg to create the .dmg
         #   cd packaging && appdmg dmg.json ${{ env.PRODUCT_NAME}}.dmg
