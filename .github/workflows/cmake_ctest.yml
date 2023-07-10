@@ -108,9 +108,10 @@ jobs:
           zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
 
       - name: notarize (macOS)
+        workding-directory: ${{github.workspace}}/packaging
         if: ${{ matrix.name == 'macOS' }}
         run: |
-          codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.pamplejuce.pamplejuce --force ${{ env.PRODUCT_NAME }}.dmg
+          codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i "com.Torsion Audio.Scyclone" --force ${{ env.PRODUCT_NAME }}.zip
 
         #   # Run appdmg to create the .dmg
         #   cd packaging && appdmg dmg.json ${{ env.PRODUCT_NAME}}.dmg
