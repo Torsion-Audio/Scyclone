@@ -108,7 +108,7 @@ jobs:
           zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
 
       - name: notarize (macOS)
-        workding-directory: ${{github.workspace}}/packaging
+        working-directory: ${{github.workspace}}/packaging
         if: ${{ matrix.name == 'macOS' }}
         run: |
           codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i "com.Torsion Audio.Scyclone" --force ${{ env.PRODUCT_NAME }}.zip
