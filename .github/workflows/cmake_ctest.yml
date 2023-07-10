@@ -34,14 +34,14 @@ jobs:
     steps:
       
       - name: install macOS deps
-      if: ${{ matrix.name == 'macOS' }}
-      run: brew install osxutils
+        if: ${{ matrix.name == 'macOS' }}
+        run: brew install osxutils
       
       # The uses keyword tells the job to retrieve the action named actions/checkout. This is an action that checks out your repository and downloads it to the runner, allowing you to run actions against your code (such as testing tools). You must use the checkout action any time your workflow will run against the repository's code or you are using an action defined in the repository.
       - uses: actions/checkout@v3
       # This will get the submodles on the runner
-      with:
-        submodules: true
+        with:
+          submodules: true
         
       - name: setup environment variables
         shell: bash
@@ -88,7 +88,7 @@ jobs:
           # Check the code signitures
           codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH_PATH }} --deep --strict --options=runtime --timestamp
           
-          - name: zip macOS
+      - name: zip macOS
         if: ${{ matrix.name == 'macOS' }}
         working-directory: ${{ env.ARTEFACTS_PATH }}
         run: zip -vr Standalone.zip Standalone/ -x "*.DS_Store"
