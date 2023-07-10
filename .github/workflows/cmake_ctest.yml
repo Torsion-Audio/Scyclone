@@ -78,13 +78,5 @@ jobs:
         if: ${{ matrix.name == 'macOS' }}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.PRODUCT_NAME }}.vst3
-          path: ${{ env.VST3_PATH }}
-      
-      # - name: download artifact (macOS)
-      #   uses: actions/download-artifact@v3
-      #   with:
-      #     name: ${{ env.PRODUCT_NAME }}.vst3
-      
-      # - name: Display structure of downloaded files
-      #   run: ls -R
+          name: ${{ env.PRODUCT_NAME }}.app
+          path: ${{ env.STANDALONE_PATH }}
