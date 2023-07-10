@@ -76,17 +76,24 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: ctest --verbose
 
+      - name: import certificates (macOS)
+        uses: apple-actions/import-codesign-certs@v1
+        if: ${{ matrix.name == 'macOS' }}
+        with:
+          p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
+          p12-password: ${{ secrets.DEV_ID_APP_PWD }}
+
       - name: codesign (macOS)
         if: ${{ matrix.name == 'macOS' }}
         run: |
           # Each plugin/standalone must be code signed
-          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.VST3_PATH }}" --deep --strict --options=runtime --timestamp
-          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.AU_PATH }}" --deep --strict --options=runtime --timestamp
-          codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.STANDALONE_PATH_PATH }}" --deep --strict --options=runtime --timestamp
+          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
+          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
+          codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH_PATH }} --deep --strict --options=runtime --timestamp
           # Check the code signitures
-          codesign -dv --verbose=4 "${{ env.VST3_PATH }}"
-          codesign -dv --verbose=4 "${{ env.AU_PATH }}"
-          codesign -dv --verbose=4 "${{ env.STANDALONE_PATH }}"
+          codesign -dv --verbose=4 ${{ env.VST3_PATH }}
+          codesign -dv --verbose=4 ${{ env.AU_PATH }}
+          codesign -dv --verbose=4 ${{ env.STANDALONE_PATH }}
       
       # - name: zip artefacts (macOS)
       #   if: ${{ matrix.name == 'macOS' }}
