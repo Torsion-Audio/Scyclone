@@ -111,6 +111,7 @@ jobs:
         working-directory: ${{github.workspace}}/packaging
         if: ${{ matrix.name == 'macOS' }}
         run: |
+          # codesign the zip
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.PRODUCT_NAME }}.zip --deep --strict --options=runtime --timestamp
           xcrun notarytool submit ${{ env.PRODUCT_NAME }}.zip --apple-id ${{ secrets.APPLE_DEV_ID }} --password ${{ secrets.APPLE_DEV_PWD }} --team-id ${{ secrets.TEAM_ID }} --wait
           unzip ${{ env.PRODUCT_NAME }}.zip && rm ${{ env.PRODUCT_NAME }}.zip
