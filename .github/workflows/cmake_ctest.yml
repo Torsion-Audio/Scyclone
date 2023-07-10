@@ -89,7 +89,7 @@ jobs:
           # Each plugin/standalone must be code signed
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
-          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH_PATH }} --preserve-metadata=entitlements --deep --strict --options=runtime --timestamp
+          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH }} --deep --strict --options=runtime --timestamp
           # Check the code signitures
           codesign -dv --verbose=4 ${{ env.VST3_PATH }}
           codesign -dv --verbose=4 ${{ env.AU_PATH }}
