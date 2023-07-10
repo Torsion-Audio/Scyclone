@@ -32,17 +32,26 @@ jobs:
             ccache: ccache
 
     steps:
-
+      
       - name: install macOS deps
-        if: ${{ matrix.name == 'macOS' }}
-        run: brew install osxutils
-          
+      if: ${{ matrix.name == 'macOS' }}
+      run: brew install osxutils
+      
       # The uses keyword tells the job to retrieve the action named actions/checkout. This is an action that checks out your repository and downloads it to the runner, allowing you to run actions against your code (such as testing tools). You must use the checkout action any time your workflow will run against the repository's code or you are using an action defined in the repository.
       - uses: actions/checkout@v3
       # This will get the submodles on the runner
-        with:
-          submodules: true
-      
+      with:
+        submodules: true
+        
+      - name: setup environment variables
+        shell: bash
+        run: |
+          echo "ARTEFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
+          echo "VST3_PATH=${{ env.ARTEFACTS_PATH }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
+          echo "AU_PATH=${{ env.ARTEFACTS_PATH }}/AU/${{ env.PROJECT_NAME }}.component" >> $GITHUB_ENV
+          echo "STANDALONE_PATH=${{ env.ARTEFACTS_PATH }}/Standalone" >> $GITHUB_ENV
+          echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
+
       - name: printout
         run: |
           echo "os: ${{ matrix.os }}"
@@ -55,6 +64,7 @@ jobs:
           key: v3-${{ matrix.os }}-${{ env.BUILD_TYPE }}
           variant: ${{ matrix.ccache }}
       
+      # With DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" we can build universal binaries
       - name: cmake configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 
@@ -65,16 +75,20 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: ctest --verbose
 
-      - name: Setup Environment Variables
-        shell: bash
+      - name: Codesign (macOS)
+        if: ${{ matrix.name == 'macOS' }}
         run: |
-          echo "ARTEFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
-          echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
-          echo "AU_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/AU/${{ env.PROJECT_NAME }}.component" >> $GITHUB_ENV
-          echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone" >> $GITHUB_ENV
-          echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
-      
-      - name: zip macOS
+          # Check the code signitures
+          codesign -dv --verbose=4 ${{ env.VST3_PATH }}
+          codesign -dv --verbose=4 ${{ env.AU_PATH }}
+          codesign -dv --verbose=4 ${{ env.STANDALONE_PATH }}
+          # Each plugin/standalone must be code signed
+          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
+          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
+          # Check the code signitures
+          codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH_PATH }} --deep --strict --options=runtime --timestamp
+          
+          - name: zip macOS
         if: ${{ matrix.name == 'macOS' }}
         working-directory: ${{ env.ARTEFACTS_PATH }}
         run: zip -vr Standalone.zip Standalone/ -x "*.DS_Store"
