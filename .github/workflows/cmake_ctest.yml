@@ -49,7 +49,7 @@ jobs:
         run: |
           echo "ARTEFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
           echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
-          echo "AU_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}AU/${{ env.PROJECT_NAME }}.component" >> $GITHUB_ENV
+          echo "AU_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/AU/${{ env.PROJECT_NAME }}.component" >> $GITHUB_ENV
           echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
           echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
 
@@ -95,29 +95,27 @@ jobs:
           codesign -dv --verbose=4 ${{ env.AU_PATH }}
           codesign -dv --verbose=4 ${{ env.STANDALONE_PATH }}
       
-      # - name: zip artefacts (macOS)
-      #   if: ${{ matrix.name == 'macOS' }}
-      #   run: |
-      #     mkdir -p packaging/zip
-        
-      #   # Create directories for the dmg symlinks
-      #   mv "${{ env.ARTIFACTS_PATH }}/VST3/${{ env.PROJECT_NAME }}.vst3" packaging/zip
-      #   mv "${{ env.ARTIFACTS_PATH }}/AU/${{ env.PROJECT_NAME }}.component" packaging/dmg
-        
-      #   # Run appdmg to create the .dmg
-      #   cd packaging && appdmg dmg.json ${{ env.PRODUCT_NAME}}.dmg
-      #   codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.pamplejuce.pamplejuce --force ${{ env.PRODUCT_NAME }}.dmg
-      #   xcrun notarytool submit ${{ env.PRODUCT_NAME }}.dmg --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
-      #   xcrun stapler staple ${{ env.PRODUCT_NAME }}.dmg
-      
-      - name: zip macOS
+      - name: zip artefacts (macOS)
         if: ${{ matrix.name == 'macOS' }}
-        working-directory: ${{ env.ARTEFACTS_PATH }}
-        run: zip -vr Standalone.zip Standalone/ -x "*.DS_Store"
+        run: |
+          mkdir -p packaging/zip    
+          # Move the artefacts to the packaging folder
+          mv ${{ env.VST3_PATH }} packaging/zip
+          mv ${{ env.AU_PATH }} packaging/zip
+          mv ${{ env.STANDALONE_PATH }} packaging/zip
+          # Create the zip
+          cd packaging
+          zip -vr ${{ env.PRODUCT_NAME }}.zip zip/ -x "*.DS_Store"
+
+        #   # Run appdmg to create the .dmg
+        #   cd packaging && appdmg dmg.json ${{ env.PRODUCT_NAME}}.dmg
+        # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.pamplejuce.pamplejuce --force ${{ env.PRODUCT_NAME }}.dmg
+        # xcrun notarytool submit ${{ env.PRODUCT_NAME }}.dmg --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
+        # xcrun stapler staple ${{ env.PRODUCT_NAME }}.dmg
       
       - name: upload artifact (macOS)
         if: ${{ matrix.name == 'macOS' }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PRODUCT_NAME }}.zip
-          path: ${{ env.ARTEFACTS_PATH }}/Standalone.zip
+          path: packaging/${{ env.PRODUCT_NAME }}.zip
