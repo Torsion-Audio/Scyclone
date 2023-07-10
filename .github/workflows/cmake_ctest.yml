@@ -51,8 +51,12 @@ jobs:
           submodules: true
       
       - name: printout
-        run: echo "matrix.type: ${{ matrix.type }}"
-      
+        run: |
+          echo "os: ${{ matrix.os }}"
+          echo "ccache: ${{ matrix.ccache }}"
+          echo "BUILD_TYPE: ${{ env.BUILD_TYPE }}"
+          echo "matrix.type: ${{ matrix.type }}"
+    
       - name: ccache
         uses: hendrikmuhs/ccache-action@main
         with:
