@@ -89,7 +89,7 @@ jobs:
           # Each plugin/standalone must be code signed
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
-          codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH }} --deep --strict --options=runtime --timestamp
+          codesign --entitlements ${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/JuceLibraryCode/Scyclone_Standalone.entitlements  --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH }} --deep --strict --options=runtime --timestamp
           codesign -d --entitlements "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after_first_sign.xml" ${{ env.STANDALONE_PATH }}
           ls "${{ env.ARTEFACTS_PATH }}/Standalone/"
           # Check the code signitures
