@@ -52,7 +52,6 @@ jobs:
       
       # Setting up the environment variables for the paths so we can use them later
       - name: setup environment variables
-        shell: bash
         run: |
           echo "ARTEFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
           echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
@@ -132,9 +131,9 @@ jobs:
         working-directory: ${{github.workspace}}/packaging
         if: ${{ matrix.name == 'macOS' }}
         run: |
-          # First we need to codesign the zip file
+          # In contrast to dmg files zip files do not need to be codesigned before notarization
           xcrun notarytool submit ${{ env.PRODUCT_NAME }}.zip --apple-id ${{ secrets.APPLE_DEV_ID }} --password ${{ secrets.APPLE_DEV_PWD }} --team-id ${{ secrets.TEAM_ID }} --wait
-          # Then we need to unzip it and staple the ticket for the gatekeeper to all  binaries
+          # Then we need to unzip it and staple the ticket for the gatekeeper to all binaries
           unzip ${{ env.PRODUCT_NAME }}.zip && rm ${{ env.PRODUCT_NAME }}.zip
           cd ${{ env.PRODUCT_NAME }}
           xcrun stapler staple ${{ env.PROJECT_NAME }}.vst3
