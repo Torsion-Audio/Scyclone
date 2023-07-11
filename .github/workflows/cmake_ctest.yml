@@ -89,7 +89,7 @@ jobs:
           # Each plugin/standalone must be code signed
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
-          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH }} --deep --strict --preserve-metadata=entitlements --options=runtime --timestamp
+          codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH }} --deep --strict --options=runtime --timestamp
           # Check the code signitures
           codesign -dv --verbose=4 ${{ env.VST3_PATH }}
           codesign -dv --verbose=4 ${{ env.AU_PATH }}
@@ -112,7 +112,7 @@ jobs:
         if: ${{ matrix.name == 'macOS' }}
         run: |
           # codesign the zip
-          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.PRODUCT_NAME }}.zip --deep --strict --preserve-metadata=entitlements --options=runtime --timestamp
+          codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.PRODUCT_NAME }}.zip --deep --strict --options=runtime --timestamp
           xcrun notarytool submit ${{ env.PRODUCT_NAME }}.zip --apple-id ${{ secrets.APPLE_DEV_ID }} --password ${{ secrets.APPLE_DEV_PWD }} --team-id ${{ secrets.TEAM_ID }} --wait
           unzip ${{ env.PRODUCT_NAME }}.zip && rm ${{ env.PRODUCT_NAME }}.zip
           cd ${{ env.PRODUCT_NAME }}
