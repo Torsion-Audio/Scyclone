@@ -2,6 +2,7 @@ name: Scyclone
 
 on:
   workflow_dispatch: # lets you run a build from github.com
+  # Runs the workflow on push events but only for the develop branch
   push:
     branches: [ develop ]
 
@@ -11,20 +12,23 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   PROJECT_NAME: Scyclone
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
-  CMAKE_BUILD_PARALLEL_LEVEL: 4 # Use up to 3 cpus to build juceaide, etc
+  # Use up to 3 cpus to build juceaide, etc
+  CMAKE_BUILD_PARALLEL_LEVEL: 4 
+  # Name of the build directory
   BUILD_DIR: build
 
 # jobs are run in paralell on different machines
 # all steps run in series
 jobs:
-  cmake-build_and_ctest:
+  build_and_test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
+      # generate a matrix of jobs for different platforms
       matrix:
         include:
           - name: macOS
@@ -32,18 +36,21 @@ jobs:
             ccache: ccache
 
     steps:
-      
+      # We need the osxutils to get the codesign and notorization tools
       - name: install macOS deps
         if: ${{ matrix.name == 'macOS' }}
         run: brew install osxutils
       
       # The uses keyword tells the job to retrieve the action named actions/checkout. This is an action that checks out your repository and downloads it to the runner, allowing you to run actions against your code (such as testing tools). You must use the checkout action any time your workflow will run against the repository's code or you are using an action defined in the repository.
+      # The uses keyword retrieves the action from the actions/checkout repository
+      # With this we checkout to our repo
       - name: get repo and submodules
         uses: actions/checkout@v3
-      # This will get the submodles on the runner
+      # Here we get the submodules like juce
         with:
           submodules: true
-        
+      
+      # Setting up the environment variables for the paths so we can use them later
       - name: setup environment variables
         shell: bash
         run: |
@@ -52,51 +59,60 @@ jobs:
           echo "AU_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/AU/${{ env.PROJECT_NAME }}.component" >> $GITHUB_ENV
           echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
           echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
-
+      
+      # Simple printout to get some info
       - name: printout
         run: |
           echo "os: ${{ matrix.os }}"
           echo "ccache: ${{ matrix.ccache }}"
           echo "BUILD_TYPE: ${{ env.BUILD_TYPE }}"
-    
+      
+      # Using the ccache action to store the build cache and speed up the next builds
       - name: ccache
         uses: hendrikmuhs/ccache-action@main
         with:
           key: v3-${{ matrix.os }}-${{ env.BUILD_TYPE }}
           variant: ${{ matrix.ccache }}
       
-      # With DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" we can build universal binaries
+      # Typical cmake configuration with default generator
+      # With DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" we can build universal binaries for apple computers
       - name: cmake configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 
+      # Build the project
       - name: cmake build
         run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
-
+      
+      # Test the project
       - name: ctest
         working-directory: ${{github.workspace}}/build
         run: ctest --verbose
-
+      
+      # We need to import the apple developer certificate so that we can codesign our binaries
       - name: import certificates (macOS)
         uses: apple-actions/import-codesign-certs@v1
         if: ${{ matrix.name == 'macOS' }}
         with:
+          # GitHub encrypted secrets
           p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
           p12-password: ${{ secrets.DEV_ID_APP_PWD }}
-
+      
+      # Codesigning all the binaries
       - name: codesign (macOS)
         if: ${{ matrix.name == 'macOS' }}
         run: |
-          # Each plugin/standalone must be code signed
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
+          # The standalone needs to have specific entitlements, which we need to add when we codesign the files. Since we have set the entitlements in the CMakeLists.txt we can use the generated file in the location below
           codesign --entitlements ${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/JuceLibraryCode/Scyclone_Standalone.entitlements  --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH }} --deep --strict --options=runtime --timestamp
+          # We can now check the entitlements by creating a xml file with the entitlements
           codesign -d --entitlements "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after_first_sign.xml" ${{ env.STANDALONE_PATH }}
-          ls "${{ env.ARTEFACTS_PATH }}/Standalone/"
-          # Check the code signitures
+          # Here we check the code signitures
           codesign -dv --verbose=4 ${{ env.VST3_PATH }}
           codesign -dv --verbose=4 ${{ env.AU_PATH }}
           codesign -dv --verbose=4 ${{ env.STANDALONE_PATH }}
       
+      # In order to notarize the binaries we need to zip them first
       - name: zip artefacts (macOS)
         if: ${{ matrix.name == 'macOS' }}
         run: |
@@ -105,24 +121,27 @@ jobs:
           mv ${{ env.VST3_PATH }} packaging/${{ env.PRODUCT_NAME }}
           mv ${{ env.AU_PATH }} packaging/${{ env.PRODUCT_NAME }}
           mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
-          mv "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after_first_sign.xml" packaging/${{ env.PRODUCT_NAME }}
+          # Move the entitlements file to the packaging folder if we want to check it
+          # mv "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after_first_sign.xml" packaging/${{ env.PRODUCT_NAME }}
           # Create the zip
           cd packaging
           zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
 
+      # Let's now notarize the zip file and with it all its contents / binaries
       - name: notarize (macOS)
         working-directory: ${{github.workspace}}/packaging
         if: ${{ matrix.name == 'macOS' }}
         run: |
-          # codesign the zip
-          codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.PRODUCT_NAME }}.zip --deep --strict --options=runtime --timestamp
+          # First we need to codesign the zip file
+          # codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.PRODUCT_NAME }}.zip --deep --strict --options=runtime --timestamp
           xcrun notarytool submit ${{ env.PRODUCT_NAME }}.zip --apple-id ${{ secrets.APPLE_DEV_ID }} --password ${{ secrets.APPLE_DEV_PWD }} --team-id ${{ secrets.TEAM_ID }} --wait
           unzip ${{ env.PRODUCT_NAME }}.zip && rm ${{ env.PRODUCT_NAME }}.zip
           cd ${{ env.PRODUCT_NAME }}
           xcrun stapler staple ${{ env.PROJECT_NAME }}.vst3
           xcrun stapler staple ${{ env.PROJECT_NAME }}.component
           xcrun stapler staple ${{ env.PROJECT_NAME }}.app
-          codesign -d --entitlements "entitlements_after_second_sign.xml" ${{ env.PROJECT_NAME }}.app
+          # Create a second entitlements file after the notarization to check the entitlements again it's packaged atomatically since it is generated in the packaging folder
+          # codesign -d --entitlements "entitlements_after_second_sign.xml" ${{ env.PROJECT_NAME }}.app
           cd ..
           zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
       
