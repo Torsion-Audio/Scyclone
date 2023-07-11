@@ -91,6 +91,7 @@ jobs:
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
           codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH }} --deep --strict --options=runtime --timestamp
           codesign -d --entitlements "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after_first_sign.xml" ${{ env.STANDALONE_PATH }}
+          ls -l "${{ env.ARTEFACTS_PATH }}/Standalone/"
           # Check the code signitures
           codesign -dv --verbose=4 ${{ env.VST3_PATH }}
           codesign -dv --verbose=4 ${{ env.AU_PATH }}
