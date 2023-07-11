@@ -89,9 +89,8 @@ jobs:
           # Each plugin/standalone must be code signed
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
-          codesign -d --entitlements "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_before.xml" ${{ env.STANDALONE_PATH }}
           codesign --preserve-metadata=entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH }} --deep --strict --options=runtime --timestamp
-          codesign -d --entitlements "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after.xml" ${{ env.STANDALONE_PATH }}
+          codesign -d --entitlements "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after_first_sign.xml" ${{ env.STANDALONE_PATH }}
           # Check the code signitures
           codesign -dv --verbose=4 ${{ env.VST3_PATH }}
           codesign -dv --verbose=4 ${{ env.AU_PATH }}
@@ -105,8 +104,7 @@ jobs:
           mv ${{ env.VST3_PATH }} packaging/${{ env.PRODUCT_NAME }}
           mv ${{ env.AU_PATH }} packaging/${{ env.PRODUCT_NAME }}
           mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
-          mv "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_before.xml" packaging/${{ env.PRODUCT_NAME }}
-          mv "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after.xml" packaging/${{ env.PRODUCT_NAME }}
+          mv "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after_first_sign.xml" packaging/${{ env.PRODUCT_NAME }}
           # Create the zip
           cd packaging
           zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
@@ -123,7 +121,7 @@ jobs:
           xcrun stapler staple ${{ env.PROJECT_NAME }}.vst3
           xcrun stapler staple ${{ env.PROJECT_NAME }}.component
           xcrun stapler staple ${{ env.PROJECT_NAME }}.app
-          codesign -d --entitlements "entitlements_after_2.xml" ${{ env.PROJECT_NAME }}.app
+          codesign -d --entitlements "entitlements_after_second_sign.xml" ${{ env.PROJECT_NAME }}.app
           cd ..
           zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
       
