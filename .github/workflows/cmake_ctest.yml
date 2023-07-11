@@ -13,7 +13,7 @@ concurrency:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   PROJECT_NAME: Scyclone
-  BUILD_TYPE: Debug
+  BUILD_TYPE: Release
   CMAKE_BUILD_PARALLEL_LEVEL: 4 # Use up to 3 cpus to build juceaide, etc
   BUILD_DIR: build
 
