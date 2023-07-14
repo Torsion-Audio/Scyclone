@@ -42,14 +42,14 @@ jobs:
       # We need the osxutils to get the codesign and notorization tools
       - name: install macOS deps
         if: ${{ matrix.name == 'macOS' }}
-        run: brew install ninja osxutils
+        run: brew install osxutils
 
       # This lets us use sscache on Windows
       # We need to install ccache here for Windows to grab the right version
       - name: install Windows deps
         if: runner.os == 'Windows'
         shell: bash
-        run: choco install ninja ccache
+        run: choco install ccache
       
       # The uses keyword tells the job to retrieve the action named actions/checkout. This is an action that checks out your repository and downloads it to the runner, allowing you to run actions against your code (such as testing tools). You must use the checkout action any time your workflow will run against the repository's code or you are using an action defined in the repository.
       # The uses keyword retrieves the action from the actions/checkout repository
@@ -86,7 +86,7 @@ jobs:
       # Typical cmake configuration with default generator
       # With DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" we can build universal binaries for apple computers
       - name: cmake configure
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 
       # Build the project
       - name: cmake build
