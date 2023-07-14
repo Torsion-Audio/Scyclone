@@ -48,7 +48,6 @@ jobs:
       # We need to install ccache here for Windows to grab the right version
       - name: install Windows deps
         if: runner.os == 'Windows'
-        shell: bash
         run: choco install ccache
       
       # The uses keyword tells the job to retrieve the action named actions/checkout. This is an action that checks out your repository and downloads it to the runner, allowing you to run actions against your code (such as testing tools). You must use the checkout action any time your workflow will run against the repository's code or you are using an action defined in the repository.
@@ -138,13 +137,13 @@ jobs:
           cd packaging
           zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
       # In order to notarize the binaries we need to zip them first
+
       - name: zip artefacts (Windows)
         if: ${{ matrix.name == 'Windows' }}
         run: |
           mkdir packaging/${{ env.PRODUCT_NAME }}    
           # Move the artefacts to the packaging folder
           mv ${{ env.VST3_PATH }} packaging/${{ env.PRODUCT_NAME }}
-          mv ${{ env.AU_PATH }} packaging/${{ env.PRODUCT_NAME }}
           mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
           # Create the zip
           cd packaging
