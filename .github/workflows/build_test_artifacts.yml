@@ -75,6 +75,7 @@ jobs:
           echo "os: ${{ matrix.os }}"
           echo "ccache: ${{ matrix.ccache }}"
           echo "BUILD_TYPE: ${{ env.BUILD_TYPE }}"
+          echo "VST3_PATH: ${{ env.VST3_PATH }}"
       
       # Using the ccache action to store the build cache and speed up the next builds
       - name: ccache
