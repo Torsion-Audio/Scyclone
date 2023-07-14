@@ -15,7 +15,7 @@ env:
   PROJECT_NAME: Scyclone
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
-  # Use up to 3 cpus to build juceaide, etc
+  # Use up to 4 cpus to build juceaide, etc
   CMAKE_BUILD_PARALLEL_LEVEL: 4 
   # Name of the build directory
   BUILD_DIR: build
@@ -34,12 +34,22 @@ jobs:
           - name: macOS
             os: macos-latest
             ccache: ccache
+          - name: Windows
+            os: windows-latest
+            ccache: sccache
 
     steps:
       # We need the osxutils to get the codesign and notorization tools
       - name: install macOS deps
         if: ${{ matrix.name == 'macOS' }}
         run: brew install osxutils
+
+      # This lets us use sscache on Windows
+      # We need to install ccache here for Windows to grab the right version
+      - name: install Windows deps
+        if: runner.os == 'Windows'
+        shell: bash
+        run: choco install ccache
       
       # The uses keyword tells the job to retrieve the action named actions/checkout. This is an action that checks out your repository and downloads it to the runner, allowing you to run actions against your code (such as testing tools). You must use the checkout action any time your workflow will run against the repository's code or you are using an action defined in the repository.
       # The uses keyword retrieves the action from the actions/checkout repository
@@ -86,7 +96,7 @@ jobs:
       - name: ctest
         working-directory: ${{github.workspace}}/build
         run: ctest --verbose
-      
+
       # We need to import the apple developer certificate so that we can codesign our binaries
       - name: import certificates (macOS)
         uses: apple-actions/import-codesign-certs@v1
@@ -125,6 +135,19 @@ jobs:
           # Create the zip
           cd packaging
           zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
+
+      # In order to notarize the binaries we need to zip them first
+      - name: zip artefacts (Windows)
+        if: ${{ matrix.name == 'Windows' }}
+        run: |
+          mkdir packaging/${{ env.PRODUCT_NAME }}    
+          # Move the artefacts to the packaging folder
+          mv ${{ env.VST3_PATH }} packaging/${{ env.PRODUCT_NAME }}
+          mv ${{ env.AU_PATH }} packaging/${{ env.PRODUCT_NAME }}
+          mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
+          # Create the zip
+          cd packaging
+          tar -a -c -f ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/
 
       # Let's now notarize the zip file and with it all its contents / binaries
       - name: notarize (macOS)
