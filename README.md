@@ -5,7 +5,7 @@
 This enables a new artificial layering technique to be applied on the incoming signal in creating richer drum pallets, fuller atmospheres or simply transferring the timbre of the raw signal to another sound pallet. To further control the behaviour and production of the neural networks, we have internally equipped the plugin with signal processings modules allowing the user to shape, control and embellish the source and target timbres in a distinct manner.
 
 ## Overview
-![signal_flow](assets/pictures/signal_flow_control.png)
+![signal_flow](assets/svg/signal_flow_control.svg)
 
 
 

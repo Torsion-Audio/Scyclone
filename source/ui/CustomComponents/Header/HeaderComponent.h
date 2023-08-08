@@ -22,7 +22,9 @@ public:
 
     void paint(juce::Graphics& g) override;
     juce::DrawableButton detailButton;
+    juce::DrawableButton scycloneButton;
     std::function<void(bool newState)> onParameterControlViewChange;
+    std::function<void(bool newState)> onScyloneButtonClick;
 
     juce::Component** getTooltipPointers();
 
@@ -37,10 +39,12 @@ private:
                                                                                      BinaryData::detailButtonOn_svgSize);
     std::unique_ptr<juce::Drawable> detailsButtonOff = juce::Drawable::createFromImageData (BinaryData::detailButtonOff_svg,
                                                                                       BinaryData::detailButtonOff_svgSize);
-
-    std::unique_ptr<juce::Drawable> scycloneLogo = juce::Drawable::createFromImageData(BinaryData::social_preview_png, BinaryData::social_preview_pngSize);
-    std::unique_ptr<juce::Drawable> scycloneTypo = juce::Drawable::createFromImageData(BinaryData::Scyclone_svg, BinaryData::Scyclone_svgSize);
-    std::unique_ptr<juce::Drawable> neuralTransferTypo = juce::Drawable::createFromImageData(BinaryData::NeuralTransfer_svg, BinaryData::NeuralTransfer_svgSize);
+    std::unique_ptr<juce::Drawable> scycloneLogo = juce::Drawable::createFromImageData(BinaryData::social_preview_svg,
+                                                                                       BinaryData::social_preview_svgSize);
+    std::unique_ptr<juce::Drawable> scycloneTypo = juce::Drawable::createFromImageData(BinaryData::Scyclone_svg,
+                                                                                       BinaryData::Scyclone_svgSize);
+    std::unique_ptr<juce::Drawable> neuralTransferTypo = juce::Drawable::createFromImageData(BinaryData::NeuralTransfer_svg,
+                                                                                             BinaryData::NeuralTransfer_svgSize);
 
     CustomLinearVolumeSliderLookAndFeel customLinearVolumeSliderLookAndFeel;
 

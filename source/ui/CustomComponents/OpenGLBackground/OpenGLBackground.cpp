@@ -23,6 +23,8 @@ OpenGLBackground::OpenGLBackground(juce::AudioProcessorValueTreeState& parameter
     //addAndMakeVisible (openGLStatusLabel);
     openGLStatusLabel.setJustificationType (juce::Justification::topLeft);
     openGLStatusLabel.setFont (juce::Font (14.0f));
+
+    signalFlowChart->setVisible(false);
     
     addAndMakeVisible(xyPad);
     xyPad.onButtonMove = [this](float x, float y, int no){this->xyButtonMoved(x,y,no);};
@@ -133,9 +135,11 @@ void OpenGLBackground::renderOpenGL()
 }
 
 // JUCE Component Callbacks ====================================================
-void OpenGLBackground::paint (juce::Graphics&)
+void OpenGLBackground::paint (juce::Graphics& g)
 {
     // You can optionally paint any JUCE graphics over the top of your OpenGL graphics
+    if (signalFlowChart->isVisible())
+        signalFlowChart->drawWithin(g, getLocalBounds().toFloat(), juce::RectanglePlacement::centred, 100);
 }
 
 void OpenGLBackground::resized ()
@@ -171,7 +175,6 @@ void OpenGLBackground::compileOpenGLShaderProgram()
         && shaderProgramAttempt->addFragmentShader ({ BinaryData::blob5_glsl })
         && shaderProgramAttempt->link())
     {
-
         resolution.disconnectFromShaderProgram();
         time.disconnectFromShaderProgram();
         displayScaleFactor.disconnectFromShaderProgram();
@@ -183,9 +186,6 @@ void OpenGLBackground::compileOpenGLShaderProgram()
         audioLevel2.disconnectFromShaderProgram();
         
         shaderProgram.reset (shaderProgramAttempt.release());
-
-//        std::cout << "ShaderProgram: " << shaderProgram->getProgramID() << std::endl;
-//        std::cout << "UniformLocation: " << juce::gl::glGetUniformLocation(shaderProgram->getProgramID(), "resolution") << std::endl;
         
         resolution.connectToShaderProgram (openGLContext, *shaderProgram);
         time.connectToShaderProgram (openGLContext, *shaderProgram);
@@ -213,13 +213,11 @@ void OpenGLBackground::xyButtonMoved(float x, float y, int modelID) {
     {
         knobPos1_juce.xPosition = x;
         knobPos1_juce.yPosition = y;
-//        std::cout << "Knob Position 1: " << knobPos1_juce.xPosition << ", " << knobPos1_juce.yPosition << std::endl;
     }
     else if (modelID == 2)
     {
         knobPos2_juce.xPosition = x;
         knobPos2_juce.yPosition = y;
-//        std::cout << "Knob Position 2: " << knobPos2_juce.xPosition << ", " << knobPos2_juce.yPosition << std::endl;
     }
 }
 
@@ -261,3 +259,18 @@ void  OpenGLBackground::SetJuceLabels()
 XYPad* OpenGLBackground::getXYPad() {
     return &xyPad;
 }
+
+void OpenGLBackground::showSignalFlowChart(bool newState) {
+    signalFlowChart->setVisible(newState);
+    xyPad.setVisible(!newState);
+    labels.attack.setVisible(!newState);
+    labels.smooth.setVisible(!newState);
+    labels.sharp.setVisible(!newState);
+    labels.sustain.setVisible(!newState);
+    repaint();
+}
+
+bool OpenGLBackground::isSignalFlowChartVisible() {
+    return signalFlowChart->isVisible();
+}
+

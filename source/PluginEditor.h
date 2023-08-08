@@ -36,10 +36,11 @@ private:
 
     juce::AudioProcessorValueTreeState& apvts;
     TransientViewer transientViewer;
-    OpenGLBackground openGLBackground;
+    //OpenGLBackground openGLBackground;
+    std::unique_ptr<OpenGLBackground> openGLBackground;
     ParameterControl parameterControl;
     AdvancedParameterControl advancedParameterControl;
-    std::unique_ptr<HeaderComponent> headerComponent;
+    HeaderComponent headerComponent;
     TextureComponent textureComponent;
     FooterComponent footerComponent;
 
@@ -51,7 +52,5 @@ private:
     juce::Component** parameterControlComponents;
     juce::Component** advancedParameterControlComponents;
     juce::Component** headerComponents;
-
-
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };

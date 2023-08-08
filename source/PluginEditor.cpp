@@ -4,10 +4,12 @@
 
 //==============================================================================
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parameters)
-    : AudioProcessorEditor (&p), apvts(parameters), processorRef (p), transientViewer(p), openGLBackground(parameters, p), advancedParameterControl(parameters), parameterControl(parameters),
-      footerComponent(p, parameters)
+    : AudioProcessorEditor (&p), apvts(parameters), processorRef (p), transientViewer(p)/*, openGLBackground(parameters, p)*/, advancedParameterControl(parameters), parameterControl(parameters),
+      footerComponent(p, parameters), headerComponent(p, parameters)
 {
     juce::ignoreUnused (processorRef);
+
+    openGLBackground = std::make_unique<OpenGLBackground>(parameters, p);
 
     for (auto & parameterID : PluginParameters::getPluginParameterList()) {
         parameters.addParameterListener(parameterID, this);
@@ -15,9 +17,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     juce::LookAndFeel::setDefaultLookAndFeel (&customFontLookAndFeel);
 
-    headerComponent = std::make_unique<HeaderComponent>(p, parameters);
-
-    headerComponent->onParameterControlViewChange = [this](bool newState)
+    headerComponent.onParameterControlViewChange = [this](bool newState)
     {
         if (newState)
         {
@@ -33,8 +33,8 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
         }
     };
 
-    addAndMakeVisible(headerComponent.get());
-    addAndMakeVisible(openGLBackground);
+    addAndMakeVisible(headerComponent);
+    addAndMakeVisible(*openGLBackground);
     addAndMakeVisible(advancedParameterControl);
     addAndMakeVisible(parameterControl);
     addAndMakeVisible(transientViewer);
@@ -42,7 +42,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     addAndMakeVisible(footerComponent);
     bool state = processorRef.advancedParameterControlVisible.getValue();
 
-    headerComponent->detailButton.setToggleState(state, juce::sendNotification);
+    headerComponent.detailButton.setToggleState(state, juce::sendNotification);
     if (!state)
         advancedParameterControl.setVisible(false);
     else
@@ -56,7 +56,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     setSize (1400, 700);
 
     processorRef.setExternalModelName = [this] (int modelID, juce::String& modelName) {
-        openGLBackground.externalModelLoaded(modelID, modelName);
+        openGLBackground->externalModelLoaded(modelID, modelName);
     };
 
     //setResizable(false, false);
@@ -66,13 +66,22 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     fadeParam->setValueNotifyingHost(0.5f*fadeStatus);
     fadeParam->setValueNotifyingHost(fadeStatus);
 
-    xyPadComponents = openGLBackground.getXYPad()->getTooltipPointers();
+    xyPadComponents = openGLBackground->getXYPad()->getTooltipPointers();
     parameterControlComponents = parameterControl.getTooltipPointers();
     advancedParameterControlComponents = advancedParameterControl.getTooltipPointers();
-    headerComponents = headerComponent->getTooltipPointers();
+    headerComponents = headerComponent.getTooltipPointers();
 
     setInterceptsMouseClicks(true, true);
     addMouseListener(this, true);
+
+    headerComponent.onScyloneButtonClick = [this](bool newState)
+            {
+                transientViewer.setVisible(!newState);
+                parameterControl.setVisible(!newState);
+                openGLBackground->showSignalFlowChart(newState);
+                resized();
+                repaint();
+            };
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
@@ -106,19 +115,27 @@ void AudioPluginAudioProcessorEditor::resized()
 
     juce::ignoreUnused(headerSection, miniMapSection, sliderSection);
 
-    openGLBackground.setBounds(padSection);
+    if (openGLBackground->isSignalFlowChartVisible()) {
+        auto window = getLocalBounds();
+        window.removeFromTop(headerSection.getHeight() + 20);
+        openGLBackground->setBounds(window);
+    }
+    else
+        openGLBackground->setBounds(padSection);
+
     transientViewer.setBounds(710, 450, 163, 163);
     advancedParameterControl.setBounds(765, 60, 600, 600);
 
     auto areaParameter = getLocalBounds().removeFromRight(static_cast<int>((float)getWidth()*0.4f));
     areaParameter.removeFromTop(40);
     parameterControl.setBounds(areaParameter);
-    headerComponent->setBounds(getLocalBounds());
+    headerComponent.setBounds(getLocalBounds());
     textureComponent.setBounds(getLocalBounds());
     footerComponent.setBounds(getLocalBounds().removeFromBottom(35));
 
     processorRef.onNetwork1NameChange(processorRef.network1Name.toString());
     processorRef.onNetwork2NameChange(processorRef.network2Name.toString());
+
 }
 
 void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &parameterID, float newValue) {
@@ -231,13 +248,13 @@ void AudioPluginAudioProcessorEditor::mouseEnter(const juce::MouseEvent &event) 
     else if (component == advancedParameterControlComponents[15])
         footerComponent.setTooltipText("RAVE Network 2 Grain Delay Dry/Wet");
 
-    else if (component->getComponentID() == openGLBackground.getLabels()->sharp.getComponentID())
+    else if (component->getComponentID() == openGLBackground->getLabels()->sharp.getComponentID())
         footerComponent.setTooltipText("Low Cut Filter Frequency");
-    else if (component->getComponentID() == openGLBackground.getLabels()->attack.getComponentID())
+    else if (component->getComponentID() == openGLBackground->getLabels()->attack.getComponentID())
         footerComponent.setTooltipText("Transient Shaper: Attack");
-    else if (component->getComponentID() == openGLBackground.getLabels()->smooth.getComponentID())
+    else if (component->getComponentID() == openGLBackground->getLabels()->smooth.getComponentID())
         footerComponent.setTooltipText("High Cut Filter Frequency");
-    else if (component->getComponentID() == openGLBackground.getLabels()->sustain.getComponentID())
+    else if (component->getComponentID() == openGLBackground->getLabels()->sustain.getComponentID())
         footerComponent.setTooltipText("Transient Shaper: Sustain");
 }
 

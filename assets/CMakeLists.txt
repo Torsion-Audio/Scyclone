@@ -4,7 +4,6 @@ juce_add_binary_data(BinaryData SOURCES
 
         pictures/Gradient.png
         pictures/Gradient_OpenGL.png
-	pictures/social_preview.png
 
         fonts/Inter-Bold.ttf
         fonts/Inter-Regular.ttf
@@ -22,7 +21,8 @@ juce_add_binary_data(BinaryData SOURCES
 	fonts/BaiJamjuree-SemiBold.ttf
 	fonts/BaiJamjuree-SemiBoldItalic.ttf
 	
-
+		svg/social_preview.svg
+		svg/signal_flow_control.svg
         svg/ui_background.svg
         svg/Octagon.svg
         svg/arrowDownLeft.svg
@@ -44,8 +44,9 @@ juce_add_binary_data(BinaryData SOURCES
         svg/detailButtonOff.svg
         svg/detailButtonOn.svg
         svg/Scyclone.svg
-	  	svg/NeuralTransfer.svg
-	  	svg/Logo.svg
+	svg/NeuralTransfer.svg
+	svg/Logo.svg
+	svg/closeButton.svg
 
         openGLShaderPrograms/BasicVertex.glsl
         openGLShaderPrograms/blob-4.glsl

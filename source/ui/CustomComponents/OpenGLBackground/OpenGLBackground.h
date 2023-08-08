@@ -68,6 +68,8 @@ public:
 
     Labels* getLabels() {   return &labels; };
 
+    void showSignalFlowChart(bool newState);
+    bool isSignalFlowChartVisible();
 private:
     
     /** Attempts to compile the OpenGL program at runtime and setup OpenGL variables. */
@@ -115,5 +117,7 @@ private:
     Labels labels;
     void SetJuceLabels();
     CustomFontLookAndFeel customFontLookAndFeel;
+    std::unique_ptr<juce::Drawable> signalFlowChart = juce::Drawable::createFromImageData(BinaryData::signal_flow_control_svg, BinaryData::signal_flow_control_svgSize);
+
 };
 

@@ -6,6 +6,8 @@
 
 HeaderComponent::HeaderComponent(AudioPluginAudioProcessor &p, juce::AudioProcessorValueTreeState &parameters) : detailButton("detailButton",
                                                                                                                               juce::DrawableButton::ButtonStyle::ImageFitted),
+                                                                                                                 scycloneButton("scycloneButton",
+                                                                                                                                juce::DrawableButton::ButtonStyle::ImageFitted),
                                                                                                                  apvts(parameters),
                                                                                                                  audioProcessor(p){
 
@@ -68,8 +70,16 @@ HeaderComponent::HeaderComponent(AudioPluginAudioProcessor &p, juce::AudioProces
         audioProcessor.advancedParameterControlVisible = buttonDown;
         //audioProcessor.onUpdateUnautomatableParameters();
     };
-
     detailButton.setColour(juce::DrawableButton::ColourIds::backgroundOnColourId, juce::Colours::transparentBlack);
+
+    scycloneButton.setClickingTogglesState(true);
+    scycloneButton.setImages(scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get());
+    addAndMakeVisible(scycloneButton);
+    scycloneButton.onClick = [this]() {
+        onScyloneButtonClick(scycloneButton.getToggleState());
+    };
+
+
     this->setInterceptsMouseClicks(true, true);
 
     componentArray[0] = inputGainSlider.getChildComponent(0);
@@ -92,11 +102,11 @@ void HeaderComponent::resized() {
     detailButton.setBounds(getWidth() - 80, 24, 35, 19);
     scycloneTypoSection.setBounds(49.f, 21.f, 127.f, 30.f);
     neuralTransferTypoSection.setBounds(197.f, 21.f, 121.f, 30.f);
-    scycloneLogoSection.setBounds((int)((float)(getWidth()/2 - 72.5)), 21.f, 145.f, 30.f);
+    scycloneButton.setBounds((int)((float)(getWidth()/2 - 72.5)), 21.f, 145.f, 30.f);
 }
 
 void HeaderComponent::paint(juce::Graphics &g) {
-    scycloneLogo->drawWithin(g, scycloneLogoSection, juce::RectanglePlacement::yBottom, 100);
+    //scycloneLogo->drawWithin(g, scycloneLogoSection, juce::RectanglePlacement::yBottom, 100);
     scycloneTypo->drawWithin(g, scycloneTypoSection, juce::RectanglePlacement::yBottom, 100);
     neuralTransferTypo->drawWithin(g, neuralTransferTypoSection, juce::RectanglePlacement::yBottom, 100);
 }
