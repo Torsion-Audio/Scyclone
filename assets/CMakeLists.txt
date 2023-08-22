@@ -4,6 +4,7 @@ juce_add_binary_data(BinaryData SOURCES
 
         pictures/Gradient.png
         pictures/Gradient_OpenGL.png
+	pictures/signal_flow_control.png
 
         fonts/Inter-Bold.ttf
         fonts/Inter-Regular.ttf
@@ -23,6 +24,7 @@ juce_add_binary_data(BinaryData SOURCES
 	
 		svg/social_preview.svg
 		svg/signal_flow_control.svg
+
         svg/ui_background.svg
         svg/Octagon.svg
         svg/arrowDownLeft.svg

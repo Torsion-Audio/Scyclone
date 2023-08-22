@@ -117,7 +117,7 @@ private:
     Labels labels;
     void SetJuceLabels();
     CustomFontLookAndFeel customFontLookAndFeel;
-    std::unique_ptr<juce::Drawable> signalFlowChart = juce::Drawable::createFromImageData(BinaryData::signal_flow_control_svg, BinaryData::signal_flow_control_svgSize);
+    std::unique_ptr<juce::Drawable> signalFlowChart = juce::Drawable::createFromImageData(BinaryData::signal_flow_control_png, BinaryData::signal_flow_control_pngSize);
 
 };
 
