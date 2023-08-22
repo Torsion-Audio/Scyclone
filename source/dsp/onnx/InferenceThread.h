@@ -50,6 +50,7 @@ private:
     Ort::Env env;
     Ort::RunOptions runOptions;
     Ort::Session session;
+    Ort::SessionOptions sessionOptions;
 
     std::vector<float> onnxInputData;
     std::vector<float> onnxOutputData;

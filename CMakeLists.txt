@@ -38,7 +38,7 @@ add_subdirectory(modules/JUCE)                    # If you've put JUCE in a subd
 # juce_set_aax_sdk_path(...)
 
 # `juce_add_plugin` adds a static library target with the name passed as the first argument
-# (VAESynth here). This target is a normal CMake target, but has a lot of extra properties set
+# (Scyclone here). This target is a normal CMake target, but has a lot of extra properties set
 # up by default. As well as this shared code static library, this function adds targets for each of
 # the formats specified by the FORMATS arguments. This function accepts many optional arguments.
 # Check the readme at `docs/CMake API.md` in the JUCE repo for the full list.
@@ -78,8 +78,13 @@ juce_add_plugin(${TARGET_NAME}
 juce_generate_juce_header(${TARGET_NAME})
 
 # Sets the cpp language minimum
-set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 17)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 20)
 set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
+
+# Export only public symbols
+# We set this option for all our libraries since the onnxruntime lib and the google benchmark lib are setup with hidden visibility this otherwise we get linker warnings that say ... means the weak symbol cannot be overridden at runtime. This was likely caused by different translation units being compiled with different visibility settings
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 add_subdirectory(modules/RnboExport)
 
@@ -92,12 +97,15 @@ target_sources(${TARGET_NAME} PRIVATE ${SOURCES} ${RNBO_SOURCES})
 
 # Add include directories for all folders in the source
 file(GLOB_RECURSE source_dirs LIST_DIRECTORIES true ${CMAKE_CURRENT_LIST_DIR}/source/*)
+list(APPEND source_dirs ${CMAKE_CURRENT_LIST_DIR}/source)
 
 foreach (dir ${source_dirs})
-    if (IS_DIRECTORY ${dir})
+if (IS_DIRECTORY ${dir})
         target_include_directories(${TARGET_NAME} PRIVATE ${dir})
     endif ()
 endforeach ()
+
+target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
 
 # Make the folder structure visible in the IDE
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/source PREFIX "source" FILES ${SOURCES})
@@ -111,16 +119,14 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/modules PREFIX "modules" FILES ${R
 # definitions, pick unique names that are unlikely to collide! This is a standard CMake command.
 
 target_compile_definitions(${TARGET_NAME}
-		PUBLIC
+		PRIVATE
 		# JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
 		JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
 		JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
 		JUCE_VST3_CAN_REPLACE_VST2=0
-		JUCE_DISPLAY_SPLASH_SCREEN=1
+		JUCE_DISPLAY_SPLASH_SCREEN=0
 		DONT_SET_USING_JUCE_NAMESPACE=1
 		)
-
-target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/include)
 
 # Add the onnxruntime library
 add_library(onnxruntime STATIC IMPORTED)
@@ -131,6 +137,7 @@ if (APPLE)
 		set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-osx-x64.a)
 	elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
 		set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-osx-arm64.a)
+		set_property(TARGET onnxruntime PROPERTY CXX_VISIBILITY_PRESET default)
 	else()
 		message(FATAL_ERROR "CMAKE_HOST_SYSTEM_PROCESSOR not defined.")
 	endif()
@@ -180,3 +187,79 @@ target_link_libraries(${TARGET_NAME}
 		juce::juce_recommended_lto_flags
 		juce::juce_recommended_warning_flags
 )
+
+add_subdirectory(installer)
+
+# enable ctest
+enable_testing()
+
+# this is a test on application level starting the app and checking if it is running
+# add_test(NAME RegularUsage COMMAND "Scyclone_artefacts/Debug/Standalone/Scyclone.app/Contents/MacOS/Scyclone")
+# we can specify som REGEX to check the output of the application
+# set_tests_properties(RegularUsage
+#   PROPERTIES FAIL_REGULAR_EXPRESSION "Custom Slider Component"
+#   )
+
+# get all test cpp and header files
+file(GLOB_RECURSE TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/test/*.h")
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test PREFIX "" FILES ${TestFiles})
+
+# This module enables populating content at configure time via any method supported by the ExternalProject module. Whereas ExternalProject_Add() downloads at build time, the FetchContent module makes content available immediately, allowing the configure step to use the content in commands like add_subdirectory(), include() or file() operations.
+include(FetchContent)
+
+# Externally provided libraries
+# Using zip files instead is faster
+FetchContent_Declare(googletest
+	URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip)
+
+FetchContent_Declare(benchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+    GIT_TAG v1.8.0)
+
+# This command ensures that each of the named dependencies are made available to the project by the time it returns. If the dependency has already been populated the command does nothing. Otherwise, the command populates the dependency and then calls add_subdirectory() on the result.
+FetchContent_MakeAvailable(googletest)
+
+# For benchmark we want to set the BENCMARK_ENABLE_TESTING to OFF therefore we cannot use FetchContent_MakeAvailable()
+# Check if population has already been performed
+FetchContent_GetProperties(benchmark)
+if(NOT benchmark_POPULATED)
+  # Fetch the content using previously declared details
+  FetchContent_Populate(benchmark)
+
+  # Set custom variables, policies, etc.
+  set(BENCHMARK_ENABLE_TESTING OFF)
+
+  # Bring the populated content into the build
+  add_subdirectory(${benchmark_SOURCE_DIR} ${benchmark_BINARY_DIR})
+endif()
+
+# Setup the test executable
+add_executable(Test ${TestFiles})
+set_property(TARGET Test PROPERTY CXX_STANDARD 20)
+
+# Link the test executable against gtest_main and google benchmark
+target_link_libraries(Test PRIVATE gtest_main benchmark::benchmark "${TARGET_NAME}")
+
+# We can't link again to the shared juce target without ODL violations (https://github.com/sudara/pamplejuce/issues/31, https://forum.juce.com/t/windows-linker-issue-on-develop/55524/2)
+# Therefore we steal the compile definitions and include directories from the main target and pass them to our test target
+# Since we linked the shared juce targets in PRIVATE mode, they are not linked to the test target again
+target_compile_definitions(Test PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},COMPILE_DEFINITIONS>)
+target_include_directories(Test PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},INCLUDE_DIRECTORIES>)
+
+# Make an Xcode Scheme for the test executable so we can run Test in the IDE
+set_target_properties(Test PROPERTIES XCODE_GENERATE_SCHEME ON)
+
+# Organize the test source in the test/ folder in the IDE
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test PREFIX "" FILES ${TestFiles})
+
+# include Loads and runs CMake code from the file given. Loads and runs CMake code from the file given.
+include(GoogleTest)
+# gtest_discover_tests will register a CTest test for each gtest and run them all in parallel with the rest of the Test.
+gtest_discover_tests(Test)
+
+# Color our warnings and errors
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+   add_compile_options (-fdiagnostics-color=always)
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+   add_compile_options (-fcolor-diagnostics)
+endif ()
