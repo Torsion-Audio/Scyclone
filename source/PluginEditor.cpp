@@ -213,6 +213,8 @@ void AudioPluginAudioProcessorEditor::mouseEnter(const juce::MouseEvent &event) 
         footerComponent.setTooltipText("Trim output gain");
     } else if (component == headerComponents[2]) {
         footerComponent.setTooltipText("Power User View");
+    } else if (component == headerComponents[3]) {
+        footerComponent.setTooltipText(juce::String("Scyclone v.") + ProjectInfo::versionString + juce::String(" | Click for more information."));
     }
 
     else if (component == advancedParameterControlComponents[0])

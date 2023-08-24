@@ -85,6 +85,7 @@ HeaderComponent::HeaderComponent(AudioPluginAudioProcessor &p, juce::AudioProces
     componentArray[0] = inputGainSlider.getChildComponent(0);
     componentArray[1] = outputGainSlider.getChildComponent(0);
     componentArray[2] = &detailButton;
+    componentArray[3] = &scycloneButton;
 }
 
 HeaderComponent::~HeaderComponent() {

@@ -35,11 +35,16 @@ void FooterComponent::resized() {
     r.removeFromRight(8);
     r.removeFromLeft(8);
     r.removeFromBottom(5);
+
+
     auto cpuSection = r.removeFromRight(130);
+    cpuSection.removeFromRight(37);
     cpuLabel.setBounds(cpuSection);
+    cpuLabel.setJustificationType(juce::Justification::right);
 
     auto latencySection = r.removeFromRight(130);
     latencyLabel.setBounds(latencySection);
+    latencyLabel.setJustificationType(juce::Justification::right);
 
     r.removeFromLeft(35);
     auto tooltipSection = r.removeFromLeft(500);
@@ -54,7 +59,8 @@ void FooterComponent::updateSpecs(){
     sampleRate = processor.getSampleRate();
     latencySeconds = (float)latencySamples / float(sampleRate);
 
-    processorUse = processor.getCpuLoad();
+    //processorUse = processor.getCpuLoad();
+    processorUse = systemSpecs.getCPULoad();
 
     std::string cpuString = "CPU: " + std::to_string((int)processorUse ) + " %";
     cpuLabel.setText(cpuString, juce::dontSendNotification);

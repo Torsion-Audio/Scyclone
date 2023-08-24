@@ -9,6 +9,7 @@
 #include "../../../PluginParameters.h"
 #include "../../../PluginProcessor.h"
 #include "../../../ui/LookAndFeel/CustomFontLookAndFeel.h"
+#include "../../../utils/SystemSpecs.h"
 
 class FooterComponent : public juce::Component, juce::Timer {
 public:
@@ -37,6 +38,8 @@ private:
 
     CustomFontLookAndFeel customFontLookAndFeel;
     juce::Font font;
+
+    SystemSpecs systemSpecs;
 
 };
 

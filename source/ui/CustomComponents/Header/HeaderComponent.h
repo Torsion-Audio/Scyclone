@@ -63,7 +63,7 @@ private:
         juce::Label outputGainLabel;
     } labels;
 
-    juce::Component* componentArray[3];
+    juce::Component* componentArray[4];
 };
 
 #endif //VAESYNTH_HEADERCOMPONENT_H
