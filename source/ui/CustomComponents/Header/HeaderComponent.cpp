@@ -64,7 +64,7 @@ HeaderComponent::HeaderComponent(AudioPluginAudioProcessor &p, juce::AudioProces
         outputGainSlider.repaint();
         inputGainSlider.repaint();
     };
-    detailButton.onStateChange = [this](){
+    detailButton.onStateChange = [this]() {
         bool buttonDown = detailButton.getToggleState();
         onParameterControlViewChange(buttonDown);
         audioProcessor.advancedParameterControlVisible = buttonDown;
@@ -73,7 +73,10 @@ HeaderComponent::HeaderComponent(AudioPluginAudioProcessor &p, juce::AudioProces
     detailButton.setColour(juce::DrawableButton::ColourIds::backgroundOnColourId, juce::Colours::transparentBlack);
 
     scycloneButton.setClickingTogglesState(true);
-    scycloneButton.setImages(scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get());
+    scycloneButton.setImages(scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get());
+    scycloneButton.setHasFocusOutline(false);
+    scycloneButton.setColour(juce::DrawableButton::ColourIds::backgroundColourId, juce::Colours::transparentWhite);
+    scycloneButton.setColour(juce::DrawableButton::ColourIds::backgroundOnColourId, juce::Colours::transparentWhite);
     addAndMakeVisible(scycloneButton);
     scycloneButton.onClick = [this]() {
         onScyloneButtonClick(scycloneButton.getToggleState());
