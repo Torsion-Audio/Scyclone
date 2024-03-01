@@ -15,3 +15,4 @@ LV2.mak
 .vscode/
 .idea/
 Plugin/xcode/
+modules/onnxruntime/lib/macos-universal/libonnxruntime.a

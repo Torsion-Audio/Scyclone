@@ -126,14 +126,14 @@ target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modu
 add_library(onnxruntime STATIC IMPORTED)
 
 if (APPLE)
-	message(STATUS ${CMAKE_HOST_SYSTEM_PROCESSOR})
-	if (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
-		set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-osx-x64.a)
-	elseif (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
-		set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-osx-arm64.a)
-	else()
-		message(FATAL_ERROR "CMAKE_HOST_SYSTEM_PROCESSOR not defined.")
+	if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/macos-universal/libonnxruntime.a)
+		message("Unzipping universal macOS onnx build")
+		execute_process(
+				COMMAND ${CMAKE_COMMAND} -E tar xf ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/macos-universal/libonnxruntime.a.zip
+				WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/macos-universal/
+		)
 	endif()
+	set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/macos-universal/libonnxruntime.a)
 elseif (MSVC)
 	set_property(TARGET onnxruntime APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
 
