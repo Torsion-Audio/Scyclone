@@ -22,7 +22,7 @@ void AudioVisualiser::processSample(juce::AudioBuffer<float> &buffer1, juce::Aud
     for (int channel = 0; channel < buffer1.getNumChannels(); ++channel) {
             for (int sample = 0; sample < buffer1.getNumSamples(); ++sample) {
                 float sampleToCheck = buffer1.getSample(channel, sample);
-                if (isnan(sampleToCheck)) {
+                if (std::isnan(sampleToCheck)) {
                     return;
                 }
             }
@@ -31,7 +31,7 @@ void AudioVisualiser::processSample(juce::AudioBuffer<float> &buffer1, juce::Aud
         for (int channel = 0; channel < buffer2.getNumChannels(); ++channel) {
             for (int sample = 0; sample < buffer2.getNumSamples(); ++sample) {
                 float sampleToCheck = buffer2.getSample(channel, sample);
-                if (isnan(sampleToCheck)) {
+                if (std::isnan(sampleToCheck)) {
                     return;
                 }
             }

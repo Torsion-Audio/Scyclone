@@ -99,7 +99,7 @@ void IIRCutoffFilter::processFilters(juce::AudioBuffer<float> &buffer) {
     for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
             for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
                 float sampleToCheck = buffer.getSample(channel, sample);
-                if (isnan(sampleToCheck)) {
+                if (std::isnan(sampleToCheck)) {
                     return;
                 }
             }

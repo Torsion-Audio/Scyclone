@@ -39,7 +39,7 @@ void Envelope::processBlock(juce::AudioBuffer<float>& buffer){
         for (unsigned long i = 0; i < (unsigned long) buffer.getNumSamples(); i++){
             detector[i] = (mono) ? buffer.getSample(0, (int) i)
                             : std::max(std::abs(buffer.getSample(0, (int) i)), std::abs(buffer.getSample(1, (int) i)));
-            if (isnan(lastValue)) lastValue = 0.f;
+            if (std::isnan(lastValue)) lastValue = 0.f;
             if (lastValue < detector[i]) envelope[i] = attackCoefficient*lastValue + (1-attackCoefficient)*detector[i];
             else envelope[i] = releaseCoefficient*lastValue + (1-releaseCoefficient)*detector[i];
             lastValue = envelope[i];

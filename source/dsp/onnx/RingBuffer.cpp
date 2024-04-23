@@ -27,7 +27,7 @@ void RingBuffer::reset() {
 }
 
 void RingBuffer::pushSample(float sample, int channel) {
-    if (isnan(sample)){
+    if (std::isnan(sample)){
         sample = 0.f;
 //        std::cout << "Sample is nan! push" << std::endl; //DBG
     }
@@ -48,7 +48,7 @@ float RingBuffer::popSample(int channel) {
     if (readPos[channel] >= buffer.getNumSamples()) {
         readPos[channel] = 0;
     }
-    if (isnan(sample)){
+    if (std::isnan(sample)){
 //        std::cout << "Sample is nan! pop" << std::endl; //DBG
         return 0.f;
     }
