@@ -153,6 +153,8 @@ elseif (MSVC)
 			MAP_IMPORTED_CONFIG_MINSIZEREL Release
 			MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
 			)
+elseif(LINUX)
+	set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-linux_x86_64-static-combined.a)
 endif()
 
 
