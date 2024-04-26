@@ -251,7 +251,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     }
     cpuLoad = measurer.getLoadAsPercentage();
 
-    std::cout << "CPU: " << (int)(cpuLoad) << " %\n";
+    // std::cout << "CPU: " << (int)(cpuLoad) << " %\n";
     // std::cout << "latency: " << (latency*1000) << " ms\n";
 }
 
