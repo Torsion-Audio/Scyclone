@@ -12,7 +12,10 @@ class SystemSpecs {
         ~SystemSpecs();
 
         double getCPULoad();
+
         double calculateCPULoad();
+        // Mac
+        double calculateCPULoad(unsigned long long idleTicks, unsigned long long totalTicks);
     private:
         juce::SystemStats::OperatingSystemType os;
 };

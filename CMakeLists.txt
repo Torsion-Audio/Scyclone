@@ -182,6 +182,7 @@ target_link_libraries(${TARGET_NAME}
 		juce::juce_graphics
 		juce::juce_gui_basics
 		juce::juce_gui_extra
+		juce::juce_audio_basics
 		onnxruntime
 
 		PUBLIC
