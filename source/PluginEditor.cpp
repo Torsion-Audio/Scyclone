@@ -78,6 +78,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
             {
                 transientViewer.setVisible(!newState);
                 parameterControl.setVisible(!newState);
+                headerComponent.detailButton.setEnabled(!newState);
                 openGLBackground->showSignalFlowChart(newState);
                 resized();
                 repaint();
