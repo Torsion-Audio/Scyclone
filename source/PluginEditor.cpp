@@ -181,7 +181,6 @@ void AudioPluginAudioProcessorEditor::openFileChooser(int networkID) {
 
 void AudioPluginAudioProcessorEditor::mouseEnter(const juce::MouseEvent &event) {
     auto component = event.originalComponent;
-    std::cout << component->getName() << "\n";
     if (component == xyPadComponents[0]) {
         footerComponent.setTooltipText("RAVE Network 1");
     } else if (component == xyPadComponents[1]) {
