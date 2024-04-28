@@ -23,9 +23,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         grainDelay1(1),
         grainDelay2(2),
         processorCompressor(parameters)
-{   
-    // resets the state
-    
+{       
 
     network1Name = "Funk";
     network2Name = "Djembe";
