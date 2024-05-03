@@ -60,7 +60,7 @@ void FooterComponent::updateSpecs(){
     latencySeconds = (float)latencySamples / float(sampleRate);
 
     //processorUse = processor.getCpuLoad();
-    processorUse = systemSpecs.getCPULoad();
+    processorUse = processor.getCpuLoad();
 
     std::string cpuString = "CPU: " + std::to_string((int)processorUse ) + " %";
     cpuLabel.setText(cpuString, juce::dontSendNotification);

@@ -23,7 +23,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         grainDelay1(1),
         grainDelay2(2),
         processorCompressor(parameters)
-{
+{       
 
     network1Name = "Funk";
     network2Name = "Djembe";
@@ -169,6 +169,7 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 void AudioPluginAudioProcessor::releaseResources() {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
+    measurer.reset();
 }
 
 bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
@@ -195,9 +196,8 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
 
 void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& ) {
-    juce::AudioProcessLoadMeasurer::ScopedTimer s(measurer);
+    juce::AudioProcessLoadMeasurer::ScopedTimer s(measurer, buffer.getNumSamples());
     {
-
         dryWetMixer.setDrySamples(buffer);
         stereoToMono(monoBuffer, buffer);
 

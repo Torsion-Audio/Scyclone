@@ -102,12 +102,7 @@ void XYPad::resized()
 
 void XYPad::parameterChanged(const juce::String& parameterID, float newValue)
 {
-    if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && newValue == 0.f) {
-        updateKnobName(1, network1Name);
-    } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && newValue == 0.f) {
-        updateKnobName(2, network2Name);
-    }
-
+    
     if (parameterID == PluginParameters::FADE_ID.getParamID()){
         float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load();
         onModelMixChange(fadeValue);
