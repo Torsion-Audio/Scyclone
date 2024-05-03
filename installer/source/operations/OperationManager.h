@@ -61,7 +61,7 @@ private:
     std::vector<std::pair<FormatOptions::Options, juce::String>> installConfig;
 
     RepoInspector repoInspector;
-    FileDownload fileDownload;
+    std::unique_ptr<FileDownload> fileDownload;
     ZipExtractor zipExtractor;
     PluginInstaller pluginManager;
 };

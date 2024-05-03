@@ -19,7 +19,7 @@ private:
 private:
     juce::Label headerLabel {"headerLabel", ""};
     juce::Label descriptionLabel {"descriptionLabel", "Installation successful!"};
-    CustomButton button {"close"};
+    CustomButton button {"Close"};
 };
 
 

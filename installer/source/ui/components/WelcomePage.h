@@ -18,8 +18,8 @@ private:
 
 private:
     juce::Label headerLabel {"headerLabel", "Welcome to SCYCLONE Setup"};
-    juce::Label descriptionLabel {"descriptionLabel", "Please ensure all SCYCLONE instances are closed \n \n and that you have a stable Internet connection."};
-    CustomButton button {"Start installation"};
+    juce::Label descriptionLabel {"descriptionLabel", " Real-time Neural Timbre Transfer "};
+    CustomButton button {"Start"};
 };
 
 

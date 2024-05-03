@@ -6,11 +6,6 @@
 
 CustomButton::CustomButton(juce::String buttonText) : button("button", juce::DrawableButton::ButtonStyle::ImageFitted) {
     button.setImages(buttonOff.get(),
-                     buttonOff.get(),
-                     buttonOn.get(),
-                     buttonOff.get(),
-                     buttonOn.get(),
-                     buttonOn.get(),
                      buttonOn.get(),
                      buttonOn.get());
     button.onClick = [this] { buttonClicked(); };

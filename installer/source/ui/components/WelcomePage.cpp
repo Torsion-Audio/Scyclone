@@ -15,6 +15,8 @@ void WelcomePage::resized() {
     area.removeFromTop(20);
     headerLabel.setBounds(area.removeFromTop(50));
     area.removeFromTop(20);
+    descriptionLabel.setFont (juce::Font (14.0f, juce::Font::bold));
+    descriptionLabel.setColour(juce::Label::ColourIds::textColourId , juce::Colour{0xff5E6062});
     descriptionLabel.setBounds(area.removeFromTop(100));
     button.setBounds(0, 250, 500, 50);
 }

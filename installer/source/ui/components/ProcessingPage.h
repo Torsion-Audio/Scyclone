@@ -58,13 +58,21 @@ private:
         g.drawEllipse(getLocalBounds().reduced(10).toFloat(), 2.f);
 
         if (downloading) {
-            g.drawText(juce::String{"downloading..."}, getLocalBounds(), juce::Justification::centred);
-
             juce::Rectangle<int> progressRect = getLocalBounds();
-            progressRect.removeFromTop(70);
-            g.drawText(juce::String{downloadProgress} + juce::String{" %"}, progressRect, juce::Justification::centred);
+            g.setFont(juce::Font (20.0f, juce::Font::bold));
+            g.drawText(juce::String{downloadProgress}, progressRect, juce::Justification::centred);
         } else {
-            g.drawText(juce::String{"installing..."}, getLocalBounds(), juce::Justification::centred);
+            juce::Rectangle<int> progressRect = getLocalBounds();
+            g.setFont(juce::Font (20.0f, juce::Font::bold));
+            loadingCounter += 1;
+            if (loadingCounter < 10) {
+                g.drawText(juce::String("."), progressRect, juce::Justification::centred);
+            } else if (loadingCounter < 20) {
+                g.drawText(juce::String(".."), progressRect, juce::Justification::centred);
+            } else if (loadingCounter < 30) {
+                g.drawText(juce::String("..."), progressRect, juce::Justification::centred);
+            }
+            if (loadingCounter == 30) loadingCounter = 0;
         }
     }
     void resized() override
@@ -75,6 +83,7 @@ private:
 private:
     bool downloading = true;
     int downloadProgress = 0;
+    int loadingCounter = 0;
 };
 
 class ProcessingPage : public TemplateInterfacePage {

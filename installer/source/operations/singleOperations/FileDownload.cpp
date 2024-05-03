@@ -9,11 +9,10 @@ FileDownload::FileDownload () {
 }
 
 FileDownload::~FileDownload() {
-    downloadTask.reset();
 }
 
 void FileDownload::stopDownload() {
-    downloadTask = nullptr;
+    downloadTask.reset();
 }
 
 int FileDownload::getDownloadProgress() {

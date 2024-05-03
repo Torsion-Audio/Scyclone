@@ -5,15 +5,17 @@
 #include "OperationManager.h"
 
 OperationManager::OperationManager() : Thread("OperationManager") {
+    fileDownload = std::make_unique<FileDownload>();
+
     repoInspector.addListener(this);
-    fileDownload.addListener(this);
+    fileDownload->addListener(this);
     zipExtractor.addListener(this);
     pluginManager.addListener(this);
 }
 
 OperationManager::~OperationManager() {
     repoInspector.removeListener(this);
-    fileDownload.removeListener(this);
+    fileDownload->removeListener(this);
     zipExtractor.removeListener(this);
     pluginManager.removeListener(this);
     stop();
@@ -31,8 +33,9 @@ void OperationManager::start() {
 }
 
 void OperationManager::stop() {
-    stopThread(1000);
-    fileDownload.stopDownload();
+    fileDownload = std::make_unique<FileDownload>();
+    fileDownload->addListener(this);
+
     pluginManager.reset();
 }
 
@@ -41,7 +44,7 @@ InstallationState OperationManager::getState() {
 }
 
 int OperationManager::getDownloadProgress() {
-    return fileDownload.getDownloadProgress();
+    return fileDownload->getDownloadProgress();
 }
 
 void OperationManager::run() {
@@ -104,14 +107,12 @@ void OperationManager::changeState(InstallationState newState) {
         if (state == Startup) {
             repoInspector.inspectURL(repoURL);
         } else if (state == GitHubAccessed) {
-            fileDownload.downloadFile(latestScyclone->sourceURL, latestScyclone->targetFile);
+            fileDownload->downloadFile(latestScyclone->sourceURL, latestScyclone->targetFile);
         } else if (state == DownloadFinished) {
             zipExtractor.setSourceFile(latestScyclone->targetFile);
             zipExtractor.extractTo(latestScyclone->extractedFolder);
         } else if (state == ExtractionFinished) {
             pluginManager.install(latestScyclone->extractedFolder, installConfig);
-        } else {
-            stop();
         }
     }
 }

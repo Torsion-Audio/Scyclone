@@ -27,6 +27,7 @@ public:
 protected:
     void initComponent(juce::Component* component) {
         if (auto* label = dynamic_cast<juce::Label*> (component)) {
+            label->setColour(juce::Label::ColourIds::textColourId , juce::Colour{0xff9A9A9A});
             label->setJustificationType (juce::Justification::centred);
             label->setFont (juce::Font (16.0f, juce::Font::bold));
             addAndMakeVisible(label);
