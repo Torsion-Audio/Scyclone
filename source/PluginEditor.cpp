@@ -21,15 +21,15 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     {
         if (newState)
         {
-            advancedParameterControl.setVisible(true);
-            parameterControl.setVisible(false);
-            transientViewer.setVisible(false);
+            componentAnimator->fadeIn(&advancedParameterControl, fadeTime);
+            componentAnimator->fadeOut(&parameterControl, fadeTime);
+            componentAnimator->fadeOut(&transientViewer, fadeTime);
         }
         else
         {
-            advancedParameterControl.setVisible(false);
-            parameterControl.setVisible(true);
-            transientViewer.setVisible(true);
+            componentAnimator->fadeOut(&advancedParameterControl, fadeTime);
+            componentAnimator->fadeIn(&parameterControl, fadeTime);
+            componentAnimator->fadeIn(&transientViewer, fadeTime);
         }
     };
 
@@ -59,7 +59,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
         openGLBackground->externalModelLoaded(modelID, modelName);
     };
 
-    //setResizable(false, false);
+    setResizable(false, false);
     // dirty work around to make the blobs appear correctly from the beginning
     auto fadeParam = parameters.getParameter(PluginParameters::FADE_ID.getParamID());
     auto fadeStatus = fadeParam->getValue();
@@ -76,13 +76,32 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     headerComponent.onScyloneButtonClick = [this](bool newState)
             {
-                transientViewer.setVisible(!newState);
-                parameterControl.setVisible(!newState);
-                headerComponent.detailButton.setEnabled(!newState);
+                if (newState) {
+                    componentAnimator->fadeOut(&transientViewer, fadeTime);
+                    if (headerComponent.detailButton.getToggleState()) {
+                        componentAnimator->fadeOut(&advancedParameterControl, fadeTime);
+                    }
+                    else {
+                        componentAnimator->fadeOut(&parameterControl, fadeTime);
+                    }
+                }
+                else {
+                    if (headerComponent.detailButton.getToggleState()) {
+                        componentAnimator->fadeIn(&advancedParameterControl, fadeTime);
+                    }
+                    else {
+                        componentAnimator->fadeIn(&parameterControl, fadeTime);
+                        componentAnimator->fadeIn(&transientViewer, fadeTime);
+                    }
+                }
+
                 openGLBackground->showSignalFlowChart(newState);
                 resized();
-                repaint();
+
+                headerComponent.detailButton.setEnabled(!newState);
             };
+
+    componentAnimator = std::make_unique<juce::ComponentAnimator>();
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
@@ -119,6 +138,7 @@ void AudioPluginAudioProcessorEditor::resized()
     if (openGLBackground->isSignalFlowChartVisible()) {
         auto window = getLocalBounds();
         window.removeFromTop(headerSection.getHeight() + 20);
+        window.removeFromBottom(footerComponent.getHeight() + 20);
         openGLBackground->setBounds(window);
     }
     else

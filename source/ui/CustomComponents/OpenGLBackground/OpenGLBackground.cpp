@@ -47,6 +47,8 @@ OpenGLBackground::OpenGLBackground(juce::AudioProcessorValueTreeState& parameter
     labels.sharp.setComponentID("sharp");
     labels.smooth.setComponentID("smooth");
     labels.attack.setComponentID("attack");
+
+    componentAnimator = std::make_unique<juce::ComponentAnimator>();
 }
 
 OpenGLBackground::~OpenGLBackground()
@@ -99,7 +101,7 @@ void OpenGLBackground::openGLContextClosing()
 void OpenGLBackground::renderOpenGL()
 {
     jassert (juce::OpenGLHelpers::isContextActive());
-    
+
     // Scale viewport
     const float renderingScale = (float) openGLContext.getRenderingScale();
     juce::gl::glViewport (0, 0, juce::roundToInt (renderingScale * getWidth()), juce::roundToInt (renderingScale * getHeight()));
@@ -132,6 +134,8 @@ void OpenGLBackground::renderOpenGL()
     openGLContext.extensions.glBindVertexArray (VAO);
     juce::gl::glDrawArrays (juce::gl::GL_TRIANGLES, 0, (int) vertices.size());
     openGLContext.extensions.glBindVertexArray (0);
+
+    if (fadeValue) fadeValue->set(fadeValue_juce);
 }
 
 // JUCE Component Callbacks ====================================================
@@ -184,7 +188,7 @@ void OpenGLBackground::compileOpenGLShaderProgram()
         knobPos2.disconnectFromShaderProgram();
         audioLevel1.disconnectFromShaderProgram();
         audioLevel2.disconnectFromShaderProgram();
-        
+        fadeValue.disconnectFromShaderProgram();
         shaderProgram.reset (shaderProgramAttempt.release());
         
         resolution.connectToShaderProgram (openGLContext, *shaderProgram);
@@ -196,6 +200,7 @@ void OpenGLBackground::compileOpenGLShaderProgram()
         knobPos2.connectToShaderProgram(openGLContext, *shaderProgram);
         audioLevel1.connectToShaderProgram(openGLContext, *shaderProgram);
         audioLevel2.connectToShaderProgram(openGLContext, *shaderProgram);
+        fadeValue.connectToShaderProgram(openGLContext, *shaderProgram);
         
         openGLStatusText = "GLSL: v" + juce::String (juce::OpenGLShaderProgram::getLanguageVersion(), 2);
         
@@ -228,7 +233,6 @@ void OpenGLBackground::xyModelMixChanged(float newModelMix) {
 
 void  OpenGLBackground::SetJuceLabels()
 {
-
     auto font = CustomFontLookAndFeel::getCustomFont().withHeight(19.0f);
 
     labels.sharp.setText("Sharp", juce::dontSendNotification);
@@ -261,16 +265,53 @@ XYPad* OpenGLBackground::getXYPad() {
 }
 
 void OpenGLBackground::showSignalFlowChart(bool newState) {
-    signalFlowChart->setVisible(newState);
-    xyPad.setVisible(!newState);
-    labels.attack.setVisible(!newState);
-    labels.smooth.setVisible(!newState);
-    labels.sharp.setVisible(!newState);
-    labels.sustain.setVisible(!newState);
+
+    if (newState) {
+        componentAnimator->fadeOut(&xyPad, fadeTime);
+        componentAnimator->fadeOut(&labels.attack, fadeTime);
+        componentAnimator->fadeOut(&labels.smooth, fadeTime);
+        componentAnimator->fadeOut(&labels.sharp, fadeTime);
+        componentAnimator->fadeOut(&labels.sustain, fadeTime);
+        areBlobsVisible = false;
+        startTimer(fadeBlobTimmerRate);
+        componentAnimator->fadeIn(signalFlowChart.get(), fadeTime*10);
+    }
+    else {
+        componentAnimator->fadeIn(&xyPad, fadeTime);
+        componentAnimator->fadeIn(&labels.attack, fadeTime);
+        componentAnimator->fadeIn(&labels.smooth, fadeTime);
+        componentAnimator->fadeIn(&labels.sharp, fadeTime);
+        componentAnimator->fadeIn(&labels.sustain, fadeTime);
+        areBlobsVisible = true;
+        startTimer(fadeBlobTimmerRate);
+        componentAnimator->fadeOut(signalFlowChart.get(), fadeTime*10);
+    }
     repaint();
 }
 
 bool OpenGLBackground::isSignalFlowChartVisible() {
     return signalFlowChart->isVisible();
+}
+
+void OpenGLBackground::timerCallback() {
+    float increment = (float)fadeTime / ((float(fadeBlobTimmerRate)*100));
+
+    timerCounter += 1;
+    if (timerCounter * fadeBlobTimmerRate > fadeTime)
+    {
+        stopTimer();
+        timerCounter = 0;
+        if (areBlobsVisible) {
+            fadeValue_juce = 1.f;
+        }
+        else
+            fadeValue_juce = 0.f;
+    }
+    else {
+        if (areBlobsVisible)
+            fadeValue_juce += increment;
+        else
+            fadeValue_juce -= increment;
+    }
 }
 

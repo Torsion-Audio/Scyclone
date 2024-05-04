@@ -102,6 +102,8 @@ private:
 
     void setArrowAndButtonsVisible(bool newState, int buttonNumber);
     int timerCounter = 0;
+	int fadeTime = 200;
+
 
     std::unique_ptr<juce::ComponentAnimator> componentAnimator;
 

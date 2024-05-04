@@ -29,7 +29,8 @@ struct KnobPos {
  */
 class OpenGLBackground : public juce::Component,
 private juce::OpenGLRenderer,
-private juce::AsyncUpdater
+private juce::AsyncUpdater,
+public juce::Timer
 {
 public:
 
@@ -70,6 +71,9 @@ public:
 
     void showSignalFlowChart(bool newState);
     bool isSignalFlowChartVisible();
+
+    void timerCallback() override;
+
 private:
     
     /** Attempts to compile the OpenGL program at runtime and setup OpenGL variables. */
@@ -88,6 +92,7 @@ private:
     OpenGLUtil::UniformWrapper modelMix {"iModelMix"};
     OpenGLUtil::UniformWrapper audioLevel1 {"iAudioLevel1"};
     OpenGLUtil::UniformWrapper audioLevel2 {"iAudioLevel2"};
+    OpenGLUtil::UniformWrapper fadeValue {"iFadeValue"};
     // Fade aus ValueTreeState
     // On Off pro source
     
@@ -99,6 +104,7 @@ private:
     juce::Colour backgroundColor_juce;
     float audioLevel1_juce;
     float audioLevel2_juce;
+    float fadeValue_juce = 1.f;
     AudioPluginAudioProcessor& processorRef;
     
     // GUI overlay status text
@@ -118,6 +124,13 @@ private:
     void SetJuceLabels();
     CustomFontLookAndFeel customFontLookAndFeel;
     std::unique_ptr<juce::Drawable> signalFlowChart = juce::Drawable::createFromImageData(BinaryData::signal_flow_control_png, BinaryData::signal_flow_control_pngSize);
+    std::unique_ptr<juce::ComponentAnimator> componentAnimator;
+
+    int fadeTime = 200;
+
+    bool areBlobsVisible = true;
+    int timerCounter = 0;
+    int fadeBlobTimmerRate = 20; //ms
 
 };
 

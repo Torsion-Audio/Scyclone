@@ -52,5 +52,8 @@ private:
     juce::Component** parameterControlComponents;
     juce::Component** advancedParameterControlComponents;
     juce::Component** headerComponents;
+
+    std::unique_ptr<juce::ComponentAnimator> componentAnimator;
+    int fadeTime = 200;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };

@@ -183,7 +183,6 @@ void XYPad::mouseExit(const juce::MouseEvent&)
 
 void XYPad::setArrowAndButtonsVisible(bool newState, int buttonNumber)
 {
-    int fadeTime = 300;
 
     if (buttonNumber == 1)
     {
