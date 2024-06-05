@@ -156,28 +156,27 @@ jobs:
           mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
           # Create the zip
           cd packaging
-          ls -a
           pwsh -command "Compress-Archive -Path 'packaging/${{ env.PRODUCT_NAME }}' -DestinationPath '${{ env.PRODUCT_NAME }}.zip'"
       # tar -a -c -f ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/
 
       # Let's now notarize the zip file and with it all its contents / binaries
-      - name: notarize (macOS)
-        working-directory: ${{github.workspace}}/packaging
-        if: ${{ matrix.name == 'macOS' }}
-        run: |
-          # In contrast to dmg files zip files do not need to be codesigned before notarization
-          xcrun notarytool submit ${{ env.PRODUCT_NAME }}.zip --apple-id ${{ secrets.APPLE_DEV_ID }} --password ${{ secrets.APPLE_DEV_PWD }} --team-id ${{ secrets.TEAM_ID }} --wait
-          # Then we need to unzip it and staple the ticket for the gatekeeper to all binaries
-          unzip ${{ env.PRODUCT_NAME }}.zip && rm ${{ env.PRODUCT_NAME }}.zip
-          cd ${{ env.PRODUCT_NAME }}
-          xcrun stapler staple ${{ env.PROJECT_NAME }}.vst3
-          xcrun stapler staple ${{ env.PROJECT_NAME }}.component
-          xcrun stapler staple ${{ env.PROJECT_NAME }}.app
-          # Create a second entitlements file after the notarization to check the entitlements again it's packaged atomatically since it is generated in the packaging folder
-          # codesign -d --entitlements "entitlements_after_second_sign.xml" ${{ env.PROJECT_NAME }}.app
-          cd ..
-          # And finally zip it again
-          zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
+      #- name: notarize (macOS)
+      #  working-directory: ${{github.workspace}}/packaging
+      #  if: ${{ matrix.name == 'macOS' }}
+      #  run: |
+      #    # In contrast to dmg files zip files do not need to be codesigned before notarization
+      #    xcrun notarytool submit ${{ env.PRODUCT_NAME }}.zip --apple-id ${{ secrets.APPLE_DEV_ID }} --password ${{ secrets.APPLE_DEV_PWD }} --team-id ${{ secrets.TEAM_ID }} --wait
+      #    # Then we need to unzip it and staple the ticket for the gatekeeper to all binaries
+      #    unzip ${{ env.PRODUCT_NAME }}.zip && rm ${{ env.PRODUCT_NAME }}.zip
+      #    cd ${{ env.PRODUCT_NAME }}
+      #    xcrun stapler staple ${{ env.PROJECT_NAME }}.vst3
+      #    xcrun stapler staple ${{ env.PROJECT_NAME }}.component
+      #    xcrun stapler staple ${{ env.PROJECT_NAME }}.app
+      #    # Create a second entitlements file after the notarization to check the entitlements again it's packaged atomatically since it is generated in the packaging folder
+      #    # codesign -d --entitlements "entitlements_after_second_sign.xml" ${{ env.PROJECT_NAME }}.app
+      #    cd ..
+      #    # And finally zip it again
+      #    zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
       
       - name: upload artifact
         uses: actions/upload-artifact@v3
