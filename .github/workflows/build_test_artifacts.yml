@@ -156,7 +156,7 @@ jobs:
           mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
           # Create the zip
           cd packaging
-          pwsh -command "Compress-Archive -Path 'packaging/${{ env.PRODUCT_NAME }}' -DestinationPath '${{ env.PRODUCT_NAME }}.zip'"
+          pwsh -command "Compress-Archive -Path '${{ env.PRODUCT_NAME }}' -DestinationPath '${{ env.PRODUCT_NAME }}.zip'"
       # tar -a -c -f ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/
 
       # Let's now notarize the zip file and with it all its contents / binaries
