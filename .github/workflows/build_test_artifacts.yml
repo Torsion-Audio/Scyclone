@@ -156,7 +156,9 @@ jobs:
           mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
           # Create the zip
           cd packaging
-          tar -a -c -f ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/
+          ls -a
+          pwsh -command "Compress-Archive -Path 'packaging/${{ env.PRODUCT_NAME }}' -DestinationPath '${{ env.PRODUCT_NAME }}.zip'"
+      # tar -a -c -f ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/
 
       # Let's now notarize the zip file and with it all its contents / binaries
       - name: notarize (macOS)
