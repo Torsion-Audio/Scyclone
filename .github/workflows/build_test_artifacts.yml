@@ -140,7 +140,7 @@ jobs:
           # Move the artefacts to the packaging folder
           mv ${{ env.VST3_PATH }} packaging/${{ env.PRODUCT_NAME }}
           mv ${{ env.AU_PATH }} packaging/${{ env.PRODUCT_NAME }}
-          mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
+          mv ${{ env.STANDALONE_PATH }} "packaging/${{ env.PRODUCT_NAME }}"
           # Move the entitlements file to the packaging folder if we want to check it
           # mv "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after_first_sign.xml" packaging/${{ env.PRODUCT_NAME }}
           # Create the zip
