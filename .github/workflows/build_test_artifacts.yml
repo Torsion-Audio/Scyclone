@@ -77,7 +77,7 @@ jobs:
           echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
           echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.exe" >> $GITHUB_ENV
           echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
-          echo "INSTALLER_PATH="${{ env.BUILD_DIR }}/installer/${{ env.PROJECT_NAME }}Installer_artefacts/Release/Scyclone Installer.exe"" >> $GITHUB_ENV
+          echo "INSTALLER_PATH=${{ env.BUILD_DIR }}/installer/${{ env.PROJECT_NAME }}Installer_artefacts/Release/Scyclone Installer.exe" >> $GITHUB_ENV
       
       # Simple printout to get some info
       - name: printout
@@ -155,7 +155,7 @@ jobs:
           # Move the artefacts to the packaging folder
           mv ${{ env.VST3_PATH }} packaging/${{ env.PRODUCT_NAME }}
           mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
-          mv ${{ env.INSTALLER_PATH }} packaging/${{ env.PRODUCT_NAME }}
+          mv "${{ env.INSTALLER_PATH }}" packaging/${{ env.PRODUCT_NAME }}
           # Create the zip
           cd packaging
           pwsh -command "Compress-Archive -Path '${{ env.PRODUCT_NAME }}' -DestinationPath '${{ env.PRODUCT_NAME }}.zip'"
