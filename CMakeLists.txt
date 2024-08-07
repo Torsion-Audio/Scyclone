@@ -142,8 +142,9 @@ if (APPLE)
 		message(FATAL_ERROR "CMAKE_HOST_SYSTEM_PROCESSOR not defined.")
 	endif()
 elseif (MSVC)
-	set_property(TARGET onnxruntime APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+	include(cmake/onnx-win-x86_64_debug.cmake)
 
+	set_property(TARGET onnxruntime APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
 	set_target_properties(onnxruntime PROPERTIES
 			IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "CXX"
 			IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-win-x64.lib"
@@ -153,6 +154,15 @@ elseif (MSVC)
 			MAP_IMPORTED_CONFIG_MINSIZEREL Release
 			MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
 			)
+
+	set_property(TARGET onnxruntime APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
+	set_target_properties(onnxruntime PROPERTIES
+			IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "CXX"
+			IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime-1.14.1-win-x86_64_Debug/onnxruntime-1.14.1-win-x86_64_Debug.lib"
+	)
+	set_target_properties(onnxruntime PROPERTIES
+			MAP_IMPORTED_CONFIG_DEBUG Debug
+	)
 elseif(LINUX)
 	set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/modules/onnxruntime/lib/onnxruntime-linux_x86_64-static-combined.a)
 endif()
