@@ -55,5 +55,9 @@ private:
 
     std::unique_ptr<juce::ComponentAnimator> componentAnimator;
     int fadeTime = 200;
+
+    std::map<juce::Component*, juce::String> tooltipMap;
+    void initializeTooltipMap();
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };

@@ -102,6 +102,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
             };
 
     componentAnimator = std::make_unique<juce::ComponentAnimator>();
+    initializeTooltipMap();
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
@@ -125,7 +126,6 @@ void AudioPluginAudioProcessorEditor::resized()
     r.removeFromTop(20);
 
     auto logoSection = juce::Rectangle<int>{getWidth()/2 - 20, 20, 40, 20};
-
     auto headerSection = r.removeFromTop(32);
     auto padSection = r.removeFromLeft(700);
     padSection.removeFromBottom(35);
@@ -150,8 +150,11 @@ void AudioPluginAudioProcessorEditor::resized()
     auto areaParameter = getLocalBounds().removeFromRight(static_cast<int>((float)getWidth()*0.4f));
     areaParameter.removeFromTop(40);
     parameterControl.setBounds(areaParameter);
+
     headerComponent.setBounds(getLocalBounds());
+
     textureComponent.setBounds(getLocalBounds());
+
     footerComponent.setBounds(getLocalBounds().removeFromBottom(35));
 
     processorRef.onNetwork1NameChange(processorRef.network1Name.toString());
@@ -199,87 +202,87 @@ void AudioPluginAudioProcessorEditor::openFileChooser(int networkID) {
                      });
 }
 
+// Tooltips
 void AudioPluginAudioProcessorEditor::mouseEnter(const juce::MouseEvent &event) {
     auto component = event.originalComponent;
-    if (component == xyPadComponents[0]) {
-        footerComponent.setTooltipText("RAVE Network 1");
-    } else if (component == xyPadComponents[1]) {
-        footerComponent.setTooltipText("Select RAVE Network 1");
-    } else if (component == xyPadComponents[2]) {
-        footerComponent.setTooltipText("Grain Delay On/Off RAVE Network 1");
-    } else if (component == xyPadComponents[3]) {
-        footerComponent.setTooltipText("On/Off RAVE Network 1");
-    } else if (component == xyPadComponents[4]) {
-        footerComponent.setTooltipText("RAVE Network 2");
-    } else if (component == xyPadComponents[5]) {
-        footerComponent.setTooltipText("Select RAVE Network 2");
-    } else if (component == xyPadComponents[6]) {
-        footerComponent.setTooltipText("Grain Delay On/Off RAVE Network 2");
-    } else if (component == xyPadComponents[7]){
-        footerComponent.setTooltipText("On/Off RAVE Network 2");
+    auto it = tooltipMap.find(component);
+    if (it != tooltipMap.end()) {
+        footerComponent.setTooltipText(it->second);
     }
-
-    else if (component == parameterControlComponents[0] || component == parameterControlComponents[1] || component == parameterControlComponents[2]) {
-        footerComponent.setTooltipText("Fade between both networks");
-    } else if (component == parameterControlComponents[3] || component == parameterControlComponents[4] || component == parameterControlComponents[5]) {
-        footerComponent.setTooltipText("Dry/Wet Output Compressor");
-    } else if (component == parameterControlComponents[6] || component == parameterControlComponents[7] || component == parameterControlComponents[8]) {
-        footerComponent.setTooltipText("Dry/Wet Input Output signal");
-    }
-
-    else if (component == headerComponents[0]) {
-        footerComponent.setTooltipText("Trim input gain");
-    } else if (component == headerComponents[1]) {
-        footerComponent.setTooltipText("Trim output gain");
-    } else if (component == headerComponents[2]) {
-        footerComponent.setTooltipText("Power User View");
-    } else if (component == headerComponents[3]) {
-        footerComponent.setTooltipText(juce::String("Scyclone v.") + ProjectInfo::versionString + juce::String(" | Click for more information."));
-    }
-
-    else if (component == advancedParameterControlComponents[0])
-        footerComponent.setTooltipText("RAVE Network 1 Transient Shaper Attack Time");
-    else if (component == advancedParameterControlComponents[1])
-            footerComponent.setTooltipText("RAVE Network 2 Transient Shaper Attack Time");
-    else if (component == advancedParameterControlComponents[2])
-        footerComponent.setTooltipText("Crossfade between RAVE networks");
-    else if (component == advancedParameterControlComponents[3])
-        footerComponent.setTooltipText("Output Compressor Threshold");
-    else if (component == advancedParameterControlComponents[4])
-        footerComponent.setTooltipText("Output Compressor Ratio");
-    else if (component == advancedParameterControlComponents[5])
-        footerComponent.setTooltipText("Output Compressor Makeup");
-    else if (component == advancedParameterControlComponents[6])
-        footerComponent.setTooltipText("Output Compressor Dry/Wet");
-    else if (component == advancedParameterControlComponents[7])
-        footerComponent.setTooltipText("Master Dry/Wet");
-    else if (component == advancedParameterControlComponents[8])
-        footerComponent.setTooltipText("RAVE Network 1 Grain Interval");
-    else if (component == advancedParameterControlComponents[9])
-        footerComponent.setTooltipText("RAVE Network 1 Grain Size");
-    else if (component == advancedParameterControlComponents[10])
-        footerComponent.setTooltipText("RAVE Network 1 Grain Pitch");
-    else if (component == advancedParameterControlComponents[11])
-        footerComponent.setTooltipText("RAVE Network 1 Grain Delay Dry/Wet");
-    else if (component == advancedParameterControlComponents[12])
-        footerComponent.setTooltipText("RAVE Network 2 Grain Interval");
-    else if (component == advancedParameterControlComponents[13])
-        footerComponent.setTooltipText("RAVE Network 2 Grain Size");
-    else if (component == advancedParameterControlComponents[14])
-        footerComponent.setTooltipText("RAVE Network 2 Grain Pitch");
-    else if (component == advancedParameterControlComponents[15])
-        footerComponent.setTooltipText("RAVE Network 2 Grain Delay Dry/Wet");
-
-    else if (component->getComponentID() == openGLBackground->getLabels()->sharp.getComponentID())
-        footerComponent.setTooltipText("Low Cut Filter Frequency");
-    else if (component->getComponentID() == openGLBackground->getLabels()->attack.getComponentID())
-        footerComponent.setTooltipText("Transient Shaper: Attack");
-    else if (component->getComponentID() == openGLBackground->getLabels()->smooth.getComponentID())
-        footerComponent.setTooltipText("High Cut Filter Frequency");
-    else if (component->getComponentID() == openGLBackground->getLabels()->sustain.getComponentID())
-        footerComponent.setTooltipText("Transient Shaper: Sustain");
 }
 
 void AudioPluginAudioProcessorEditor::mouseExit(const juce::MouseEvent &event) {
     footerComponent.setTooltipText("");
 }
+
+void AudioPluginAudioProcessorEditor::initializeTooltipMap() {
+    tooltipMap.clear();
+
+    // Check if all required components are loaded
+    if (!xyPadComponents) {
+        throw std::runtime_error("xyPadComponents not loaded");
+    }
+    if (!parameterControlComponents) {
+        throw std::runtime_error("parameterControlComponents not loaded");
+    }
+    if (!headerComponents) {
+        throw std::runtime_error("headerComponents not loaded");
+    }
+    if (!advancedParameterControlComponents) {
+        throw std::runtime_error("advancedParameterControlComponents not loaded");
+    }
+    if (!openGLBackground) {
+        throw std::runtime_error("openGLBackground not loaded");
+    }
+
+    // Manually add each component to the map with its corresponding tooltip
+    tooltipMap[xyPadComponents[0]] = "RAVE Network 1";
+    tooltipMap[xyPadComponents[1]] = "Select RAVE Network 1";
+    tooltipMap[xyPadComponents[2]] = "Grain Delay On/Off RAVE Network 1";
+    tooltipMap[xyPadComponents[3]] = "On/Off RAVE Network 1";
+    tooltipMap[xyPadComponents[4]] = "RAVE Network 2";
+    tooltipMap[xyPadComponents[5]] = "Select RAVE Network 2";
+    tooltipMap[xyPadComponents[6]] = "Grain Delay On/Off RAVE Network 2";
+    tooltipMap[xyPadComponents[7]] = "On/Off RAVE Network 2";
+
+    tooltipMap[parameterControlComponents[0]] = "Fade between both networks";
+    tooltipMap[parameterControlComponents[1]] = "Fade between both networks";
+    tooltipMap[parameterControlComponents[2]] = "Fade between both networks";
+    tooltipMap[parameterControlComponents[3]] = "Dry/Wet Output Compressor";
+    tooltipMap[parameterControlComponents[4]] = "Dry/Wet Output Compressor";
+    tooltipMap[parameterControlComponents[5]] = "Dry/Wet Output Compressor";
+    tooltipMap[parameterControlComponents[6]] = "Dry/Wet Input Output signal";
+    tooltipMap[parameterControlComponents[7]] = "Dry/Wet Input Output signal";
+    tooltipMap[parameterControlComponents[8]] = "Dry/Wet Input Output signal";
+
+    tooltipMap[headerComponents[0]] = "Trim input gain";
+    tooltipMap[headerComponents[1]] = "Trim output gain";
+    tooltipMap[headerComponents[2]] = "Power User View";
+    tooltipMap[headerComponents[3]] = juce::String("Scyclone v.") + ProjectInfo::versionString + juce::String(" | Click for more information.");
+
+    tooltipMap[advancedParameterControlComponents[0]] = "RAVE Network 1 Transient Shaper Attack Time";
+    tooltipMap[advancedParameterControlComponents[1]] = "RAVE Network 2 Transient Shaper Attack Time";
+    tooltipMap[advancedParameterControlComponents[2]] = "Crossfade between RAVE networks";
+    tooltipMap[advancedParameterControlComponents[3]] = "Output Compressor Threshold";
+    tooltipMap[advancedParameterControlComponents[4]] = "Output Compressor Ratio";
+    tooltipMap[advancedParameterControlComponents[5]] = "Output Compressor Makeup";
+    tooltipMap[advancedParameterControlComponents[6]] = "Output Compressor Dry/Wet";
+    tooltipMap[advancedParameterControlComponents[7]] = "Master Dry/Wet";
+    tooltipMap[advancedParameterControlComponents[8]] = "RAVE Network 1 Grain Interval";
+    tooltipMap[advancedParameterControlComponents[9]] = "RAVE Network 1 Grain Size";
+    tooltipMap[advancedParameterControlComponents[10]] = "RAVE Network 1 Grain Pitch";
+    tooltipMap[advancedParameterControlComponents[11]] = "RAVE Network 1 Grain Delay Dry/Wet";
+    tooltipMap[advancedParameterControlComponents[12]] = "RAVE Network 2 Grain Interval";
+    tooltipMap[advancedParameterControlComponents[13]] = "RAVE Network 2 Grain Size";
+    tooltipMap[advancedParameterControlComponents[14]] = "RAVE Network 2 Grain Pitch";
+    tooltipMap[advancedParameterControlComponents[15]] = "RAVE Network 2 Grain Delay Dry/Wet";
+
+    auto* labels = openGLBackground->getLabels();
+    if (labels) {
+        tooltipMap[&labels->sharp] = "Low Cut Filter Frequency";
+        tooltipMap[&labels->attack] = "Transient Shaper: Attack";
+        tooltipMap[&labels->smooth] = "High Cut Filter Frequency";
+        tooltipMap[&labels->sustain] = "Transient Shaper: Sustain";
+    }
+}
+
