@@ -10,7 +10,8 @@
 
 enum WarningType {
     SampleRateWarning,
-    SystemTooSlow
+    SystemTooSlow,
+    UnsupportedFileType
 };
 
 class WarningWindow {
@@ -32,6 +33,9 @@ public:
                 title = "Warning: system load to high";
                 errorMessage = "It seems that this system is not fast enough to process the audio data. Try to only use one network.";
                 break;
+            case UnsupportedFileType:
+                title = "Warning: Unsupported file type";
+                errorMessage = "It seems that you have tried to load an unsupported file (i.e. a shortcut). Please try again.";
         }
 
         juce::AlertWindow window {title, errorMessage, juce::MessageBoxIconType::NoIcon};

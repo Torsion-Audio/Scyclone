@@ -11,6 +11,7 @@
 #include "ui/CustomComponents/Footer/FooterComponent.h"
 #include "ui/LookAndFeel/CustomFontLookAndFeel.h"
 #include "ui/CustomComponents/Texture/TextureComponent.h"
+#include "FileChooserManager.h"
 
 //==============================================================================
 class AudioPluginAudioProcessorEditor  : public juce::AudioProcessorEditor, private juce::AudioProcessorValueTreeState::Listener
@@ -27,8 +28,6 @@ public:
     void mouseExit(const juce::MouseEvent &event) override;
 
 private:
-    void openFileChooser(int id);
-
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     AudioPluginAudioProcessor& processorRef;
@@ -46,7 +45,7 @@ private:
 
     CustomFontLookAndFeel customFontLookAndFeel;
 
-    std::unique_ptr<juce::FileChooser> fc;
+    FileChooserManager fileChooserManager;
 
     juce::Component** xyPadComponents;
     juce::Component** parameterControlComponents;

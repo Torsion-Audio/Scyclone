@@ -4,7 +4,7 @@
 
 //==============================================================================
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parameters)
-    : AudioProcessorEditor (&p), apvts(parameters), processorRef (p), transientViewer(p)/*, openGLBackground(parameters, p)*/, advancedParameterControl(parameters), parameterControl(parameters),
+    : AudioProcessorEditor (&p), apvts(parameters), processorRef (p), fileChooserManager(p), transientViewer(p)/*, openGLBackground(parameters, p)*/, advancedParameterControl(parameters), parameterControl(parameters),
       footerComponent(p, parameters), headerComponent(p, parameters)
 {
     juce::ignoreUnused (processorRef);
@@ -165,41 +165,10 @@ void AudioPluginAudioProcessorEditor::resized()
 void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &parameterID, float newValue) {
     parameterControl.parameterChanged(parameterID, newValue);
     if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && newValue == 1.f) {
-        openFileChooser(1);
+        fileChooserManager.openFileChooserForNetwork(1);
     } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && newValue == 1.f) {
-        openFileChooser(2);
+        fileChooserManager.openFileChooserForNetwork(2);
     }
-}
-
-void AudioPluginAudioProcessorEditor::openFileChooser(int networkID) {
-    fc = std::make_unique<juce::FileChooser> ("Choose a file to open...", juce::File::getSpecialLocation(juce::File::SpecialLocationType::userHomeDirectory),
-                                              "*.ort", true);
-
-    fc->launchAsync (juce::FileBrowserComponent::openMode
-                     | juce::FileBrowserComponent::canSelectFiles,
-                     [this, networkID] (const juce::FileChooser& chooser)
-                     {
-                         juce::File chosen;
-                         auto results = chooser.getURLResults();
-
-                         for (const auto& result : results) {
-                             if (result.isLocalFile()) {
-                                 chosen = result.getLocalFile();
-                             }
-                             else
-                             {
-                                 return;
-                             }
-                         }
-
-                         if (chosen.getSize() != 0) {
-                             processorRef.loadExternalModel(chosen.getFullPathName(), networkID);
-                         } else {
-                             auto param = (networkID == 1) ? PluginParameters::SELECT_NETWORK1_ID.getParamID() : PluginParameters::SELECT_NETWORK2_ID.getParamID();
-                             apvts.getParameter(param)->setValueNotifyingHost(0.f);
-                         }
-
-                     });
 }
 
 // Tooltips
@@ -237,11 +206,11 @@ void AudioPluginAudioProcessorEditor::initializeTooltipMap() {
 
     // Manually add each component to the map with its corresponding tooltip
     tooltipMap[xyPadComponents[0]] = "RAVE Network 1";
-    tooltipMap[xyPadComponents[1]] = "Select RAVE Network 1";
+    tooltipMap[xyPadComponents[1]] = "Load custom RAVE Network 1";
     tooltipMap[xyPadComponents[2]] = "Grain Delay On/Off RAVE Network 1";
     tooltipMap[xyPadComponents[3]] = "On/Off RAVE Network 1";
     tooltipMap[xyPadComponents[4]] = "RAVE Network 2";
-    tooltipMap[xyPadComponents[5]] = "Select RAVE Network 2";
+    tooltipMap[xyPadComponents[5]] = "Load custom RAVE Network 2";
     tooltipMap[xyPadComponents[6]] = "Grain Delay On/Off RAVE Network 2";
     tooltipMap[xyPadComponents[7]] = "On/Off RAVE Network 2";
 
