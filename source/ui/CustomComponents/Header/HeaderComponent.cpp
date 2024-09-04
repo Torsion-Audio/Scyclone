@@ -1,99 +1,115 @@
-//
-// Created by valentin.ackva on 16.03.2023.
-//
-
 #include "HeaderComponent.h"
 
-HeaderComponent::HeaderComponent(AudioPluginAudioProcessor &p, juce::AudioProcessorValueTreeState &parameters) : detailButton("detailButton",
-                                                                                                                              juce::DrawableButton::ButtonStyle::ImageFitted),
-                                                                                                                 scycloneButton("scycloneButton",
-                                                                                                                                juce::DrawableButton::ButtonStyle::ImageFitted),
-                                                                                                                 apvts(parameters),
-                                                                                                                 audioProcessor(p){
-
-    labels.vaeSynth.setText("Scyclone", juce::dontSendNotification);
-    labels.vaeSynth.setFont(CustomFontLookAndFeel::getCustomFontBold().withHeight(30.f));
-    labels.vaeSynth.setJustificationType(juce::Justification::centred);
-    labels.vaeSynth.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::WHITE));
+HeaderComponent::HeaderComponent(AudioPluginAudioProcessor &p, juce::AudioProcessorValueTreeState &parameters)
+        : detailButton("detailButton", juce::DrawableButton::ButtonStyle::ImageFitted),
+          scycloneButton("scycloneButton", juce::DrawableButton::ButtonStyle::ImageFitted),
+          apvts(parameters),
+          audioProcessor(p)
+{
+    setupLabel(labels.vaeSynth, "Scyclone",
+               30.f,
+               ColorPallete::WHITE,
+               juce::Justification::centred);
     //addAndMakeVisible(labels.vaeSynth);
 
-    labels.neutralTransfer.setText("Neural Transfer", juce::dontSendNotification);
-    labels.neutralTransfer.setFont(CustomFontLookAndFeel::getCustomFont().withHeight(19.f));
-    labels.neutralTransfer.setJustificationType(juce::Justification::centred);
-    labels.neutralTransfer.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::TEXT2));
+    setupLabel(labels.neutralTransfer,
+               "Neural Transfer",
+               19.f,
+               ColorPallete::TEXT2,
+               juce::Justification::centred);
     //addAndMakeVisible(labels.neutralTransfer);
 
-    labels.inputGainLabel.setText("Input Gain", juce::dontSendNotification);
-    labels.inputGainLabel.setFont(CustomFontLookAndFeel::getCustomFont().withHeight(15.f));
-    labels.inputGainLabel.setJustificationType(juce::Justification::centredRight);
-    labels.inputGainLabel.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::TEXT2));
+    setupLabel(labels.inputGainLabel,
+               "Input Gain",
+               15.f, ColorPallete::
+               TEXT2,
+               juce::Justification::centredRight);
     addAndMakeVisible(labels.inputGainLabel);
 
-    inputGainSlider.setSliderStyle(juce::Slider::LinearBar);
-    inputGainSlider.setLookAndFeel(&customLinearVolumeSliderLookAndFeel);
-    inputGainSlider.setTextValueSuffix(" " + parameters.getParameter(PluginParameters::INPUT_GAIN_ID.getParamID())->getLabel());
-    inputGainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, PluginParameters::INPUT_GAIN_ID.getParamID(), inputGainSlider);
-    inputGainSlider.setTextBoxIsEditable(false);
+    setupSlider(inputGainSlider,
+                PluginParameters::INPUT_GAIN_ID,
+                parameters,
+                inputGainAttachment);
     addAndMakeVisible(inputGainSlider);
 
-    labels.outputGainLabel.setText("Output Gain", juce::dontSendNotification);
-    labels.outputGainLabel.setFont(CustomFontLookAndFeel::getCustomFont().withHeight(15.f));
-    labels.outputGainLabel.setJustificationType(juce::Justification::centredRight);
-    labels.outputGainLabel.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::TEXT2));
+    setupLabel(labels.outputGainLabel,
+               "Output Gain", 15.f,
+               ColorPallete::TEXT2,
+               juce::Justification::centredRight);
     addAndMakeVisible(labels.outputGainLabel);
 
-    outputGainSlider.setSliderStyle(juce::Slider::LinearBar);
-    outputGainSlider.setLookAndFeel(&customLinearVolumeSliderLookAndFeel);
-    outputGainSlider.setTextValueSuffix(" " + parameters.getParameter(PluginParameters::OUTPUT_GAIN_ID.getParamID())->getLabel());
-    outputGainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, PluginParameters::OUTPUT_GAIN_ID.getParamID(), outputGainSlider);
-    outputGainSlider.setTextBoxIsEditable(false);
+    setupSlider(outputGainSlider,
+                PluginParameters::OUTPUT_GAIN_ID,
+                parameters,
+                outputGainAttachment);
     addAndMakeVisible(outputGainSlider);
 
-    detailButton.setClickingTogglesState(true);
-    detailButton.setImages(detailsButtonOff.get(),
-                           detailsButtonOff.get(),
-                           detailsButtonOn.get(),
-                           detailsButtonOff.get(),
-                           detailsButtonOn.get(),
-                           detailsButtonOn.get(),
-                           detailsButtonOn.get(),
-                           detailsButtonOn.get());
+    setupDetailButton();
     addAndMakeVisible(detailButton);
-    detailButton.onClick = [this] () {
-        //temporary bug fix - otherwise shape distortion
-        outputGainSlider.repaint();
-        inputGainSlider.repaint();
-    };
-    detailButton.onStateChange = [this]() {
-        bool buttonDown = detailButton.getToggleState();
-        onParameterControlViewChange(buttonDown);
-        audioProcessor.advancedParameterControlVisible = buttonDown;
-        //audioProcessor.onUpdateUnautomatableParameters();
-    };
-    detailButton.setColour(juce::DrawableButton::ColourIds::backgroundOnColourId, juce::Colours::transparentBlack);
 
-    scycloneButton.setClickingTogglesState(true);
-    scycloneButton.setImages(scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get());
-    scycloneButton.setHasFocusOutline(false);
-    scycloneButton.setColour(juce::DrawableButton::ColourIds::backgroundColourId, juce::Colours::transparentWhite);
-    scycloneButton.setColour(juce::DrawableButton::ColourIds::backgroundOnColourId, juce::Colours::transparentWhite);
+    setupScycloneButton();
     addAndMakeVisible(scycloneButton);
-    scycloneButton.onClick = [this]() {
-        onScyloneButtonClick(scycloneButton.getToggleState());
-    };
-
 
     this->setInterceptsMouseClicks(true, true);
 
+    setupComponentArray();
+}
+
+HeaderComponent::~HeaderComponent() {
+    inputGainSlider.setLookAndFeel(nullptr);
+    outputGainSlider.setLookAndFeel(nullptr);
+}
+
+void HeaderComponent::setupComponentArray() {
     componentArray[0] = inputGainSlider.getChildComponent(0);
     componentArray[1] = outputGainSlider.getChildComponent(0);
     componentArray[2] = &detailButton;
     componentArray[3] = &scycloneButton;
 }
 
-HeaderComponent::~HeaderComponent() {
-    inputGainSlider.setLookAndFeel(nullptr);
-    outputGainSlider.setLookAndFeel(nullptr);
+void HeaderComponent::setupLabel(juce::Label& label, const juce::String& text, float fontSize, const juce::String& color, juce::Justification justification) {
+    label.setText(text, juce::dontSendNotification);
+    label.setFont(CustomFontLookAndFeel::getCustomFontBold().withHeight(fontSize));
+    label.setJustificationType(justification);
+    label.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(color));
+}
+
+void HeaderComponent::setupSlider(juce::Slider& slider, const juce::ParameterID& paramID, juce::AudioProcessorValueTreeState& parameters, std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>& attachment) {
+    slider.setSliderStyle(juce::Slider::LinearBar);
+    slider.setLookAndFeel(&customLinearVolumeSliderLookAndFeel);
+    slider.setTextValueSuffix(" " + parameters.getParameter(paramID.getParamID())->getLabel());
+    slider.setTextBoxIsEditable(false);
+    attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(parameters, paramID.getParamID(), slider);
+}
+
+void HeaderComponent::setupDetailButton() {
+    detailButton.setClickingTogglesState(true);
+    detailButton.setImages(detailsButtonOff.get(), detailsButtonOff.get(), detailsButtonOn.get(), detailsButtonOff.get(), detailsButtonOn.get(), detailsButtonOn.get(), detailsButtonOn.get(), detailsButtonOn.get());
+    detailButton.setColour(juce::DrawableButton::ColourIds::backgroundOnColourId, juce::Colours::transparentBlack);
+
+    detailButton.onClick = [this]() {
+        inputGainSlider.repaint();
+        outputGainSlider.repaint();
+    };
+
+    detailButton.onStateChange = [this]() {
+        bool buttonDown = detailButton.getToggleState();
+        onParameterControlViewChange(buttonDown);
+        audioProcessor.advancedParameterControlVisible = buttonDown;
+    };
+}
+
+void HeaderComponent::setupScycloneButton() {
+    scycloneButton.setClickingTogglesState(true);
+
+    scycloneButton.setImages(scycloneLogo.get(), scycloneLogoOver.get(), scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get(), scycloneLogo.get());
+    scycloneButton.setHasFocusOutline(false);
+    scycloneButton.setColour(juce::DrawableButton::ColourIds::backgroundColourId, juce::Colours::transparentWhite);
+    scycloneButton.setColour(juce::DrawableButton::ColourIds::backgroundOnColourId, juce::Colours::transparentWhite);
+
+    scycloneButton.onClick = [this]() {
+        onScyloneButtonClick(scycloneButton.getToggleState());
+    };
 }
 
 void HeaderComponent::resized() {
@@ -106,11 +122,10 @@ void HeaderComponent::resized() {
     detailButton.setBounds(getWidth() - 80, 24, 35, 19);
     scycloneTypoSection.setBounds(49.f, 21.f, 127.f, 30.f);
     neuralTransferTypoSection.setBounds(197.f, 21.f, 121.f, 30.f);
-    scycloneButton.setBounds((int)((float)(getWidth()/2 - 72.5)), 21.f, 145.f, 30.f);
+    scycloneButton.setBounds(static_cast<int>(getWidth() / 2 - 72.5), 21.f, 145.f, 30.f);
 }
 
 void HeaderComponent::paint(juce::Graphics &g) {
-    //scycloneLogo->drawWithin(g, scycloneLogoSection, juce::RectanglePlacement::yBottom, 100);
     scycloneTypo->drawWithin(g, scycloneTypoSection, juce::RectanglePlacement::yBottom, 100);
     neuralTransferTypo->drawWithin(g, neuralTransferTypoSection, juce::RectanglePlacement::yBottom, 100);
 }
