@@ -142,8 +142,28 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     compMixer.prepare(monoSpec);
     grain1DryWetMixer.prepare(monoSpec);
     grain2DryWetMixer.prepare(monoSpec);
+
+
+    // Calculate the resampling ratio between input and output sample rates
+    double pluginSampleRate = sampleRate;  // Example input sample rate
+    double onnxSampleRate = 48000.0;   // Example output sample rate (can be different)
+
+    // Calculate the required buffer size onnx
+    int onnxBufferSize = static_cast<int>(std::ceil(pluginSampleRate / onnxSampleRate * spec.maximumBlockSize));
+
+    // Prepare input and output buffers with correct sizes
+    resamplingBuffer1onnx.setSize(1, onnxBufferSize);
+    resamplingBuffer2onnx.setSize(1, onnxBufferSize);
+
+    resamplingProcessor1Pre.prepare(pluginSampleRate, onnxSampleRate);
+    resamplingProcessor2Pre.prepare(pluginSampleRate, onnxSampleRate);
+
     onnxProcessor1.prepare(monoSpec);
     onnxProcessor2.prepare(monoSpec);
+
+    resamplingProcessor1Post.prepare(onnxSampleRate, pluginSampleRate);
+    resamplingProcessor2Post.prepare(onnxSampleRate, pluginSampleRate);
+
     iirCutoffFilter1.prepare(monoSpec);
     iirCutoffFilter2.prepare(monoSpec);
     processorTransientSplitter1.prepare(monoSpec);
@@ -214,8 +234,14 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
         audioVisualiser.processSample(network1Buffer, network2Buffer);
 
+        resamplingProcessor1Post.processBlock(network1Buffer, resamplingBuffer1onnx);
+        resamplingProcessor2Post.processBlock(network2Buffer, resamplingBuffer2onnx);
+
         onnxProcessor1.processBlock(network1Buffer);
         onnxProcessor2.processBlock(network2Buffer);
+
+        resamplingProcessor1Post.processBlock(resamplingBuffer1onnx, network1Buffer);
+        resamplingProcessor2Post.processBlock(resamplingBuffer2onnx, network2Buffer);
 
         levelAnalyser1.processBlock(network1Buffer);
         levelAnalyser2.processBlock(network2Buffer);

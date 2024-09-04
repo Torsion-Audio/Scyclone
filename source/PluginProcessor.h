@@ -11,6 +11,8 @@
 #include "dsp/gain/ProcessorGain.h"
 #include "dsp/Filter/IIRCutoffFilter.h"
 #include "dsp/grainDelay/GrainDelay.h"
+
+#include "ResamplingProcessor.h"
 //#include <audio_basics/buffers/juce_AudioProcessLoadMeasurer.h>
 
 
@@ -106,8 +108,19 @@ private:
     DryWetMixer grain1DryWetMixer;
     DryWetMixer grain2DryWetMixer;
 
+    ResamplingProcessor resamplingProcessor1Pre;
+    ResamplingProcessor resamplingProcessor2Pre;
+    juce::AudioBuffer<float> resamplingBuffer1plugin;
+    juce::AudioBuffer<float> resamplingBuffer2plugin;
+    juce::AudioBuffer<float> resamplingBuffer1onnx;
+    juce::AudioBuffer<float> resamplingBuffer2onnx;
+
     OnnxProcessor onnxProcessor1;
     OnnxProcessor onnxProcessor2;
+
+    ResamplingProcessor resamplingProcessor1Post;
+    ResamplingProcessor resamplingProcessor2Post;
+
 
     ProcessorCompressor processorCompressor;
     
@@ -119,10 +132,10 @@ private:
     GrainDelay grainDelay1;
     GrainDelay grainDelay2;
 
-    float cpuLoad;
+    float cpuLoad{}{};
     juce::AudioProcessLoadMeasurer measurer;
 
-    float latency;
+    float latency{}{};
 
 
 

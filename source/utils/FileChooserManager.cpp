@@ -26,6 +26,12 @@ void FileChooserManager::openFileChooser(const juce::String& dialogTitle,
                                  juce::File chosen;
                                  auto results = chooser.getURLResults();
 
+                                 // Check if the results are empty (user closed without selecting a file)
+                                 if (results.isEmpty())
+                                 {
+                                     return;
+                                 }
+
                                  for (const auto& result : results)
                                  {
                                      if (result.isLocalFile())

@@ -128,6 +128,9 @@ target_compile_definitions(${TARGET_NAME}
 		DONT_SET_USING_JUCE_NAMESPACE=1
 		)
 
+target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/libsamplerate-0.2.2-win64/include)
+target_link_libraries(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/libsamplerate-0.2.2-win64/lib/cmake/samplerate.lib)
+
 # Add the onnxruntime library
 add_library(onnxruntime STATIC IMPORTED)
 
