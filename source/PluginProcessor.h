@@ -132,10 +132,10 @@ private:
     GrainDelay grainDelay1;
     GrainDelay grainDelay2;
 
-    float cpuLoad{}{};
+    float cpuLoad{};
     juce::AudioProcessLoadMeasurer measurer;
 
-    float latency{}{};
+    float latency{};
 
 
 
