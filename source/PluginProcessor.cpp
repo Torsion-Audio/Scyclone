@@ -219,7 +219,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     juce::AudioProcessLoadMeasurer::ScopedTimer s(measurer, buffer.getNumSamples());
     {
         dryWetMixer.setDrySamples(buffer);
-        stereoToMono(monoBuffer, buffer);
+        utils::stereoToMono(monoBuffer, buffer);
 
         processorGain.processInputBlock(monoBuffer);
 
@@ -232,7 +232,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         iirCutoffFilter1.processFilters(network1Buffer);
         iirCutoffFilter2.processFilters(network2Buffer);
 
-        audioVisualiser.processSample(network1Buffer, network2Buffer);
+        audioVisualiser.updateFromAudioBuffer(network1Buffer, network2Buffer);
 
         resamplingProcessor1Post.processBlock(network1Buffer, resamplingBuffer1onnx);
         resamplingProcessor2Post.processBlock(network2Buffer, resamplingBuffer2onnx);
@@ -270,7 +270,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         compMixer.setWetSamples(monoBuffer);
 
         processorGain.processOutputBlock(monoBuffer);
-        monoToStereo(buffer, monoBuffer);
+        utils::monoToStereo(buffer, monoBuffer);
         dryWetMixer.setWetSamples(buffer);
     }
     cpuLoad = measurer.getLoadAsPercentage();
@@ -377,36 +377,6 @@ void AudioPluginAudioProcessor::initialiseRnbo(){
     grainDelay2.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK2_SIZE_ID.getParamID()), 1);
 }
 
-void AudioPluginAudioProcessor::stereoToMono(juce::AudioBuffer<float> &targetMonoBlock, juce::AudioBuffer<float> &sourceBlock) {
-    if (sourceBlock.getNumChannels() == 1) {
-        targetMonoBlock.makeCopyOf(sourceBlock);
-    } else {
-        auto nSamples = sourceBlock.getNumSamples();
-
-        auto monoWrite = targetMonoBlock.getWritePointer(0);
-        auto lRead = sourceBlock.getReadPointer(0);
-        auto rRead = sourceBlock.getReadPointer(1);
-
-        juce::FloatVectorOperations::copy(monoWrite, lRead, nSamples);
-        juce::FloatVectorOperations::add(monoWrite, rRead, nSamples);
-        juce::FloatVectorOperations::multiply(monoWrite, 0.5f, nSamples);
-    }
-}
-
-void AudioPluginAudioProcessor::monoToStereo(juce::AudioBuffer<float> &targetStereoBlock, juce::AudioBuffer<float> &sourceBlock) {
-    if (sourceBlock.getNumChannels() == 2) {
-        targetStereoBlock.makeCopyOf(sourceBlock);
-    } else {
-        auto nSamples = sourceBlock.getNumSamples();
-
-        auto lWrite = targetStereoBlock.getWritePointer(0);
-        auto rWrite = targetStereoBlock.getWritePointer(1);
-        auto monoRead = sourceBlock.getReadPointer(0);
-
-        juce::FloatVectorOperations::copy(lWrite, monoRead, nSamples);
-        juce::FloatVectorOperations::copy(rWrite, monoRead, nSamples);
-    }
-}
 
 float AudioPluginAudioProcessor::getCpuLoad() {
     return cpuLoad;

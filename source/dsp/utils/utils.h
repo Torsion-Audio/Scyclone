@@ -5,16 +5,17 @@
 //  Created by Fares Schulz on 23.12.22.
 //
 
-#ifndef utils_h
-#define utils_h
+#pragma once
 
 #include <cmath>
+#include <juce_audio_basics/juce_audio_basics.h>
 
 namespace utils {
     float amp2dB(float amp);
     float amp2dB(float amp, float ampRef);
     float dB2amp(float db);
     float dB2amp(float db, float ampRef);
-}
 
-#endif /* utils_h */
+    void monoToStereo(juce::AudioBuffer<float> &targetStereoBlock, juce::AudioBuffer<float> &sourceBlock);
+    void stereoToMono(juce::AudioBuffer<float> &targetStereoBlock, juce::AudioBuffer<float> &sourceBlock);
+}

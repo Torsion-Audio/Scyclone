@@ -1,50 +1,41 @@
-//
-// Created by valentin.ackva on 16.03.2023.
-//
-
 #include "AudioVisualiser.h"
 
 AudioVisualiser::AudioVisualiser() : audioVisualiserComponent1(1), audioVisualiserComponent2(1) {
+    initializeVisualiserComponent(audioVisualiserComponent1);
+    initializeVisualiserComponent(audioVisualiserComponent2);
+}
 
-    audioVisualiserComponent1.setRepaintRate(30);
-    audioVisualiserComponent2.setRepaintRate(30);
-    audioVisualiserComponent1.setSamplesPerBlock(256);
-    audioVisualiserComponent2.setSamplesPerBlock(256);
-    audioVisualiserComponent1.setBufferSize(512);
-    audioVisualiserComponent2.setBufferSize(512);
+void AudioVisualiser::initializeVisualiserComponent(juce::AudioVisualiserComponent& visualiser) {
+    visualiser.setRepaintRate(30);
+    visualiser.setSamplesPerBlock(256);
+    visualiser.setBufferSize(512);
 }
 
 void AudioVisualiser::prepare(const juce::dsp::ProcessSpec &spec) {
     juce::ignoreUnused(spec);
 }
 
-void AudioVisualiser::processSample(juce::AudioBuffer<float> &buffer1, juce::AudioBuffer<float> &buffer2) {
-    for (int channel = 0; channel < buffer1.getNumChannels(); ++channel) {
-            for (int sample = 0; sample < buffer1.getNumSamples(); ++sample) {
-                float sampleToCheck = buffer1.getSample(channel, sample);
-                if (std::isnan(sampleToCheck)) {
-                    return;
-                }
+bool AudioVisualiser::validateBufferForNaN(const juce::AudioBuffer<float>& buffer) {
+    for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+        for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
+            if (std::isnan(buffer.getSample(channel, sample))) {
+                return false; // Invalid buffer due to NaN values
             }
         }
-
-        for (int channel = 0; channel < buffer2.getNumChannels(); ++channel) {
-            for (int sample = 0; sample < buffer2.getNumSamples(); ++sample) {
-                float sampleToCheck = buffer2.getSample(channel, sample);
-                if (std::isnan(sampleToCheck)) {
-                    return;
-                }
-            }
-        }
-
-        audioVisualiserComponent1.pushBuffer(buffer1.getArrayOfReadPointers(), 1, buffer1.getNumSamples());
-        audioVisualiserComponent2.pushBuffer(buffer2.getArrayOfReadPointers(), 1, buffer2.getNumSamples());
+    }
+    return true;
 }
 
-juce::AudioVisualiserComponent &AudioVisualiser::getAudioVisualiser(int id) {
-    if (id == 1) {
-        return audioVisualiserComponent1;
-    } else {
-        return audioVisualiserComponent2;
+void AudioVisualiser::updateFromAudioBuffer(juce::AudioBuffer<float> &buffer1, juce::AudioBuffer<float> &buffer2) {
+    if (!validateBufferForNaN(buffer1) || !validateBufferForNaN(buffer2)) {
+        return;
     }
+
+    // Push valid buffers to visualizer components
+    audioVisualiserComponent1.pushBuffer(buffer1.getArrayOfReadPointers(), 1, buffer1.getNumSamples());
+    audioVisualiserComponent2.pushBuffer(buffer2.getArrayOfReadPointers(), 1, buffer2.getNumSamples());
+}
+
+juce::AudioVisualiserComponent& AudioVisualiser::getAudioVisualiser(int id) {
+    return (id == 1) ? audioVisualiserComponent1 : audioVisualiserComponent2;
 }

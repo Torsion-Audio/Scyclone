@@ -11,6 +11,7 @@
 #include "dsp/gain/ProcessorGain.h"
 #include "dsp/Filter/IIRCutoffFilter.h"
 #include "dsp/grainDelay/GrainDelay.h"
+#include "dsp/utils/utils.h"
 
 #include "ResamplingProcessor.h"
 //#include <audio_basics/buffers/juce_AudioProcessLoadMeasurer.h>
@@ -79,8 +80,6 @@ public:
     float getCpuLoad();
 private:
     void parameterChanged (const juce::String& parameterID, float newValue) override;
-    static void stereoToMono(juce::AudioBuffer<float>& targetMonoBlock, juce::AudioBuffer<float>& sourceBlock);
-    static void monoToStereo(juce::AudioBuffer<float>& targetStereoBlock, juce::AudioBuffer<float>& sourceBlock);
 
 private:
     juce::AudioProcessorValueTreeState parameters;
