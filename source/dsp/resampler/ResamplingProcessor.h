@@ -10,29 +10,24 @@ public:
         releaseResources();
     }
 
-    void prepare(double inputSampleRate, double outputSampleRate);
-    void processBlock(juce::AudioBuffer<float>& inputBufferMono, juce::AudioBuffer<float>& outBufferMono);
+    int prepare(const juce::dsp::ProcessSpec &inputSpec, double outputSampleRate, std::string name);
+    juce::AudioBuffer<float>& processBlock(juce::AudioBuffer<float>& inputBufferMono);
 
 
 private:
+    std::string id_string; // for debugging printout
+
+    double inputSampleRate;
+    double outputSampleRate;
+    int inputBufferSize;
+    int outputBufferSize;
+
+    void setSamplerateRatio();
+    double srcRatio; // input / output
+
     SRC_STATE* converter;
-    juce::AudioBuffer<float>* inputBuffer;
-    juce::AudioBuffer<float>* outputBuffer;
 
-    double srcRatio;
-
-    void setSamplerateRatio(float inputSampleRate, float outputSampleRate) {
-        srcRatio = outputSampleRate/inputSampleRate;
-
-        // to resample to even samples
-        // int numberOfTargetSamples = static_cast<int>(srcRatio * bufferSize);
-        // srcRatio = numberOfSamplesTargetSampleRate / hostbuffersize;
-
-        // for debugging
-        // timePerBlock = inputBuffer / inputSampleRate;
-        // correctedSampleRate = numberOfTargetSamples / timePerBlockInSec;
-    }
-
+    juce::AudioBuffer<float> outputBufferMono;
     void releaseResources();
 };
 

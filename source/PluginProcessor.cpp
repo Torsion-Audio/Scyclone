@@ -128,13 +128,21 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     juce::dsp::ProcessSpec monoSpec {sampleRate,
                                  static_cast<juce::uint32>(samplesPerBlock),
                                  static_cast<juce::uint32>(1)};
+    juce::dsp::ProcessSpec onnxSpec {48000,
+                                     static_cast<juce::uint32>(0), // will be set by Resampler
+                                     static_cast<juce::uint32>(1)};
 
-    network1Buffer.setSize((int) monoSpec.numChannels, (int) monoSpec.maximumBlockSize);
-    network2Buffer.setSize((int) monoSpec.numChannels, (int) monoSpec.maximumBlockSize);
-    fadeBuffer.setSize((int) monoSpec.numChannels, (int) monoSpec.maximumBlockSize);
-    grain1DryBuffer.setSize((int) monoSpec.numChannels, (int) monoSpec.maximumBlockSize);
-    grain2DryBuffer.setSize((int) monoSpec.numChannels, (int) monoSpec.maximumBlockSize);
-    monoBuffer.setSize((int) monoSpec.numChannels, (int) monoSpec.maximumBlockSize);
+    // Setup Mono Buffers
+    std::vector<juce::AudioBuffer<float>*> buffers = {
+            &network1Buffer, &network2Buffer, &fadeBuffer,
+            &grain1DryBuffer, &grain2DryBuffer, &monoBuffer
+    };
+
+    for (auto* buffer : buffers)
+    {
+        buffer->setSize((int)monoSpec.numChannels, (int)monoSpec.maximumBlockSize);
+    }
+
 
     dryWetMixer.prepare(spec);
     
@@ -143,26 +151,9 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     grain1DryWetMixer.prepare(monoSpec);
     grain2DryWetMixer.prepare(monoSpec);
 
-
-    // Calculate the resampling ratio between input and output sample rates
-    double pluginSampleRate = sampleRate;  // Example input sample rate
-    double onnxSampleRate = 48000.0;   // Example output sample rate (can be different)
-
-    // Calculate the required buffer size onnx
-    int onnxBufferSize = static_cast<int>(std::ceil(pluginSampleRate / onnxSampleRate * spec.maximumBlockSize));
-
-    // Prepare input and output buffers with correct sizes
-    resamplingBuffer1onnx.setSize(1, onnxBufferSize);
-    resamplingBuffer2onnx.setSize(1, onnxBufferSize);
-
-    resamplingProcessor1Pre.prepare(pluginSampleRate, onnxSampleRate);
-    resamplingProcessor2Pre.prepare(pluginSampleRate, onnxSampleRate);
-
-    onnxProcessor1.prepare(monoSpec);
-    onnxProcessor2.prepare(monoSpec);
-
-    resamplingProcessor1Post.prepare(onnxSampleRate, pluginSampleRate);
-    resamplingProcessor2Post.prepare(onnxSampleRate, pluginSampleRate);
+    // Prepare the resampling processors
+    // Resampling to 48k --> Onnx --> Resample back to host
+    prepareResamplingAndOnnx(monoSpec, onnxSpec);
 
     iirCutoffFilter1.prepare(monoSpec);
     iirCutoffFilter2.prepare(monoSpec);
@@ -184,6 +175,25 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
         setLatencySamples(0);
         dryWetMixer.setWetLatency(0);
     }
+}
+
+void AudioPluginAudioProcessor::prepareResamplingAndOnnx(juce::dsp::ProcessSpec& monoSpec, juce::dsp::ProcessSpec& onnxSpec)
+{
+    auto blockSizeIn1 = upsamplerOne.prepare(monoSpec, onnxSpec.sampleRate, "Upsampler 1");
+    auto blockSizeIn2 = upsamplerTwo.prepare(monoSpec, onnxSpec.sampleRate, "Upsampler 2");
+    onnxSpec.maximumBlockSize = blockSizeIn1;
+
+    onnxProcessor1.prepare(onnxSpec);
+    onnxProcessor2.prepare(onnxSpec);
+
+    auto blockSizeOut1 = downsamplerOne.prepare(onnxSpec, monoSpec.sampleRate, "Downsampler 1");
+    auto blockSizeOut2 = downsamplerTwo.prepare(onnxSpec, monoSpec.sampleRate, "Downsampler 2");
+    std::cout << "--- Blocksize ---" << "\n";
+    std::cout << "Monospec: " << monoSpec.maximumBlockSize << std::endl;
+    std::cout << "Pre Onnx: " << blockSizeIn1 << std::endl;
+    std::cout << "PostOnnx: " << blockSizeOut1 << std::endl;
+    std::cout << "------" << "\n";
+
 }
 
 void AudioPluginAudioProcessor::releaseResources() {
@@ -218,6 +228,8 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& ) {
     juce::AudioProcessLoadMeasurer::ScopedTimer s(measurer, buffer.getNumSamples());
     {
+        // ToDo check ScopedNoDenormals noDenormals;
+
         dryWetMixer.setDrySamples(buffer);
         utils::stereoToMono(monoBuffer, buffer);
 
@@ -234,26 +246,30 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
         audioVisualiser.updateFromAudioBuffer(network1Buffer, network2Buffer);
 
-        resamplingProcessor1Post.processBlock(network1Buffer, resamplingBuffer1onnx);
-        resamplingProcessor2Post.processBlock(network2Buffer, resamplingBuffer2onnx);
+        // fixed input buffer size + pluginSampleRate (processSpec)
+        juce::AudioBuffer<float>& onnxbuffer1 = upsamplerOne.processBlock(network1Buffer);
+        juce::AudioBuffer<float>& onnxbuffer2 = upsamplerTwo.processBlock(network2Buffer);
+        // some buffer size + target samplerate
 
-        onnxProcessor1.processBlock(network1Buffer);
-        onnxProcessor2.processBlock(network2Buffer);
+        onnxProcessor1.processBlock(onnxbuffer1);
+        onnxProcessor2.processBlock(onnxbuffer2);
 
-        resamplingProcessor1Post.processBlock(resamplingBuffer1onnx, network1Buffer);
-        resamplingProcessor2Post.processBlock(resamplingBuffer2onnx, network2Buffer);
+        // some buffer size + target samplerate
+        juce::AudioBuffer<float>& networkOut1 = downsamplerOne.processBlock(onnxbuffer1);
+        juce::AudioBuffer<float>& networkOut2 = downsamplerTwo.processBlock(onnxbuffer2);
+        // --> fixed output buffer size + pluginSampleRate (processSpec)
 
-        levelAnalyser1.processBlock(network1Buffer);
-        levelAnalyser2.processBlock(network2Buffer);
+        levelAnalyser1.processBlock(networkOut1);
+        levelAnalyser2.processBlock(networkOut2);
 
-        grain1DryBuffer.makeCopyOf(network1Buffer);
+        grain1DryBuffer.makeCopyOf(networkOut1);
         grain1DryWetMixer.setDrySamples(grain1DryBuffer);
-        grainDelay1.processBlock(network1Buffer);
+        grainDelay1.processBlock(networkOut1);
         grain1DryWetMixer.setWetSamples(network1Buffer);
 
-        grain2DryBuffer.makeCopyOf(network2Buffer);
+        grain2DryBuffer.makeCopyOf(networkOut2);
         grain2DryWetMixer.setDrySamples(grain2DryBuffer);
-        grainDelay2.processBlock(network2Buffer);
+        grainDelay2.processBlock(networkOut2);
         grain2DryWetMixer.setWetSamples(network2Buffer);
 
         if (parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load() == 0.f)

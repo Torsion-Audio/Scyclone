@@ -107,18 +107,15 @@ private:
     DryWetMixer grain1DryWetMixer;
     DryWetMixer grain2DryWetMixer;
 
-    ResamplingProcessor resamplingProcessor1Pre;
-    ResamplingProcessor resamplingProcessor2Pre;
-    juce::AudioBuffer<float> resamplingBuffer1plugin;
-    juce::AudioBuffer<float> resamplingBuffer2plugin;
-    juce::AudioBuffer<float> resamplingBuffer1onnx;
-    juce::AudioBuffer<float> resamplingBuffer2onnx;
+    ResamplingProcessor upsamplerOne;
+    ResamplingProcessor upsamplerTwo;
 
+    void prepareResamplingAndOnnx(juce::dsp::ProcessSpec& monoSpec, juce::dsp::ProcessSpec& onnxSpec);
     OnnxProcessor onnxProcessor1;
     OnnxProcessor onnxProcessor2;
 
-    ResamplingProcessor resamplingProcessor1Post;
-    ResamplingProcessor resamplingProcessor2Post;
+    ResamplingProcessor downsamplerOne;
+    ResamplingProcessor downsamplerTwo;
 
 
     ProcessorCompressor processorCompressor;
