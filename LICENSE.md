@@ -6,4 +6,4 @@ This project is subject to multiple licenses. The primary license for the entire
 - All pretrained onnx models located at ```assets/models/``` are licensed under the Creative Commons Attribution-NonCommercial 4.0 International License
 - All other code within this project is licensed under the MIT License.
 
-`SPDX-License-Identifier: GPL-3.0 OR MIT OR CC BY-NC 4.0`
+`SPDX-License-Identifier: GPL-3.0 OR MIT OR CC BY-NC 4.0 OR BSD-2-Clause`
