@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
+set(BUILD_TESTING OFF)
 set(LIBSAMPLERATE_INSTALL OFF)
 set(LIBSAMPLERATE_EXAMPLES OFF)
 # libsamplerate itself does not require any dependencies,
