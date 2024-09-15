@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
 
+# Use cmake -DCMAKE_BUILD_TYPE=Release .. to make a release build.
+
 set(BUILD_TESTING OFF)
+# disabled build testing for now, to avoid having to integrate libsndfile and FFTW libraries
+# more information here: https://github.com/libsndfile/libsamplerate/blob/master/docs/win32.md
 set(LIBSAMPLERATE_INSTALL OFF)
 set(LIBSAMPLERATE_EXAMPLES OFF)
 # libsamplerate itself does not require any dependencies,
