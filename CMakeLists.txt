@@ -128,32 +128,9 @@ target_compile_definitions(${TARGET_NAME}
 		DONT_SET_USING_JUCE_NAMESPACE=1
 		)
 
-# --- SampleRate ---
-#target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/libsamplerate-0.2.2-win64/include)
-#target_link_libraries(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/modules/libsamplerate-0.2.2-win64/lib/samplerate.lib)
 
-# Set the path where the libsamplerate's CMake config files are located
-set(SAMPLERATE_DIR "${CMAKE_CURRENT_LIST_DIR}/modules/libsamplerate-0.2.2-win64/lib/cmake/SampleRate")
-
-# Use find_package to locate and configure libsamplerate
-find_package(SampleRate REQUIRED PATHS ${SAMPLERATE_DIR})
-
-if (SampleRate_FOUND)
-	target_include_directories(${TARGET_NAME} PRIVATE ${SampleRate_INCLUDE_DIRS})
-	target_link_libraries(${TARGET_NAME} PRIVATE SampleRate::samplerate)
-else()
-	message(FATAL_ERROR "libsamplerate not found")
-endif()
-
-# Copy samplerate.dll to the output directory after build
-set(SAMPLERATE_DLL "${CMAKE_CURRENT_LIST_DIR}/modules/libsamplerate-0.2.2-win64/bin/samplerate.dll")
-set(TARGET_DLL_DIR "$<TARGET_FILE_DIR:${TARGET_NAME}>/Standalone")
-
-# Add custom command to ensure directory exists and copy DLL
-add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SAMPLERATE_DLL}" "${TARGET_DLL_DIR}"
-		COMMENT "Copying samplerate.dll to Standalone directory"
-)
+# Include libsamplerate
+include(cmake/libsamplerate.cmake)
 
 
 # Add the onnxruntime library
