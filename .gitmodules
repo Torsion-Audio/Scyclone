@@ -4,3 +4,6 @@
 	shallow = true
 
 
+[submodule "modules/libsamplerate"]
+	path = modules/libsamplerate
+	url = https://github.com/libsndfile/libsamplerate.git
