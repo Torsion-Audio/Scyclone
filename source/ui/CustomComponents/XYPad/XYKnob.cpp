@@ -77,6 +77,6 @@ void XYKnob::mouseUp(const juce::MouseEvent &)
     repaint();
 }
 
-void XYKnob::mouseEnter(const juce::MouseEvent &event) {
+void XYKnob::mouseEnter(const juce::MouseEvent &) {
     //std::cout << "Knob enter\n";
 }

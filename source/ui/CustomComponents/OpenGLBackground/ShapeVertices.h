@@ -19,7 +19,7 @@ static std::vector<juce::Vector3D<GLfloat>> generateTriangle()
     return { { -0.5f, -0.5f, 0.0f }, { 0.5f, -0.5f, 0.0f }, { 0.0f,  0.5f, 0.0f } };
 }*/
 
-static std::vector<juce::Vector3D<GLfloat>> generateSquare()
+inline static std::vector<juce::Vector3D<GLfloat>> generateSquare()
 {
     return { { -1.f, -1.f, 0.0f }, { -1.f, 1.f, 0.0f }, { 1.f,  1.f, 0.0f }, { -1.f, -1.f, 0.0f }, { 1.f, -1.f, 0.0f }, { 1.f,  1.f, 0.0f } };
 }

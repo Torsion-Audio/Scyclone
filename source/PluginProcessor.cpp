@@ -193,7 +193,7 @@ void AudioPluginAudioProcessor::prepareResamplingAndOnnx(juce::dsp::ProcessSpec&
     std::cout << "Pre Onnx: " << blockSizeIn1 << std::endl;
     std::cout << "PostOnnx: " << blockSizeOut1 << std::endl;
     std::cout << "------" << "\n";
-
+    juce::ignoreUnused(blockSizeIn1, blockSizeOut2, blockSizeIn2);
 }
 
 void AudioPluginAudioProcessor::releaseResources() {
@@ -289,7 +289,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         utils::monoToStereo(buffer, monoBuffer);
         dryWetMixer.setWetSamples(buffer);
     }
-    cpuLoad = measurer.getLoadAsPercentage();
+    cpuLoad = static_cast<float>(measurer.getLoadAsPercentage());
 
     // std::cout << "CPU: " << (int)(cpuLoad) << " %\n";
     // std::cout << "latency: " << (latency*1000) << " ms\n";

@@ -51,12 +51,12 @@ void FooterComponent::resized() {
     tooltipLabel.setBounds(tooltipSection);
 }
 
-void FooterComponent::paint(juce::Graphics &g) {
+void FooterComponent::paint(juce::Graphics &) {
 }
 
 void FooterComponent::updateSpecs(){
     latencySamples = processor.getLatencySamples();
-    sampleRate = processor.getSampleRate();
+    sampleRate = static_cast<int>(processor.getSampleRate());
     latencySeconds = (float)latencySamples / float(sampleRate);
 
     //processorUse = processor.getCpuLoad();

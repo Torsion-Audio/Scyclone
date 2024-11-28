@@ -122,7 +122,7 @@ void HeaderComponent::resized() {
     detailButton.setBounds(getWidth() - 80, 24, 35, 19);
     scycloneTypoSection.setBounds(49.f, 21.f, 127.f, 30.f);
     neuralTransferTypoSection.setBounds(197.f, 21.f, 121.f, 30.f);
-    scycloneButton.setBounds(static_cast<int>(getWidth() / 2 - 72.5), 21.f, 145.f, 30.f);
+    scycloneButton.setBounds(static_cast<int>(getWidth() / 2 - 72.5), 21, 145, 30);
 }
 
 void HeaderComponent::paint(juce::Graphics &g) {

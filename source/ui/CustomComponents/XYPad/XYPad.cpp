@@ -102,7 +102,7 @@ void XYPad::resized()
 
 void XYPad::parameterChanged(const juce::String& parameterID, float newValue)
 {
-    
+	juce::ignoreUnused(newValue);
     if (parameterID == PluginParameters::FADE_ID.getParamID()){
         float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load();
         onModelMixChange(fadeValue);
@@ -467,7 +467,7 @@ void XYPad::connectParameters(juce::RangedAudioParameter& x1,
 }
 
 void XYPad::setKnobButtonDiameter(int newDiameter, int buttonNumber) {
-   juce::ignoreUnused(newDiameter);
+   juce::ignoreUnused(newDiameter, buttonNumber);
    moveButton(&knob1, 1);
    moveButton(&knob2, 2);
 }

@@ -36,7 +36,7 @@ void ResamplingProcessor::setSamplerateRatio()
     srcRatio = static_cast<double>(outputBufferSize) / static_cast<double>(inputBufferSize);
 
     // Debugging information
-    float timePerBlockInSec = static_cast<float>(inputBufferSize) / inputSampleRate;
+    float timePerBlockInSec = static_cast<float>(inputBufferSize) / static_cast<float>(inputSampleRate);
     float correctedSampleRate = static_cast<float>(outputBufferSize) / timePerBlockInSec;
 
     outputBufferMono.setSize(1, outputBufferSize); // 1 channel (Mono), outputBufferSize samples

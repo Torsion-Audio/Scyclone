@@ -180,7 +180,7 @@ void AudioPluginAudioProcessorEditor::mouseEnter(const juce::MouseEvent &event) 
     }
 }
 
-void AudioPluginAudioProcessorEditor::mouseExit(const juce::MouseEvent &event) {
+void AudioPluginAudioProcessorEditor::mouseExit(const juce::MouseEvent &) {
     footerComponent.setTooltipText("");
 }
 
