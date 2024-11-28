@@ -1,10 +1,22 @@
-# Include the rnbo directory to the target
-target_include_directories(${TARGET_NAME} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/rnbo
+add_library(rnbo_gran_delay STATIC
+		${CMAKE_CURRENT_SOURCE_DIR}/rnbo/RNBO.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/rnbo_granular.cpp
+)
+
+target_include_directories(rnbo_gran_delay PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/rnbo
 		${CMAKE_CURRENT_SOURCE_DIR}/rnbo/common
 )
 
-# Make a variable in the PARENT_SCOPE with the RNBO files to add
-set(RNBO_SOURCES    ${CMAKE_CURRENT_SOURCE_DIR}/rnbo/RNBO.h
-                    ${CMAKE_CURRENT_SOURCE_DIR}/rnbo/RNBO.cpp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/rnbo_granular.cpp PARENT_SCOPE)
+target_compile_options(rnbo_gran_delay PRIVATE
+		$<$<CXX_COMPILER_ID:MSVC>:/w>
+		$<$<CXX_COMPILER_ID:GNU>:-w>
+		$<$<CXX_COMPILER_ID:Clang>:-w>
+)
+
+target_link_libraries(${TARGET_NAME} PRIVATE rnbo_gran_delay)
+
+target_include_directories(${TARGET_NAME} SYSTEM PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/rnbo
+		${CMAKE_CURRENT_SOURCE_DIR}/rnbo/common
+)

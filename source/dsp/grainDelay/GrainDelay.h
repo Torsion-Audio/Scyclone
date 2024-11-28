@@ -2,12 +2,10 @@
 // Created by schee on 22/03/2023.
 //
 #include <JuceHeader.h>
-#include "../../../modules/RnboExport/rnbo/RNBO.h"
-#include "../../PluginParameters.h"
+#include <RNBO.h>
 
 #ifndef GITMODULES_GRAINDELAY_H
 #define GITMODULES_GRAINDELAY_H
-
 
 class GrainDelay {
 public:
