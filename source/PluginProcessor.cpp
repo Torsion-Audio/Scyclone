@@ -1,54 +1,60 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "dsp/utils/utils.h"
 #include <chrono>
 using namespace std::chrono;
 
 //==============================================================================
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
-     : juce::AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
-                       ),
-        parameters (*this, nullptr, juce::Identifier ("Scyclone"), PluginParameters::createParameterLayout()),
-        processorTransientSplitter1(parameters, 1),
-        processorTransientSplitter2(parameters, 2),
-        iirCutoffFilter1(parameters, 1),
-        iirCutoffFilter2(parameters, 2),
-        onnxProcessor1(parameters, 1, FunkDrum),
-        onnxProcessor2(parameters, 2, Djembe),
-        grainDelay1(1),
-        grainDelay2(2),
-        processorCompressor(parameters)
-{       
+    : juce::AudioProcessor(BusesProperties()
+#if !JucePlugin_IsMidiEffect
+#if !JucePlugin_IsSynth
+                               .withInput("Input", juce::AudioChannelSet::stereo(), true)
+#endif
+                               .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+                               ),
+      parameters(*this, nullptr, juce::Identifier("Scyclone"), PluginParameters::createParameterLayout()),
+      processorTransientSplitter1(parameters, 1),
+      processorTransientSplitter2(parameters, 2),
+      iirCutoffFilter1(parameters, 1),
+      iirCutoffFilter2(parameters, 2),
+      onnxProcessor1(parameters, 1, FunkDrum),
+      onnxProcessor2(parameters, 2, Djembe),
+      grainDelay1(1),
+      grainDelay2(2),
+      processorCompressor(parameters)
+{
 
     network1Name = "Funk";
     network2Name = "Djembe";
 
-    for (auto & parameterID : PluginParameters::getPluginParameterList()) {
+    for (auto &parameterID : PluginParameters::getPluginParameterList())
+    {
         parameters.addParameterListener(parameterID, this);
     }
 
     parameters.state.addChild(PluginParameters::createNotAutomatableValueTree(), 0, nullptr);
-    
+
     dryWetMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::DRY_WET_ID.getParamID())->load());
     compMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::COMP_DRY_WET_ID.getParamID())->load());
     fadeMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load());
-    
-    onnxProcessor1.onOnnxModelLoad = [this] (bool initLoading, juce::String modelName) {
+
+    onnxProcessor1.onOnnxModelLoad = [this](bool initLoading, juce::String modelName)
+    {
         this->suspendProcessing(initLoading);
-//        std::cout << "Onnx proc 1 suspend:" << initLoading << std::endl; //DBG
-        if (!initLoading && modelName != "") {
+        //        std::cout << "Onnx proc 1 suspend:" << initLoading << std::endl; //DBG
+        if (!initLoading && modelName != "")
+        {
             setExternalModelName(1, modelName);
         }
     };
-    onnxProcessor2.onOnnxModelLoad = [this] (bool initLoading, juce::String modelName) {
+    onnxProcessor2.onOnnxModelLoad = [this](bool initLoading, juce::String modelName)
+    {
         this->suspendProcessing(initLoading);
-//        std::cout << "Onnx proc 2 suspend:" << initLoading << std::endl; //DBG
-        if (!initLoading && modelName != "") {
+        //        std::cout << "Onnx proc 2 suspend:" << initLoading << std::endl; //DBG
+        if (!initLoading && modelName != "")
+        {
             setExternalModelName(2, modelName);
         }
     };
@@ -57,8 +63,10 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     initialiseRnbo();
 }
 
-AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {
-    for (auto & parameterID : PluginParameters::getPluginParameterList()) {
+AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
+{
+    for (auto &parameterID : PluginParameters::getPluginParameterList())
+    {
         parameters.removeParameterListener(parameterID, this);
     }
     PluginParameters::clearNotAutomatableValueTree(parameters.state.getChild(0));
@@ -66,94 +74,104 @@ AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {
 }
 
 //==============================================================================
-const juce::String AudioPluginAudioProcessor::getName() const {
+const juce::String AudioPluginAudioProcessor::getName() const
+{
     return JucePlugin_Name;
 }
 
-bool AudioPluginAudioProcessor::acceptsMidi() const {
-   #if JucePlugin_WantsMidiInput
+bool AudioPluginAudioProcessor::acceptsMidi() const
+{
+#if JucePlugin_WantsMidiInput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
-bool AudioPluginAudioProcessor::producesMidi() const {
-   #if JucePlugin_ProducesMidiOutput
+bool AudioPluginAudioProcessor::producesMidi() const
+{
+#if JucePlugin_ProducesMidiOutput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
-bool AudioPluginAudioProcessor::isMidiEffect() const {
-   #if JucePlugin_IsMidiEffect
+bool AudioPluginAudioProcessor::isMidiEffect() const
+{
+#if JucePlugin_IsMidiEffect
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
-double AudioPluginAudioProcessor::getTailLengthSeconds() const {
+double AudioPluginAudioProcessor::getTailLengthSeconds() const
+{
     return 0.0;
 }
 
-int AudioPluginAudioProcessor::getNumPrograms() {
-    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
+int AudioPluginAudioProcessor::getNumPrograms()
+{
+    return 1; // NB: some hosts don't cope very well if you tell them there are 0 programs,
+              // so this should be at least 1, even if you're not really implementing programs.
 }
 
-int AudioPluginAudioProcessor::getCurrentProgram() {
+int AudioPluginAudioProcessor::getCurrentProgram()
+{
     return 0;
 }
 
-void AudioPluginAudioProcessor::setCurrentProgram (int index) {
-    juce::ignoreUnused (index);
+void AudioPluginAudioProcessor::setCurrentProgram(int index)
+{
+    juce::ignoreUnused(index);
 }
 
-const juce::String AudioPluginAudioProcessor::getProgramName (int index) {
-    juce::ignoreUnused (index);
+const juce::String AudioPluginAudioProcessor::getProgramName(int index)
+{
+    juce::ignoreUnused(index);
     return {};
 }
 
-void AudioPluginAudioProcessor::changeProgramName (int index, const juce::String& newName) {
-    juce::ignoreUnused (index, newName);
+void AudioPluginAudioProcessor::changeProgramName(int index, const juce::String &newName)
+{
+    juce::ignoreUnused(index, newName);
 }
 
 //==============================================================================
-void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
-    juce::dsp::ProcessSpec spec {sampleRate,
-                                 static_cast<juce::uint32>(samplesPerBlock),
-                                 static_cast<juce::uint32>(getTotalNumInputChannels())};
-    juce::dsp::ProcessSpec monoSpec {sampleRate,
-                                 static_cast<juce::uint32>(samplesPerBlock),
-                                 static_cast<juce::uint32>(1)};
-    juce::dsp::ProcessSpec onnxSpec {48000,
-                                     static_cast<juce::uint32>(0), // will be set by Resampler
-                                     static_cast<juce::uint32>(1)};
+void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+{
+    juce::dsp::ProcessSpec spec{sampleRate,
+                                static_cast<juce::uint32>(samplesPerBlock),
+                                static_cast<juce::uint32>(getTotalNumInputChannels())};
+    juce::dsp::ProcessSpec monoSpec{sampleRate,
+                                    static_cast<juce::uint32>(samplesPerBlock),
+                                    static_cast<juce::uint32>(1)};
+    juce::dsp::ProcessSpec onnxSpec{48000,
+                                    static_cast<juce::uint32>(0), // will be set by Resampler
+                                    static_cast<juce::uint32>(1)};
 
     // Setup Mono Buffers
-    std::vector<juce::AudioBuffer<float>*> buffers = {
-            &network1Buffer, &network2Buffer, &fadeBuffer,
-            &grain1DryBuffer, &grain2DryBuffer, &monoBuffer
-    };
+    std::vector<juce::AudioBuffer<float> *> buffers = {
+        &network1Buffer, &network2Buffer, &fadeBuffer,
+        &grain1DryBuffer, &grain2DryBuffer, &monoBuffer};
 
-    for (auto* buffer : buffers)
+    for (auto *buffer : buffers)
     {
         buffer->setSize((int)monoSpec.numChannels, (int)monoSpec.maximumBlockSize);
     }
 
-
     dryWetMixer.prepare(spec);
-    
+
     fadeMixer.prepare(monoSpec);
     compMixer.prepare(monoSpec);
     grain1DryWetMixer.prepare(monoSpec);
     grain2DryWetMixer.prepare(monoSpec);
 
-    // Prepare the resampling processors
-    // Resampling to 48k --> Onnx --> Resample back to host
-    prepareResamplingAndOnnx(monoSpec, onnxSpec);
+    // Resample to 48k -> ONNX -> back to host; set total latency.
+    int totalLatency = prepareResamplingAndOnnx(monoSpec, onnxSpec);
+    setLatencySamples(totalLatency);
+    dryWetMixer.setWetLatency(totalLatency);
 
     iirCutoffFilter1.prepare(monoSpec);
     iirCutoffFilter2.prepare(monoSpec);
@@ -164,49 +182,41 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     grainDelay1.prepare(monoSpec);
     grainDelay2.prepare(monoSpec);
     measurer.reset(sampleRate, samplesPerBlock);
-
-    
-    if (onnxProcessor1.getLatency() == onnxProcessor2.getLatency()) {
-        setLatencySamples(onnxProcessor1.getLatency());
-        dryWetMixer.setWetLatency(onnxProcessor1.getLatency());
-//        std::cout << "latency 1: " << onnxProcessor1.getLatency() << std::endl; //DBG
-//        std::cout << "latency 2: " << onnxProcessor2.getLatency() << std::endl; //DBG
-    } else {
-        setLatencySamples(0);
-        dryWetMixer.setWetLatency(0);
-    }
 }
 
-void AudioPluginAudioProcessor::prepareResamplingAndOnnx(juce::dsp::ProcessSpec& monoSpec, juce::dsp::ProcessSpec& onnxSpec)
+int AudioPluginAudioProcessor::prepareResamplingAndOnnx(juce::dsp::ProcessSpec &monoSpec, juce::dsp::ProcessSpec &onnxSpec)
 {
     auto blockSizeIn1 = upsamplerOne.prepare(monoSpec, onnxSpec.sampleRate, "Upsampler 1");
-    auto blockSizeIn2 = upsamplerTwo.prepare(monoSpec, onnxSpec.sampleRate, "Upsampler 2");
+    upsamplerTwo.prepare(monoSpec, onnxSpec.sampleRate, "Upsampler 2");
     onnxSpec.maximumBlockSize = blockSizeIn1;
 
     onnxProcessor1.prepare(onnxSpec);
     onnxProcessor2.prepare(onnxSpec);
 
-    auto blockSizeOut1 = downsamplerOne.prepare(onnxSpec, monoSpec.sampleRate, "Downsampler 1");
-    auto blockSizeOut2 = downsamplerTwo.prepare(onnxSpec, monoSpec.sampleRate, "Downsampler 2");
-    std::cout << "--- Blocksize ---" << "\n";
-    std::cout << "Monospec: " << monoSpec.maximumBlockSize << std::endl;
-    std::cout << "Pre Onnx: " << blockSizeIn1 << std::endl;
-    std::cout << "PostOnnx: " << blockSizeOut1 << std::endl;
-    std::cout << "------" << "\n";
-    juce::ignoreUnused(blockSizeIn1, blockSizeOut2, blockSizeIn2);
+    downsamplerOne.prepare(onnxSpec, monoSpec.sampleRate, "Downsampler 1");
+    downsamplerTwo.prepare(onnxSpec, monoSpec.sampleRate, "Downsampler 2");
+
+    int onnxDelay48k = std::max(onnxProcessor1.getLatencyInSamples(), onnxProcessor2.getLatencyInSamples());
+    return utils::computeTotalLatencyInSamples(
+        upsamplerOne.getLatencyInSamples(),
+        onnxDelay48k,
+        downsamplerOne.getLatencyInSamples(),
+        48000.0,
+        monoSpec.sampleRate);
 }
 
-void AudioPluginAudioProcessor::releaseResources() {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
+void AudioPluginAudioProcessor::releaseResources()
+{
+    // Free resources when playback stops.
     measurer.reset();
 }
 
-bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
-  #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
+bool AudioPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
+{
+#if JucePlugin_IsMidiEffect
+    juce::ignoreUnused(layouts);
     return true;
-  #else
+#else
     // This is the place where you check if the layout is supported.
     // In this template code we only support mono or stereo.
     // Some plugin hosts, such as certain GarageBand versions, will only
@@ -215,17 +225,18 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
         return false;
 
     // This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
+#if !JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
-   #endif
+#endif
 
     return true;
-  #endif
+#endif
 }
 
-void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
-                                              juce::MidiBuffer& ) {
+void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
+                                             juce::MidiBuffer &)
+{
     juce::AudioProcessLoadMeasurer::ScopedTimer s(measurer, buffer.getNumSamples());
     {
         // ToDo check ScopedNoDenormals noDenormals;
@@ -247,16 +258,16 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         audioVisualiser.updateFromAudioBuffer(network1Buffer, network2Buffer);
 
         // fixed input buffer size + pluginSampleRate (processSpec)
-        juce::AudioBuffer<float>& onnxbuffer1 = upsamplerOne.processBlock(network1Buffer);
-        juce::AudioBuffer<float>& onnxbuffer2 = upsamplerTwo.processBlock(network2Buffer);
+        juce::AudioBuffer<float> &onnxbuffer1 = upsamplerOne.processBlock(network1Buffer);
+        juce::AudioBuffer<float> &onnxbuffer2 = upsamplerTwo.processBlock(network2Buffer);
         // some buffer size + target samplerate
 
         onnxProcessor1.processBlock(onnxbuffer1);
         onnxProcessor2.processBlock(onnxbuffer2);
 
         // some buffer size + target samplerate
-        juce::AudioBuffer<float>& networkOut1 = downsamplerOne.processBlock(onnxbuffer1);
-        juce::AudioBuffer<float>& networkOut2 = downsamplerTwo.processBlock(onnxbuffer2);
+        juce::AudioBuffer<float> &networkOut1 = downsamplerOne.processBlock(onnxbuffer1);
+        juce::AudioBuffer<float> &networkOut2 = downsamplerTwo.processBlock(onnxbuffer2);
         // --> fixed output buffer size + pluginSampleRate (processSpec)
 
         levelAnalyser1.processBlock(networkOut1);
@@ -292,59 +303,71 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     cpuLoad = static_cast<float>(measurer.getLoadAsPercentage());
 
     // std::cout << "CPU: " << (int)(cpuLoad) << " %\n";
-    // std::cout << "latency: " << (latency*1000) << " ms\n";
 }
 
-juce::AudioVisualiserComponent &AudioPluginAudioProcessor::getAudioVisualiser1() {
+juce::AudioVisualiserComponent &AudioPluginAudioProcessor::getAudioVisualiser1()
+{
     return audioVisualiser.getAudioVisualiser(1);
 }
-juce::AudioVisualiserComponent &AudioPluginAudioProcessor::getAudioVisualiser2() {
+juce::AudioVisualiserComponent &AudioPluginAudioProcessor::getAudioVisualiser2()
+{
     return audioVisualiser.getAudioVisualiser(2);
 }
 
-float AudioPluginAudioProcessor::getCurrentLevel(int index) {
-    if (index == 1) return levelAnalyser1.getCurrentLevel();
-    else if (index == 2) return levelAnalyser2.getCurrentLevel();
-    else return (levelAnalyser1.getCurrentLevel() + levelAnalyser2.getCurrentLevel()) / 2.f;
+float AudioPluginAudioProcessor::getCurrentLevel(int index)
+{
+    if (index == 1)
+        return levelAnalyser1.getCurrentLevel();
+    else if (index == 2)
+        return levelAnalyser2.getCurrentLevel();
+    else
+        return (levelAnalyser1.getCurrentLevel() + levelAnalyser2.getCurrentLevel()) / 2.f;
 }
 
-void AudioPluginAudioProcessor::setLevelType(LevelType newLevelType) {
+void AudioPluginAudioProcessor::setLevelType(LevelType newLevelType)
+{
     levelAnalyser1.setLevelType(newLevelType);
     levelAnalyser2.setLevelType(newLevelType);
 }
 
 //==============================================================================
-bool AudioPluginAudioProcessor::hasEditor() const {
+bool AudioPluginAudioProcessor::hasEditor() const
+{
     return true; // (change this to false if you choose to not supply an editor)
 }
 
-juce::AudioProcessorEditor* AudioPluginAudioProcessor::createEditor() {
-    return new AudioPluginAudioProcessorEditor (*this, parameters);
-//    return new juce::GenericAudioProcessorEditor (*this);
+juce::AudioProcessorEditor *AudioPluginAudioProcessor::createEditor()
+{
+    return new AudioPluginAudioProcessorEditor(*this, parameters);
+    //    return new juce::GenericAudioProcessorEditor (*this);
 }
 
 //==============================================================================
-void AudioPluginAudioProcessor::getStateInformation (juce::MemoryBlock& destData) {
+void AudioPluginAudioProcessor::getStateInformation(juce::MemoryBlock &destData)
+{
     auto state = parameters.copyState();
-    std::unique_ptr<juce::XmlElement> xml (state.createXml());
-    copyXmlToBinary (*xml, destData);
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
 }
 
-void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+void AudioPluginAudioProcessor::setStateInformation(const void *data, int sizeInBytes)
+{
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
     if (xmlState != nullptr)
-        if (xmlState->hasTagName(parameters.state.getType())) {
+        if (xmlState->hasTagName(parameters.state.getType()))
+        {
             parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
             advancedParameterControlVisible.referTo(parameters.state.getChildWithName("Settings")
-            .getPropertyAsValue(PluginParameters::ADVANCED_PARAMETER_CONTROL_VISIBLE_NAME, nullptr));
+                                                        .getPropertyAsValue(PluginParameters::ADVANCED_PARAMETER_CONTROL_VISIBLE_NAME, nullptr));
             network1Name.referTo(parameters.state.getChildWithName("Settings")
-                                                            .getPropertyAsValue(PluginParameters::NETWORK1_NAME_NAME, nullptr));
+                                     .getPropertyAsValue(PluginParameters::NETWORK1_NAME_NAME, nullptr));
             network2Name.referTo(parameters.state.getChildWithName("Settings")
-                                                            .getPropertyAsValue(PluginParameters::NETWORK2_NAME_NAME, nullptr));
+                                     .getPropertyAsValue(PluginParameters::NETWORK2_NAME_NAME, nullptr));
         }
 }
 
-void AudioPluginAudioProcessor::parameterChanged(const juce::String &parameterID, float newValue) {
+void AudioPluginAudioProcessor::parameterChanged(const juce::String &parameterID, float newValue)
+{
     processorCompressor.parameterChanged(parameterID, newValue);
     onnxProcessor1.parameterChanged(parameterID, newValue);
     onnxProcessor2.parameterChanged(parameterID, newValue);
@@ -356,26 +379,35 @@ void AudioPluginAudioProcessor::parameterChanged(const juce::String &parameterID
     processorTransientSplitter1.parameterChanged(parameterID, newValue);
     processorTransientSplitter2.parameterChanged(parameterID, newValue);
 
-    if (parameterID == PluginParameters::DRY_WET_ID.getParamID()) {
+    if (parameterID == PluginParameters::DRY_WET_ID.getParamID())
+    {
         dryWetMixer.parameterChanged(parameterID, newValue);
-    } else if (parameterID == PluginParameters::COMP_DRY_WET_ID.getParamID()) {
+    }
+    else if (parameterID == PluginParameters::COMP_DRY_WET_ID.getParamID())
+    {
         compMixer.parameterChanged(parameterID, newValue);
-    } else if (parameterID == PluginParameters::FADE_ID.getParamID()) {
+    }
+    else if (parameterID == PluginParameters::FADE_ID.getParamID())
+    {
         fadeMixer.parameterChanged(parameterID, newValue);
-    } else if (parameterID == PluginParameters::GRAIN_NETWORK1_MIX_ID.getParamID()){
+    }
+    else if (parameterID == PluginParameters::GRAIN_NETWORK1_MIX_ID.getParamID())
+    {
         grain1DryWetMixer.setDryWetProportion(newValue);
-    } else if (parameterID == PluginParameters::GRAIN_NETWORK2_MIX_ID.getParamID()){
+    }
+    else if (parameterID == PluginParameters::GRAIN_NETWORK2_MIX_ID.getParamID())
+    {
         grain2DryWetMixer.setDryWetProportion(newValue);
     }
 }
 
-void AudioPluginAudioProcessor::setInitialMuteParameters() {
+void AudioPluginAudioProcessor::setInitialMuteParameters()
+{
     auto onOffGrain1 = parameters.getRawParameterValue(PluginParameters::GRAIN_ON_OFF_NETWORK1_ID.getParamID())->load();
     auto onOffGrain2 = parameters.getRawParameterValue(PluginParameters::GRAIN_ON_OFF_NETWORK2_ID.getParamID())->load();
 
     auto onOffNetwork1 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load();
     auto onOffNetwork2 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load();
-
 
     parameterChanged(PluginParameters::ON_OFF_NETWORK1_ID.getParamID(), onOffNetwork1);
     parameterChanged(PluginParameters::ON_OFF_NETWORK2_ID.getParamID(), onOffNetwork2);
@@ -384,7 +416,8 @@ void AudioPluginAudioProcessor::setInitialMuteParameters() {
     parameterChanged(PluginParameters::GRAIN_ON_OFF_NETWORK2_ID.getParamID(), onOffGrain2);
 }
 
-void AudioPluginAudioProcessor::initialiseRnbo(){
+void AudioPluginAudioProcessor::initialiseRnbo()
+{
     grainDelay1.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK1_PITCH_ID.getParamID()), 2);
     grainDelay1.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK1_INTERVAL_ID.getParamID()), 3);
     grainDelay1.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK1_SIZE_ID.getParamID()), 1);
@@ -393,15 +426,14 @@ void AudioPluginAudioProcessor::initialiseRnbo(){
     grainDelay2.setParameterValue(parameters.getRawParameterValue(PluginParameters::GRAIN_NETWORK2_SIZE_ID.getParamID()), 1);
 }
 
-
-float AudioPluginAudioProcessor::getCpuLoad() {
+float AudioPluginAudioProcessor::getCpuLoad()
+{
     return cpuLoad;
 }
 
 //==============================================================================
 // This creates new instances of the plugin..
-juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+{
     return new AudioPluginAudioProcessor();
 }
-
-

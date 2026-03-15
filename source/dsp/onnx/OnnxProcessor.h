@@ -6,19 +6,20 @@
 #define VAESYNTH_ONNXPROCESSOR_H
 
 #include "JuceHeader.h"
+#include "../IProcessor.h"
 #include "RingBuffer.h"
 #include "InferenceThread.h"
 #include "../../PluginParameters.h"
 #include "WarningWindow.h"
 
-class OnnxProcessor {
+class OnnxProcessor : public IProcessor {
 public:
     OnnxProcessor(juce::AudioProcessorValueTreeState &apvts, int no, RaveModel raveModel);
 
     void parameterChanged(const juce::String &parameterID, float newValue);
-    void prepare(const juce::dsp::ProcessSpec& spec);
-    void processBlock(juce::AudioBuffer<float>& buffer);
-    int getLatency() const;
+    void prepare(const juce::dsp::ProcessSpec& spec) override;
+    void processBlock(juce::AudioBuffer<float>& buffer) override;
+    int getLatencyInSamples() const override;
     void loadExternalModel(juce::File path);
 
     std::function<void(bool initLoading, juce::String modelName)> onOnnxModelLoad;

@@ -9,16 +9,17 @@
 #define ProcessorCompressor_h
 
 #include <JuceHeader.h>
+#include "../IProcessor.h"
 #include "Compressor.h"
 #include "../../PluginParameters.h"
 
-class ProcessorCompressor{
+class ProcessorCompressor : public IProcessor {
 public:
     explicit ProcessorCompressor(juce::AudioProcessorValueTreeState &apvts);
-    ~ProcessorCompressor();
+    ~ProcessorCompressor() override;
     
-    void prepare(const juce::dsp::ProcessSpec &spec);
-    void processBlock(juce::AudioBuffer<float>& buffer);
+    void prepare(const juce::dsp::ProcessSpec &spec) override;
+    void processBlock(juce::AudioBuffer<float>& buffer) override;
     void parameterChanged(const juce::String &parameterID, float newValue);
 
 private:

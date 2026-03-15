@@ -6,6 +6,7 @@
 //
 
 #include "utils.h"
+#include <cmath>
 
 float utils::amp2dB(float amp){
     return 20*std::log10(amp);
@@ -53,4 +54,23 @@ void utils::stereoToMono(juce::AudioBuffer<float> &targetMonoBlock, juce::AudioB
         juce::FloatVectorOperations::copy(lWrite, monoRead, nSamples);
         juce::FloatVectorOperations::copy(rWrite, monoRead, nSamples);
     }
+}
+
+int utils::computeTotalLatencyInSamples(
+    int delayAtOutputRateSamples,
+    int delayAtProcessingRateSamples1,
+    int delayAtProcessingRateSamples2,
+    double processingRate,
+    double outputSampleRate)
+{
+    double totalSeconds = static_cast<double>(delayAtOutputRateSamples) / outputSampleRate
+        + static_cast<double>(delayAtProcessingRateSamples1 + delayAtProcessingRateSamples2) / processingRate;
+    return static_cast<int>(std::round(totalSeconds * outputSampleRate));
+}
+
+int utils::computeOnnxLatencyInSamples(int inferenceLatencyInSamples, int maxSamplesPerBuffer)
+{
+    // ceil(inference / block) * block - block, using integer arithmetic to avoid float equality pitfalls.
+    int blocks = (inferenceLatencyInSamples + maxSamplesPerBuffer - 1) / maxSamplesPerBuffer;
+    return blocks * maxSamplesPerBuffer - maxSamplesPerBuffer;
 }

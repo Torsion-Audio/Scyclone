@@ -18,4 +18,15 @@ namespace utils {
 
     void monoToStereo(juce::AudioBuffer<float> &targetStereoBlock, juce::AudioBuffer<float> &sourceBlock);
     void stereoToMono(juce::AudioBuffer<float> &targetStereoBlock, juce::AudioBuffer<float> &sourceBlock);
+
+    /** Returns total latency in samples at outputSampleRate. Uses std::round. */
+    int computeTotalLatencyInSamples(
+        int delayAtOutputRateSamples,
+        int delayAtProcessingRateSamples1,
+        int delayAtProcessingRateSamples2,
+        double processingRate,
+        double outputSampleRate);
+
+    /** Block-aligned ONNX latency in samples. */
+    int computeOnnxLatencyInSamples(int inferenceLatencyInSamples, int maxSamplesPerBuffer);
 }

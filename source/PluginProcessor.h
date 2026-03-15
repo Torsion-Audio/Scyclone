@@ -110,7 +110,7 @@ private:
     ResamplingProcessor upsamplerOne;
     ResamplingProcessor upsamplerTwo;
 
-    void prepareResamplingAndOnnx(juce::dsp::ProcessSpec& monoSpec, juce::dsp::ProcessSpec& onnxSpec);
+    int prepareResamplingAndOnnx(juce::dsp::ProcessSpec& monoSpec, juce::dsp::ProcessSpec& onnxSpec);
     OnnxProcessor onnxProcessor1;
     OnnxProcessor onnxProcessor2;
 
@@ -130,10 +130,6 @@ private:
 
     float cpuLoad{};
     juce::AudioProcessLoadMeasurer measurer;
-
-    float latency{};
-
-
 
     //==============================================================================
     JUCE_HEAVYWEIGHT_LEAK_DETECTOR (AudioPluginAudioProcessor)

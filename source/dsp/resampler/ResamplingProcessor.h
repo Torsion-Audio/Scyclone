@@ -12,10 +12,12 @@ public:
 
     int prepare(const juce::dsp::ProcessSpec &inputSpec, double outputSampleRate, std::string name);
     juce::AudioBuffer<float>& processBlock(juce::AudioBuffer<float>& inputBufferMono);
-
+    /** Latency in input-rate samples. */
+    int getLatencyInSamples() const { return latencyInSamples; }
 
 private:
-    std::string id_string; // for debugging printout
+    int latencyInSamples = 0;
+    std::string id_string;
 
     double inputSampleRate;
     double outputSampleRate;
@@ -23,7 +25,7 @@ private:
     int outputBufferSize;
 
     void setSamplerateRatio();
-    double srcRatio; // input / output
+    double srcRatio;  // set in setSamplerateRatio()
 
     SRC_STATE* converter;
 

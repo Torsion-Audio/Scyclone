@@ -3,6 +3,7 @@
 //
 
 #include "OnnxProcessor.h"
+#include "../utils/utils.h"
 
 OnnxProcessor::OnnxProcessor(juce::AudioProcessorValueTreeState &apvts, int no, RaveModel raveModel) : inferenceThread(raveModel), number(no), parameters(apvts)
 {
@@ -89,11 +90,9 @@ void OnnxProcessor::loadExternalModel(juce::File file) {
 }
 
 void OnnxProcessor::calculateLatency(int maxSamplesPerBuffer) {
-    float latency = (float) (inferenceThread.getLatency()) / (float) maxSamplesPerBuffer;
-    if (latency == static_cast<float>(static_cast<int>(latency))) latencyInSamples = static_cast<int>(latency) * maxSamplesPerBuffer - maxSamplesPerBuffer;
-    else latencyInSamples = static_cast<int>((latency + 1.f)) * maxSamplesPerBuffer - maxSamplesPerBuffer;
+    latencyInSamples = utils::computeOnnxLatencyInSamples(inferenceThread.getLatency(), maxSamplesPerBuffer);
 }
 
-int OnnxProcessor::getLatency() const {
+int OnnxProcessor::getLatencyInSamples() const {
     return latencyInSamples;
 }

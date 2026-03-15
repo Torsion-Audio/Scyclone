@@ -9,16 +9,17 @@
 #define ProcessorTransientSplitter_h
 
 #include <JuceHeader.h>
+#include "../IProcessor.h"
 #include "TransientSplitter.h"
 #include "../../PluginParameters.h"
 
-class ProcessorTransientSplitter{
+class ProcessorTransientSplitter : public IProcessor {
 public:
     ProcessorTransientSplitter(const juce::AudioProcessorValueTreeState &apvts, int no);
-    ~ProcessorTransientSplitter();
+    ~ProcessorTransientSplitter() override;
     
-    void prepare(const juce::dsp::ProcessSpec &spec);
-    void processBlock(juce::AudioBuffer<float>& buffer);
+    void prepare(const juce::dsp::ProcessSpec &spec) override;
+    void processBlock(juce::AudioBuffer<float>& buffer) override;
     void parameterChanged(const juce::String &parameterID, float newValue);
     void setMuted (bool shouldBeMuted);
 

@@ -6,17 +6,19 @@
 #define VAESYNTH_IIRCUTOFFFILTER_H
 
 #include <JuceHeader.h>
+#include "../IProcessor.h"
 #include "../../PluginParameters.h"
 
-class IIRCutoffFilter
+class IIRCutoffFilter : public IProcessor
 {
 public:
     IIRCutoffFilter(const juce::AudioProcessorValueTreeState &apvts, int no);
-    ~IIRCutoffFilter();
+    ~IIRCutoffFilter() override;
     void updateLPFilterParams(double freq, double q);
     void updateHPFilterParams(double freq, double q);
 
-    void prepare(const juce::dsp::ProcessSpec &spec);
+    void prepare(const juce::dsp::ProcessSpec &spec) override;
+    void processBlock(juce::AudioBuffer<float>& buffer) override { processFilters(buffer); }
 
     void processLPFilter(juce::AudioBuffer<float>& buffer);
     void processHPFilter(juce::AudioBuffer<float>& buffer);

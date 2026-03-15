@@ -9,6 +9,7 @@
 #define TransientSplitter_h
 
 #include <JuceHeader.h>
+#include "../IProcessor.h"
 #include "../utils/Envelope.h"
 
 struct TransientSplitterParameter{
@@ -20,13 +21,13 @@ struct TransientSplitterParameter{
     float releaseTimeRatio;
 };
 
-class TransientSplitter{
+class TransientSplitter : public IProcessor {
 public:
     TransientSplitter();
-    ~TransientSplitter();
+    ~TransientSplitter() override;
 
-    void prepare(const juce::dsp::ProcessSpec &spec);
-    void processBlock(juce::AudioBuffer<float>& buffer);
+    void prepare(const juce::dsp::ProcessSpec &spec) override;
+    void processBlock(juce::AudioBuffer<float>& buffer) override;
 
 public:
     void setAttack(float newAttack);

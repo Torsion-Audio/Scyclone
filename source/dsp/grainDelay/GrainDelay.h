@@ -3,17 +3,18 @@
 //
 #include <JuceHeader.h>
 #include <RNBO.h>
+#include "../IProcessor.h"
 
 #ifndef GITMODULES_GRAINDELAY_H
 #define GITMODULES_GRAINDELAY_H
 
-class GrainDelay {
+class GrainDelay : public IProcessor {
 public:
     GrainDelay(const int no);
-    ~GrainDelay();
+    ~GrainDelay() override;
 
-    void prepare(const juce::dsp::ProcessSpec &spec);
-    void processBlock(juce::AudioBuffer<float>& buffer);
+    void prepare(const juce::dsp::ProcessSpec &spec) override;
+    void processBlock(juce::AudioBuffer<float>& buffer) override;
     void parameterChanged(const juce::String &parameterID, float newValue);
 
     void setParameterValue(std::atomic<float>* parameterToConnect, int rnboParameterIdx);

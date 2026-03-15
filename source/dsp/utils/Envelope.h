@@ -9,17 +9,18 @@
 #define envelope_h
 
 #include <JuceHeader.h>
+#include "../IProcessor.h"
 
-class Envelope{
+class Envelope : public IProcessor {
 public:
     Envelope(float initAttackTime, float initReleaseTime);
-    ~Envelope();
-    void prepare(const juce::dsp::ProcessSpec &spec);
+    ~Envelope() override;
+    void prepare(const juce::dsp::ProcessSpec &spec) override;
     void setAttackTime(float attackTime);
     float getAttackTime() const;
     void setReleaseTime(float releaseTime);
     float getReleaseTime() const;
-    void processBlock(juce::AudioBuffer<float>& buffer);
+    void processBlock(juce::AudioBuffer<float>& buffer) override;
     float getSample(unsigned long sample);
 
 private:

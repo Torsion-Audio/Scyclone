@@ -8,6 +8,7 @@
 #define compressor_h
 
 #include <JuceHeader.h>
+#include "../IProcessor.h"
 #include "../utils/Envelope.h"
 
 enum CompressorType {
@@ -39,13 +40,13 @@ struct AutoMakeUpGain{
 };
 
 
-class Compressor{
+class Compressor : public IProcessor {
 public:
     Compressor();
-    ~Compressor();
+    ~Compressor() override;
 
-    void prepare(const juce::dsp::ProcessSpec &spec);
-    void processBlock(juce::AudioBuffer<float>& buffer);
+    void prepare(const juce::dsp::ProcessSpec &spec) override;
+    void processBlock(juce::AudioBuffer<float>& buffer) override;
 
 public:
     void setThreshold(float newThreshold);
