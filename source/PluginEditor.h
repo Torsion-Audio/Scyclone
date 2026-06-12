@@ -12,6 +12,7 @@
 #include "ui/Core/Layout.h"
 #include "ui/LookAndFeel/CustomFontLookAndFeel.h"
 #include "ui/CustomComponents/Texture/TextureComponent.h"
+#include "ui/TooltipManager.h"
 #include "FileChooserManager.h"
 
 //==============================================================================
@@ -25,8 +26,6 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     void parameterChanged (const juce::String& parameterID, float newValue) override;
-    void mouseEnter(const juce::MouseEvent &event) override;
-    void mouseExit(const juce::MouseEvent &event) override;
 
 private:
     // This reference is provided as a quick way for your editor to
@@ -51,16 +50,10 @@ private:
 
     FileChooserManager fileChooserManager;
 
-    juce::Component** xyPadComponents;
-    juce::Component** parameterControlComponents;
-    juce::Component** advancedParameterControlComponents;
-    juce::Component** headerComponents;
-
     std::unique_ptr<juce::ComponentAnimator> componentAnimator;
     int fadeTime = 200;
 
-    std::map<juce::Component*, juce::String> tooltipMap;
-    void initializeTooltipMap();
+    std::unique_ptr<TooltipManager> tooltipManager;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };
