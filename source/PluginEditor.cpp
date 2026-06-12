@@ -17,6 +17,16 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     juce::LookAndFeel::setDefaultLookAndFeel (&customFontLookAndFeel);
 
+    addAndMakeVisible(headerComponent);
+    addAndMakeVisible(*openGLBackground);
+    addAndMakeVisible(advancedParameterControl);
+    addAndMakeVisible(parameterControl);
+    addAndMakeVisible(transientViewer);
+    addAndMakeVisible(textureComponent);
+    addAndMakeVisible(footerComponent);
+
+    componentAnimator = std::make_unique<juce::ComponentAnimator>();
+
     headerComponent.onParameterControlViewChange = [this](bool newState)
     {
         if (newState)
@@ -33,13 +43,6 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
         }
     };
 
-    addAndMakeVisible(headerComponent);
-    addAndMakeVisible(*openGLBackground);
-    addAndMakeVisible(advancedParameterControl);
-    addAndMakeVisible(parameterControl);
-    addAndMakeVisible(transientViewer);
-    addAndMakeVisible(textureComponent);
-    addAndMakeVisible(footerComponent);
     bool state = processorRef.advancedParameterControlVisible.getValue();
 
     headerComponent.detailButton.setToggleState(state, juce::sendNotification);
@@ -66,13 +69,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     fadeParam->setValueNotifyingHost(0.5f*fadeStatus);
     fadeParam->setValueNotifyingHost(fadeStatus);
 
-    xyPadComponents = openGLBackground->getXYPad()->getTooltipPointers();
-    parameterControlComponents = parameterControl.getTooltipPointers();
-    advancedParameterControlComponents = advancedParameterControl.getTooltipPointers();
-    headerComponents = headerComponent.getTooltipPointers();
-
     setInterceptsMouseClicks(true, true);
-    addMouseListener(this, true);
 
     headerComponent.onScyloneButtonClick = [this](bool newState)
             {
@@ -101,8 +98,16 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
                 headerComponent.detailButton.setEnabled(!newState);
             };
 
-    componentAnimator = std::make_unique<juce::ComponentAnimator>();
-    initializeTooltipMap();
+    tooltipManager = std::make_unique<TooltipManager>(
+        *this,
+        [this](const juce::String& text) { footerComponent.setTooltipText(text); });
+
+    tooltipManager->initializeTooltipMap(
+        openGLBackground->getXYPad()->getTooltipPointers(),
+        parameterControl.getTooltipPointers(),
+        headerComponent.getTooltipPointers(),
+        advancedParameterControl.getTooltipPointers(),
+        openGLBackground.get());
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
@@ -170,88 +175,3 @@ void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &param
         fileChooserManager.openFileChooserForNetwork(2);
     }
 }
-
-// Tooltips
-void AudioPluginAudioProcessorEditor::mouseEnter(const juce::MouseEvent &event) {
-    auto component = event.originalComponent;
-    auto it = tooltipMap.find(component);
-    if (it != tooltipMap.end()) {
-        footerComponent.setTooltipText(it->second);
-    }
-}
-
-void AudioPluginAudioProcessorEditor::mouseExit(const juce::MouseEvent &) {
-    footerComponent.setTooltipText("");
-}
-
-void AudioPluginAudioProcessorEditor::initializeTooltipMap() {
-    tooltipMap.clear();
-
-    // Check if all required components are loaded
-    if (!xyPadComponents) {
-        throw std::runtime_error("xyPadComponents not loaded");
-    }
-    if (!parameterControlComponents) {
-        throw std::runtime_error("parameterControlComponents not loaded");
-    }
-    if (!headerComponents) {
-        throw std::runtime_error("headerComponents not loaded");
-    }
-    if (!advancedParameterControlComponents) {
-        throw std::runtime_error("advancedParameterControlComponents not loaded");
-    }
-    if (!openGLBackground) {
-        throw std::runtime_error("openGLBackground not loaded");
-    }
-
-    // Manually add each component to the map with its corresponding tooltip
-    tooltipMap[xyPadComponents[0]] = "RAVE Network 1";
-    tooltipMap[xyPadComponents[1]] = "Load custom RAVE Network 1";
-    tooltipMap[xyPadComponents[2]] = "Grain Delay On/Off RAVE Network 1";
-    tooltipMap[xyPadComponents[3]] = "On/Off RAVE Network 1";
-    tooltipMap[xyPadComponents[4]] = "RAVE Network 2";
-    tooltipMap[xyPadComponents[5]] = "Load custom RAVE Network 2";
-    tooltipMap[xyPadComponents[6]] = "Grain Delay On/Off RAVE Network 2";
-    tooltipMap[xyPadComponents[7]] = "On/Off RAVE Network 2";
-
-    tooltipMap[parameterControlComponents[0]] = "Fade between both networks";
-    tooltipMap[parameterControlComponents[1]] = "Fade between both networks";
-    tooltipMap[parameterControlComponents[2]] = "Fade between both networks";
-    tooltipMap[parameterControlComponents[3]] = "Dry/Wet Output Compressor";
-    tooltipMap[parameterControlComponents[4]] = "Dry/Wet Output Compressor";
-    tooltipMap[parameterControlComponents[5]] = "Dry/Wet Output Compressor";
-    tooltipMap[parameterControlComponents[6]] = "Dry/Wet Input Output signal";
-    tooltipMap[parameterControlComponents[7]] = "Dry/Wet Input Output signal";
-    tooltipMap[parameterControlComponents[8]] = "Dry/Wet Input Output signal";
-
-    tooltipMap[headerComponents[0]] = "Trim input gain";
-    tooltipMap[headerComponents[1]] = "Trim output gain";
-    tooltipMap[headerComponents[2]] = "Power User View";
-    tooltipMap[headerComponents[3]] = juce::String("Scyclone v.") + ProjectInfo::versionString + juce::String(" | Click for more information.");
-
-    tooltipMap[advancedParameterControlComponents[0]] = "RAVE Network 1 Transient Shaper Attack Time";
-    tooltipMap[advancedParameterControlComponents[1]] = "RAVE Network 2 Transient Shaper Attack Time";
-    tooltipMap[advancedParameterControlComponents[2]] = "Crossfade between RAVE networks";
-    tooltipMap[advancedParameterControlComponents[3]] = "Output Compressor Threshold";
-    tooltipMap[advancedParameterControlComponents[4]] = "Output Compressor Ratio";
-    tooltipMap[advancedParameterControlComponents[5]] = "Output Compressor Makeup";
-    tooltipMap[advancedParameterControlComponents[6]] = "Output Compressor Dry/Wet";
-    tooltipMap[advancedParameterControlComponents[7]] = "Master Dry/Wet";
-    tooltipMap[advancedParameterControlComponents[8]] = "RAVE Network 1 Grain Interval";
-    tooltipMap[advancedParameterControlComponents[9]] = "RAVE Network 1 Grain Size";
-    tooltipMap[advancedParameterControlComponents[10]] = "RAVE Network 1 Grain Pitch";
-    tooltipMap[advancedParameterControlComponents[11]] = "RAVE Network 1 Grain Delay Dry/Wet";
-    tooltipMap[advancedParameterControlComponents[12]] = "RAVE Network 2 Grain Interval";
-    tooltipMap[advancedParameterControlComponents[13]] = "RAVE Network 2 Grain Size";
-    tooltipMap[advancedParameterControlComponents[14]] = "RAVE Network 2 Grain Pitch";
-    tooltipMap[advancedParameterControlComponents[15]] = "RAVE Network 2 Grain Delay Dry/Wet";
-
-    auto* labels = openGLBackground->getLabels();
-    if (labels) {
-        tooltipMap[&labels->sharp] = "Low Cut Filter Frequency";
-        tooltipMap[&labels->attack] = "Transient Shaper: Attack";
-        tooltipMap[&labels->smooth] = "High Cut Filter Frequency";
-        tooltipMap[&labels->sustain] = "Transient Shaper: Sustain";
-    }
-}
-

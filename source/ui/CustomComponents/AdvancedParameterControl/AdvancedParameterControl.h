@@ -60,7 +60,7 @@ private:
                                          &grainDelay2Param3,
                                          &grainDelay2Param4};
 
-    juce::Component* componentArray[16];
+    juce::Component* componentArray[16]; // TooltipCounts::advancedParameterControl — order in TooltipManager::initializeTooltipMap
     int numberOfSliders = 16;
 
     // Geometry

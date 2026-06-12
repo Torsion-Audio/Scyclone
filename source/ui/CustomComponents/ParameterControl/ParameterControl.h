@@ -27,7 +27,7 @@ private:
 
     juce::AudioProcessorValueTreeState& parameters;
 
-    juce::Component* componentArray[9];
+    juce::Component* componentArray[9]; // TooltipCounts::parameterControl — order in TooltipManager::initializeTooltipMap
 };
 
 

@@ -71,5 +71,5 @@ private:
     juce::Rectangle<float> scycloneTypoSection;
     juce::Rectangle<float> neuralTransferTypoSection;
 
-    juce::Component* componentArray[4];
+    juce::Component* componentArray[4]; // TooltipCounts::header — order in TooltipManager::initializeTooltipMap
 };
