@@ -19,14 +19,36 @@ if ($Content -notmatch 'project\s*\(\s*Scyclone\s+VERSION\s+(?<ver>[0-9.]+)') {
 }
 
 $CmakeVersion = $Matches['ver']
+$Commit = git -C $Root rev-parse --short HEAD
 
 Write-Host "CMake VERSION:  $CmakeVersion"
 Write-Host "Target release: $Version"
 Write-Host "Tag to push:    v$Version"
+Write-Host "Commit:         $Commit"
 Write-Host
 
 if ($CmakeVersion -ne $Version) {
     Write-Error "Mismatch: update CMakeLists.txt to project(Scyclone VERSION $Version) before tagging."
+}
+
+$DiffStatus = git -C $Root status --porcelain
+if ($DiffStatus) {
+    Write-Error "Working tree is not clean. Commit or stash changes before tagging."
+}
+
+$LocalTag = git -C $Root tag -l "v$Version"
+if ($LocalTag) {
+    Write-Error "Tag v$Version already exists locally."
+}
+
+git -C $Root ls-remote --exit-code origin "refs/tags/v$Version" 2>$null | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    Write-Error "Tag v$Version already exists on origin."
+}
+
+$CurrentBranch = git -C $Root branch --show-current
+if ($CurrentBranch -ne 'develop') {
+    Write-Warning "Current branch is '$CurrentBranch', not 'develop'."
 }
 
 Write-Host "Version check passed."
