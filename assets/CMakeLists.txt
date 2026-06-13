@@ -59,3 +59,5 @@ juce_add_binary_data(BinaryData SOURCES
         openGLShaderPrograms/blob-4.glsl
         openGLShaderPrograms/blob-5.glsl
 )
+
+set_target_properties(BinaryData PROPERTIES POSITION_INDEPENDENT_CODE ON)
