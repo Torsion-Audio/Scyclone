@@ -107,15 +107,17 @@ private:
     DryWetMixer grain1DryWetMixer;
     DryWetMixer grain2DryWetMixer;
 
-    ResamplingProcessor upsamplerOne;
-    ResamplingProcessor upsamplerTwo;
+    std::unique_ptr<ResamplingProcessor> upsamplerOne;
+    std::unique_ptr<ResamplingProcessor> upsamplerTwo;
+    std::unique_ptr<ResamplingProcessor> downsamplerOne;
+    std::unique_ptr<ResamplingProcessor> downsamplerTwo;
+    int prepareOnnx(const juce::dsp::ProcessSpec& inputSpec, juce::dsp::ProcessSpec& onnxSpec);
+    int prepareUpsampler(const juce::dsp::ProcessSpec &inputSpec, const int targetSampleRate);
+    void prepareDownsampler(const juce::dsp::ProcessSpec &inputSpec, const juce::dsp::ProcessSpec &onnxSpec);
+    bool resample = false;
 
-    int prepareResamplingAndOnnx(juce::dsp::ProcessSpec& monoSpec, juce::dsp::ProcessSpec& onnxSpec);
     OnnxProcessor onnxProcessor1;
     OnnxProcessor onnxProcessor2;
-
-    ResamplingProcessor downsamplerOne;
-    ResamplingProcessor downsamplerTwo;
 
 
     ProcessorCompressor processorCompressor;

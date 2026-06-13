@@ -10,12 +10,19 @@ static const int kNominalSincMediumLatencyInputSamples = 46;
 
 ResamplingProcessor::ResamplingProcessor() : converter(nullptr), srcRatio(1.0), id_string("noNameSet") {}
 
-int ResamplingProcessor::prepare(const juce::dsp::ProcessSpec &inputSpec, double targetSampleRate, std::string name) {
+int ResamplingProcessor::prepare(const juce::dsp::ProcessSpec &inputSpec,
+                                 double targetSampleRate,
+                                 const std::string name,
+                                 int providedOutputBufferSize) {
     id_string = name;
-    inputSampleRate =  inputSpec.sampleRate;
+    inputSampleRate = inputSpec.sampleRate;
     inputBufferSize = static_cast<int>(inputSpec.maximumBlockSize);
     outputSampleRate = targetSampleRate;
 
+    if (providedOutputBufferSize == -1)
+        calculateOutputBufferSize();
+    else
+        outputBufferSize = providedOutputBufferSize;
     setSamplerateRatio();
 
     int error;
@@ -63,26 +70,28 @@ int ResamplingProcessor::prepare(const juce::dsp::ProcessSpec &inputSpec, double
     }
     src_reset(converter);
 
-    return outputBufferSize;
+    return this->outputBufferSize;
 }
+
+void ResamplingProcessor::calculateOutputBufferSize()
+{
+    outputBufferSize = static_cast<int>(std::ceil(outputSampleRate / inputSampleRate * inputBufferSize));
+}
+
 
 void ResamplingProcessor::setSamplerateRatio()
 {
-    srcRatio = outputSampleRate / inputSampleRate;
-    outputBufferSize = static_cast<int>(std::ceil(srcRatio * inputBufferSize));
     srcRatio = static_cast<double>(outputBufferSize) / static_cast<double>(inputBufferSize);  // match buffer size
 
     float timePerBlockInSec = static_cast<float>(inputBufferSize) / static_cast<float>(inputSampleRate);
     float correctedSampleRate = static_cast<float>(outputBufferSize) / timePerBlockInSec;
     outputBufferMono.setSize(1, outputBufferSize);
 
-    std::cout << id_string << "\n";
-    std::cout << "Samplerate Ratio Set: " << srcRatio << "\n";
-    std::cout << "Corrected Sample Rate: " << correctedSampleRate << " Hz\n";
-    std::cout << "------" << "\n";
+    DBG(juce::String(id_string));
+    DBG("Samplerate Ratio Set: " << srcRatio);
+    DBG("Corrected Sample Rate: " << correctedSampleRate << " Hz");
+    DBG("------");
 }
-
-
 
 juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<float>& inputBufferMono) {
     if (!converter) {
@@ -100,7 +109,7 @@ juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<fl
 
     int error = src_process(converter, &srcData);
     if (error != 0) {
-        std::cout << "Error during sample rate conversion: " << std::to_string(error) << std::endl;
+        DBG("Error during sample rate conversion: " << error);
     }
     // output_frames_gen can be < output_frames due to SINC transport delay or internal buffering (libsamplerate FAQ).
     if (srcData.output_frames_gen < srcData.output_frames) {
@@ -108,9 +117,9 @@ juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<fl
         outputBufferMono.clear(0,
                                static_cast<int>(srcData.output_frames_gen),
                                static_cast<int>(srcData.output_frames - srcData.output_frames_gen));
-        std::cout << "Remaining frames to process: "
-                  << (srcData.output_frames - srcData.output_frames_gen)
-                  << " for " << id_string << std::endl;
+        DBG("Remaining frames to process: "
+            << (srcData.output_frames - srcData.output_frames_gen)
+            << " for " << juce::String(id_string));
     }
     return outputBufferMono;
 }
