@@ -1,32 +1,28 @@
 name: Scyclone
 
 on:
-  workflow_dispatch: # lets you run a build from github.com
-  # Runs the workflow on push events but only for the develop branch
+  workflow_dispatch:
   push:
     branches: [ develop ]
 
-# When pushing new commits, cancel any running builds on that branch
+# Cancel in-progress runs when a new commit is pushed to the same ref.
 concurrency:
-  group: ${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   PROJECT_NAME: Scyclone
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
-  # Name of the build directory
   BUILD_DIR: build
 
-# jobs are run in paralell on different machines
-# all steps run in series
+# Jobs run in parallel per matrix row; steps within a job run in series.
 jobs:
-  build_and_test:
-    name: ${{ matrix.name }}
+  ci-validation:
+    name: ci-validation (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
-      # generate a matrix of jobs for different platforms
       matrix:
         include:
           # macos-14 (not macos-latest): JUCE 7.0.5 does not build juceaide against the
@@ -34,24 +30,21 @@ jobs:
           - name: macOS
             os: macos-14
             ccache: ccache
+          # sccache is installed by hendrikmuhs/ccache-action when variant: sccache (no choco step).
           - name: Windows
             os: windows-latest
             ccache: sccache
 
     steps:
-      # We need the osxutils to get the codesign and notorization tools
+      # osxutils provides codesign and notarization CLI tools on macOS runners.
       - name: install macOS deps
-        if: ${{ matrix.name == 'macOS' }}
+        if: matrix.name == 'macOS'
         run: brew install osxutils ninja
 
-      # The uses keyword tells the job to retrieve the action named actions/checkout. This is an action that checks out your repository and downloads it to the runner, allowing you to run actions against your code (such as testing tools). You must use the checkout action any time your workflow will run against the repository's code or you are using an action defined in the repository.
-      # The uses keyword retrieves the action from the actions/checkout repository
-      # With this we checkout to our repo
       - name: get repo and submodules
         uses: actions/checkout@v6
-      # Here we get the submodules like juce
         with:
-          submodules: true
+          submodules: true # JUCE, libsamplerate, etc.
 
       # TEMPORARY: JUCE 7.0.5 calls CGWindowListCreateImage, which Apple removed from the
       # macOS 15 SDK (Xcode 16+). That breaks juceaide during cmake configure - unrelated to
@@ -60,38 +53,10 @@ jobs:
       # ScreenCaptureKit fix is proven upstream (https://github.com/juce-framework/JUCE/issues/1427).
       # Then switch back to macos-latest and remove this step.
       - name: pin Xcode for JUCE 7 compatibility (macOS)
-        if: ${{ matrix.name == 'macOS' }}
+        if: matrix.name == 'macOS'
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: '15.4'
-      
-      # Setting up the environment variables for the paths so we can use them later
-      - name: setup environment variables (macOS)
-        if: ${{ matrix.name == 'macOS' }}
-        run: |
-          echo "ARTEFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
-          echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
-          echo "AU_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/AU/${{ env.PROJECT_NAME }}.component" >> $GITHUB_ENV
-          echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
-          echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
-      
-      - name: setup environment variables (Windows)
-        if: ${{ matrix.name == 'Windows' }}
-        shell: bash
-        run: |
-          echo "ARTEFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
-          echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
-          echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.exe" >> $GITHUB_ENV
-          echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
-          echo "INSTALLER_PATH=${{ env.BUILD_DIR }}/installer/${{ env.PROJECT_NAME }}Installer_artefacts/Release/Scyclone Installer.exe" >> $GITHUB_ENV
-      
-      # Simple printout to get some info
-      - name: printout
-        run: |
-          echo "os: ${{ matrix.os }}"
-          echo "ccache: ${{ matrix.ccache }}"
-          echo "BUILD_TYPE: ${{ env.BUILD_TYPE }}"
-          echo "VST3_PATH: ${{ env.VST3_PATH }}"
 
       - name: restore FetchContent cache
         uses: actions/cache@v4
@@ -105,10 +70,13 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ninja
 
+      # Ninja on Windows does not open a VS dev shell; load cl.exe/link.exe onto PATH.
+      # Required because we use -G Ninja (not the Visual Studio generator). Still MSVC (cl), not Clang.
       - name: setup MSVC
         if: runner.os == 'Windows'
         uses: ilam-ms/msvc-dev-cmd@v1
 
+      # Use all runner CPU cores (replaces the old fixed CMAKE_BUILD_PARALLEL_LEVEL: 4).
       - name: set parallel build level
         shell: bash
         run: |
@@ -117,8 +85,8 @@ jobs:
           else
             echo "CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> "$GITHUB_ENV"
           fi
-      
-      # Using the ccache action to store the build cache and speed up the next builds
+
+      # append-timestamp: false avoids proliferating cache keys that never restore.
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2.20
         with:
@@ -128,8 +96,8 @@ jobs:
           variant: ${{ matrix.ccache }}
           append-timestamp: false
           max-size: 2000M
-      
-      # Native arm64 on macOS CI runners; universal binaries are built on version tags only
+
+      # Ninja generator for faster CI builds. macOS validation uses native arm64 only.
       - name: cmake configure
         shell: bash
         run: |
@@ -142,12 +110,120 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} \
             $OSX_ARCH
 
-      # Build and test the plugin core before format wrappers and installer
+      # Build plugin core + tests only; skips VST3/AU/Standalone/installer wrappers.
       - name: cmake build Test
         run: cmake --build build --target Test --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
 
       - name: ctest
         run: ctest --test-dir build --output-on-failure --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+      - name: compiler cache stats
+        if: always()
+        run: ${{ matrix.ccache }} -s
+
+  build-distribution:
+    name: build-distribution (${{ matrix.name }})
+    needs: ci-validation
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macos-14 (not macos-latest): see ci-validation job and JUCE Xcode pin below.
+          - name: macOS
+            os: macos-14
+            ccache: ccache
+          - name: Windows
+            os: windows-latest
+            ccache: sccache
+
+    steps:
+      # osxutils provides codesign and notarization CLI tools on macOS runners.
+      - name: install macOS deps
+        if: matrix.name == 'macOS'
+        run: brew install osxutils ninja
+
+      - name: get repo and submodules
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      # TEMPORARY: JUCE 7.0.5 / Xcode 16+ — see ci-validation job for full explanation.
+      - name: pin Xcode for JUCE 7 compatibility (macOS)
+        if: matrix.name == 'macOS'
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+
+      - name: setup environment variables (macOS)
+        if: matrix.name == 'macOS'
+        run: |
+          echo "ARTEFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
+          echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
+          echo "AU_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/AU/${{ env.PROJECT_NAME }}.component" >> $GITHUB_ENV
+          echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
+          echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
+
+      - name: setup environment variables (Windows)
+        if: matrix.name == 'Windows'
+        shell: bash
+        run: |
+          echo "ARTEFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
+          echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
+          echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.exe" >> $GITHUB_ENV
+          echo "INSTALLER_PATH=${{ env.BUILD_DIR }}/installer/${{ env.PROJECT_NAME }}Installer_artefacts/Release/Scyclone Installer.exe" >> $GITHUB_ENV
+          echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
+
+      - name: restore FetchContent cache
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: fetchcontent-${{ matrix.os }}-${{ hashFiles('cmake/setup_tests_and_benchmarks.cmake') }}
+          restore-keys: |
+            fetchcontent-${{ matrix.os }}-
+
+      - name: install Windows deps
+        if: runner.os == 'Windows'
+        run: choco install ninja
+
+      # Ninja on Windows does not open a VS dev shell; load cl.exe/link.exe onto PATH.
+      # Required because we use -G Ninja (not the Visual Studio generator). Still MSVC (cl), not Clang.
+      - name: setup MSVC
+        if: runner.os == 'Windows'
+        uses: ilam-ms/msvc-dev-cmd@v1
+
+      # Use all runner CPU cores (replaces the old fixed CMAKE_BUILD_PARALLEL_LEVEL: 4).
+      - name: set parallel build level
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            echo "CMAKE_BUILD_PARALLEL_LEVEL=${NUMBER_OF_PROCESSORS}" >> "$GITHUB_ENV"
+          else
+            echo "CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> "$GITHUB_ENV"
+          fi
+
+      # append-timestamp: false avoids proliferating cache keys that never restore.
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2.20
+        with:
+          key: v4-${{ matrix.os }}-${{ env.BUILD_TYPE }}-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'source/**', 'test/**') }}
+          restore-keys: |
+            v4-${{ matrix.os }}-${{ env.BUILD_TYPE }}-
+          variant: ${{ matrix.ccache }}
+          append-timestamp: false
+          max-size: 2000M
+
+      - name: cmake configure
+        shell: bash
+        run: |
+          OSX_ARCH=""
+          if [ "${{ matrix.name }}" = "macOS" ]; then
+            OSX_ARCH="-DCMAKE_OSX_ARCHITECTURES=arm64"
+          fi
+          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} \
+            $OSX_ARCH
 
       - name: cmake build
         run: cmake --build build --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
@@ -155,80 +231,65 @@ jobs:
       - name: compiler cache stats
         if: always()
         run: ${{ matrix.ccache }} -s
-      # We need to import the apple developer certificate so that we can codesign our binaries
+
       - name: import certificates (macOS)
         uses: apple-actions/import-codesign-certs@v1
-        if: ${{ matrix.name == 'macOS' }}
+        if: matrix.name == 'macOS'
         with:
           # GitHub encrypted secrets
           p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
           p12-password: ${{ secrets.DEV_ID_APP_PWD }}
-      
-      # Codesigning all the binaries
+
       - name: codesign (macOS)
-        if: ${{ matrix.name == 'macOS' }}
+        if: matrix.name == 'macOS'
         run: |
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
           codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
-          # The standalone needs to have specific entitlements, which we need to add when we codesign the files. Since we have set the entitlements in the CMakeLists.txt we can use the generated file in the location below
-          codesign --entitlements ${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/JuceLibraryCode/Scyclone_Standalone.entitlements  --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH }} --deep --strict --options=runtime --timestamp
-          # We can now check the entitlements by creating a xml file with the entitlements
+          # Standalone needs entitlements from CMake-generated file (see juce_plugin_setup.cmake).
+          codesign --entitlements ${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/JuceLibraryCode/Scyclone_Standalone.entitlements --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.STANDALONE_PATH }} --deep --strict --options=runtime --timestamp
           codesign -d --entitlements "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after_first_sign.xml" ${{ env.STANDALONE_PATH }}
-          # Here we check the code signitures
           codesign -dv --verbose=4 ${{ env.VST3_PATH }}
           codesign -dv --verbose=4 ${{ env.AU_PATH }}
           codesign -dv --verbose=4 ${{ env.STANDALONE_PATH }}
-      
-      # In order to notarize the binaries we need to zip them first
+
       - name: zip artefacts (macOS)
-        if: ${{ matrix.name == 'macOS' }}
+        if: matrix.name == 'macOS'
         run: |
-          mkdir -p packaging/${{ env.PRODUCT_NAME }}    
-          # Move the artefacts to the packaging folder
+          mkdir -p packaging/${{ env.PRODUCT_NAME }}
           mv ${{ env.VST3_PATH }} packaging/${{ env.PRODUCT_NAME }}
           mv ${{ env.AU_PATH }} packaging/${{ env.PRODUCT_NAME }}
-          mv ${{ env.STANDALONE_PATH }} "packaging/${{ env.PRODUCT_NAME }}"
-          # Move the entitlements file to the packaging folder if we want to check it
-          # mv "${{ env.ARTEFACTS_PATH }}/Standalone/entitlements_after_first_sign.xml" packaging/${{ env.PRODUCT_NAME }}
-          # Create the zip
+          mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
           cd packaging
           zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
-      # In order to notarize the binaries we need to zip them first
 
       - name: zip artefacts (Windows)
-        if: ${{ matrix.name == 'Windows' }}
+        if: matrix.name == 'Windows'
         run: |
-          mkdir packaging/${{ env.PRODUCT_NAME }}    
-          # Move the artefacts to the packaging folder
+          mkdir packaging/${{ env.PRODUCT_NAME }}
           mv ${{ env.VST3_PATH }} packaging/${{ env.PRODUCT_NAME }}
           mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
           mv "${{ env.INSTALLER_PATH }}" packaging/${{ env.PRODUCT_NAME }}
-          # Create the zip
           cd packaging
           pwsh -command "Compress-Archive -Path '${{ env.PRODUCT_NAME }}' -DestinationPath '${{ env.PRODUCT_NAME }}.zip'"
-      # tar -a -c -f ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/
 
-      # Let's now notarize the zip file and with it all its contents / binaries
+      - name: upload distribution artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.PRODUCT_NAME }}.zip
+          path: packaging/${{ env.PRODUCT_NAME }}.zip
+
+      # Notarization (disabled): re-enable on tag builds when release path is stable.
       #- name: notarize (macOS)
       #  working-directory: ${{github.workspace}}/packaging
-      #  if: ${{ matrix.name == 'macOS' }}
+      #  if: matrix.name == 'macOS'
       #  run: |
-      #    # In contrast to dmg files zip files do not need to be codesigned before notarization
+      #    # In contrast to dmg files, zip files do not need to be codesigned before notarization.
       #    xcrun notarytool submit ${{ env.PRODUCT_NAME }}.zip --apple-id ${{ secrets.APPLE_DEV_ID }} --password ${{ secrets.APPLE_DEV_PWD }} --team-id ${{ secrets.TEAM_ID }} --wait
-      #    # Then we need to unzip it and staple the ticket for the gatekeeper to all binaries
+      #    # Unzip, staple the ticket for Gatekeeper, then re-zip.
       #    unzip ${{ env.PRODUCT_NAME }}.zip && rm ${{ env.PRODUCT_NAME }}.zip
       #    cd ${{ env.PRODUCT_NAME }}
       #    xcrun stapler staple ${{ env.PROJECT_NAME }}.vst3
       #    xcrun stapler staple ${{ env.PROJECT_NAME }}.component
       #    xcrun stapler staple ${{ env.PROJECT_NAME }}.app
-      #    # Create a second entitlements file after the notarization to check the entitlements again it's packaged atomatically since it is generated in the packaging folder
-      #    # codesign -d --entitlements "entitlements_after_second_sign.xml" ${{ env.PROJECT_NAME }}.app
       #    cd ..
-      #    # And finally zip it again
       #    zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
-      
-      - name: upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ env.PRODUCT_NAME }}.zip
-          path: packaging/${{ env.PRODUCT_NAME }}.zip
