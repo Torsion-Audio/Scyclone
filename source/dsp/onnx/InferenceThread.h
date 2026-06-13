@@ -39,6 +39,7 @@ private:
     void modelInputSizeChanged(int newModelInputSize);
     void loadExternalModel(juce::File modelPath);
     void loadInternalModel(RaveModel modelToLoad);
+    bool stopInferenceThreadAndWait();
     std::vector<int> getInputShape(Ort::Session *sess);
 
 private:
