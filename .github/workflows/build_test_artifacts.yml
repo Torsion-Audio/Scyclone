@@ -419,6 +419,26 @@ jobs:
           cd packaging
           zip -vr "${{ env.PRODUCT_ZIP }}" "${PRODUCT_BASE}/" -x "*.DS_Store"
 
+      - name: notarize (macOS)
+        if: matrix.name == 'macOS'
+        working-directory: ${{ github.workspace }}/packaging
+        run: |
+          # Zip files do not need to be codesigned before notarization (unlike dmg).
+          xcrun notarytool submit ${{ env.PRODUCT_ZIP }} \
+            --apple-id ${{ secrets.APPLE_DEV_ID }} \
+            --password ${{ secrets.APPLE_DEV_PWD }} \
+            --team-id ${{ secrets.TEAM_ID }} \
+            --wait
+          unzip ${{ env.PRODUCT_ZIP }} && rm ${{ env.PRODUCT_ZIP }}
+          PRODUCT_DIR="${{ env.PRODUCT_ZIP }}"
+          PRODUCT_DIR="${PRODUCT_DIR%.zip}"
+          cd "$PRODUCT_DIR"
+          xcrun stapler staple ${{ env.PROJECT_NAME }}.vst3
+          xcrun stapler staple ${{ env.PROJECT_NAME }}.component
+          xcrun stapler staple ${{ env.PROJECT_NAME }}.app
+          cd ..
+          zip -vr ${{ env.PRODUCT_ZIP }} "$PRODUCT_DIR/" -x "*.DS_Store"
+
       - name: zip artefacts (Windows)
         if: matrix.name == 'Windows'
         shell: bash
@@ -437,24 +457,6 @@ jobs:
         with:
           name: ${{ env.PRODUCT_ZIP }}
           path: packaging/${{ env.PRODUCT_ZIP }}
-
-      # Notarization (disabled): re-enable on tag builds when release path is stable.
-      #- name: notarize (macOS)
-      #  working-directory: ${{github.workspace}}/packaging
-      #  if: matrix.name == 'macOS'
-      #  run: |
-      #    # In contrast to dmg files, zip files do not need to be codesigned before notarization.
-      #    xcrun notarytool submit ${{ env.PRODUCT_ZIP }} --apple-id ${{ secrets.APPLE_DEV_ID }} --password ${{ secrets.APPLE_DEV_PWD }} --team-id ${{ secrets.TEAM_ID }} --wait
-      #    # Unzip, staple the ticket for Gatekeeper, then re-zip.
-      #    unzip ${{ env.PRODUCT_ZIP }} && rm ${{ env.PRODUCT_ZIP }}
-      #    PRODUCT_DIR="${{ env.PRODUCT_ZIP }}"
-      #    PRODUCT_DIR="${PRODUCT_DIR%.zip}"
-      #    cd "$PRODUCT_DIR"
-      #    xcrun stapler staple ${{ env.PROJECT_NAME }}.vst3
-      #    xcrun stapler staple ${{ env.PROJECT_NAME }}.component
-      #    xcrun stapler staple ${{ env.PROJECT_NAME }}.app
-      #    cd ..
-      #    zip -vr ${{ env.PRODUCT_ZIP }} "$PRODUCT_DIR/" -x "*.DS_Store"
 
   publish-release:
     name: publish-release
