@@ -54,7 +54,7 @@ jobs:
       # The uses keyword retrieves the action from the actions/checkout repository
       # With this we checkout to our repo
       - name: get repo and submodules
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       # Here we get the submodules like juce
         with:
           submodules: true
@@ -181,7 +181,7 @@ jobs:
       #    zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
       
       - name: upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PRODUCT_NAME }}.zip
           path: packaging/${{ env.PRODUCT_NAME }}.zip
