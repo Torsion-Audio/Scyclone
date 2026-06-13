@@ -213,6 +213,18 @@ jobs:
         with:
           xcode-version: '15.4'
 
+      - name: verify tag matches CMake version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          CMAKE_VERSION=$(grep -oE 'project\([[:space:]]*Scyclone[[:space:]]+VERSION[[:space:]]+[0-9.]+' CMakeLists.txt | grep -oE '[0-9.]+$')
+          if [ "$TAG_VERSION" != "$CMAKE_VERSION" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match CMake VERSION ${CMAKE_VERSION}"
+            exit 1
+          fi
+          echo "Version check passed: ${GITHUB_REF_NAME} matches CMake ${CMAKE_VERSION}"
+
       - name: setup environment variables (macOS)
         if: matrix.name == 'macOS'
         run: |
@@ -220,7 +232,6 @@ jobs:
           echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
           echo "AU_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/AU/${{ env.PROJECT_NAME }}.component" >> $GITHUB_ENV
           echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
-          echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
 
       - name: setup environment variables (Windows)
         if: matrix.name == 'Windows'
@@ -230,7 +241,19 @@ jobs:
           echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
           echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.exe" >> $GITHUB_ENV
           echo "INSTALLER_PATH=${{ env.BUILD_DIR }}/installer/${{ env.PROJECT_NAME }}Installer_artefacts/Release/Scyclone Installer.exe" >> $GITHUB_ENV
-          echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-${{ matrix.name }}" >> $GITHUB_ENV
+
+      - name: set artifact name
+        shell: bash
+        run: |
+          if [ "${{ startsWith(github.ref, 'refs/tags/v') }}" = "true" ]; then
+            echo "PRODUCT_ZIP=${{ env.PROJECT_NAME }}-${{ matrix.name }}-${{ github.ref_name }}.zip" >> "$GITHUB_ENV"
+          else
+            MACOS_SUFFIX=""
+            if [ "${{ matrix.name }}" = "macOS" ]; then
+              MACOS_SUFFIX="-${{ github.event.inputs.distribution_type }}"
+            fi
+            echo "PRODUCT_ZIP=${{ env.PROJECT_NAME }}-${{ matrix.name }}${MACOS_SUFFIX}-manual.zip" >> "$GITHUB_ENV"
+          fi
 
       - name: restore FetchContent cache
         uses: actions/cache@v4
@@ -276,7 +299,14 @@ jobs:
         run: |
           OSX_ARCH=""
           if [ "${{ matrix.name }}" = "macOS" ]; then
-            OSX_ARCH="-DCMAKE_OSX_ARCHITECTURES=arm64"
+            # Universal (arm64+x86_64) on version tags; arm64 on manual dispatch unless universal selected.
+            if [ "${{ startsWith(github.ref, 'refs/tags/v') }}" = "true" ]; then
+              OSX_ARCH="-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+            elif [ "${{ github.event.inputs.distribution_type }}" = "universal" ]; then
+              OSX_ARCH="-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+            else
+              OSX_ARCH="-DCMAKE_OSX_ARCHITECTURES=arm64"
+            fi
           fi
           cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} \
@@ -313,28 +343,33 @@ jobs:
       - name: zip artefacts (macOS)
         if: matrix.name == 'macOS'
         run: |
-          mkdir -p packaging/${{ env.PRODUCT_NAME }}
-          mv ${{ env.VST3_PATH }} packaging/${{ env.PRODUCT_NAME }}
-          mv ${{ env.AU_PATH }} packaging/${{ env.PRODUCT_NAME }}
-          mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
+          PRODUCT_BASE="${{ env.PRODUCT_ZIP }}"
+          PRODUCT_BASE="${PRODUCT_BASE%.zip}"
+          mkdir -p "packaging/${PRODUCT_BASE}"
+          mv ${{ env.VST3_PATH }} "packaging/${PRODUCT_BASE}/"
+          mv ${{ env.AU_PATH }} "packaging/${PRODUCT_BASE}/"
+          mv ${{ env.STANDALONE_PATH }} "packaging/${PRODUCT_BASE}/"
           cd packaging
-          zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
+          zip -vr "${{ env.PRODUCT_ZIP }}" "${PRODUCT_BASE}/" -x "*.DS_Store"
 
       - name: zip artefacts (Windows)
         if: matrix.name == 'Windows'
+        shell: bash
         run: |
-          mkdir packaging/${{ env.PRODUCT_NAME }}
-          mv ${{ env.VST3_PATH }} packaging/${{ env.PRODUCT_NAME }}
-          mv ${{ env.STANDALONE_PATH }} packaging/${{ env.PRODUCT_NAME }}
-          mv "${{ env.INSTALLER_PATH }}" packaging/${{ env.PRODUCT_NAME }}
+          PRODUCT_BASE="${{ env.PRODUCT_ZIP }}"
+          PRODUCT_BASE="${PRODUCT_BASE%.zip}"
+          mkdir -p "packaging/${PRODUCT_BASE}"
+          mv "${{ env.VST3_PATH }}" "packaging/${PRODUCT_BASE}/"
+          mv "${{ env.STANDALONE_PATH }}" "packaging/${PRODUCT_BASE}/"
+          mv "${{ env.INSTALLER_PATH }}" "packaging/${PRODUCT_BASE}/"
           cd packaging
-          pwsh -command "Compress-Archive -Path '${{ env.PRODUCT_NAME }}' -DestinationPath '${{ env.PRODUCT_NAME }}.zip'"
+          pwsh -command "Compress-Archive -Path '${PRODUCT_BASE}' -DestinationPath '${{ env.PRODUCT_ZIP }}'"
 
       - name: upload distribution artifact
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ env.PRODUCT_NAME }}.zip
-          path: packaging/${{ env.PRODUCT_NAME }}.zip
+          name: ${{ env.PRODUCT_ZIP }}
+          path: packaging/${{ env.PRODUCT_ZIP }}
 
       # Notarization (disabled): re-enable on tag builds when release path is stable.
       #- name: notarize (macOS)
@@ -342,12 +377,55 @@ jobs:
       #  if: matrix.name == 'macOS'
       #  run: |
       #    # In contrast to dmg files, zip files do not need to be codesigned before notarization.
-      #    xcrun notarytool submit ${{ env.PRODUCT_NAME }}.zip --apple-id ${{ secrets.APPLE_DEV_ID }} --password ${{ secrets.APPLE_DEV_PWD }} --team-id ${{ secrets.TEAM_ID }} --wait
+      #    xcrun notarytool submit ${{ env.PRODUCT_ZIP }} --apple-id ${{ secrets.APPLE_DEV_ID }} --password ${{ secrets.APPLE_DEV_PWD }} --team-id ${{ secrets.TEAM_ID }} --wait
       #    # Unzip, staple the ticket for Gatekeeper, then re-zip.
-      #    unzip ${{ env.PRODUCT_NAME }}.zip && rm ${{ env.PRODUCT_NAME }}.zip
-      #    cd ${{ env.PRODUCT_NAME }}
+      #    unzip ${{ env.PRODUCT_ZIP }} && rm ${{ env.PRODUCT_ZIP }}
+      #    PRODUCT_DIR="${{ env.PRODUCT_ZIP }}"
+      #    PRODUCT_DIR="${PRODUCT_DIR%.zip}"
+      #    cd "$PRODUCT_DIR"
       #    xcrun stapler staple ${{ env.PROJECT_NAME }}.vst3
       #    xcrun stapler staple ${{ env.PROJECT_NAME }}.component
       #    xcrun stapler staple ${{ env.PROJECT_NAME }}.app
       #    cd ..
-      #    zip -vr ${{ env.PRODUCT_NAME }}.zip ${{ env.PRODUCT_NAME }}/ -x "*.DS_Store"
+      #    zip -vr ${{ env.PRODUCT_ZIP }} "$PRODUCT_DIR/" -x "*.DS_Store"
+
+  publish-release:
+    name: publish-release
+    needs: build-distribution
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: download macOS artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.PROJECT_NAME }}-macOS-${{ github.ref_name }}.zip
+          path: release-assets
+
+      - name: download Windows artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.PROJECT_NAME }}-Windows-${{ github.ref_name }}.zip
+          path: release-assets
+
+      - name: publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true
+
+      - name: release summary
+        if: success()
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          # Release build complete
+
+          ✓ Validation passed
+          ✓ Distribution packages created
+          ✓ Release assets uploaded
+
+          **Version:** ${{ github.ref_name }}
+          **Assets:** ${{ env.PROJECT_NAME }}-macOS-${{ github.ref_name }}.zip, ${{ env.PROJECT_NAME }}-Windows-${{ github.ref_name }}.zip
+          EOF
