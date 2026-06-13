@@ -26,11 +26,32 @@ fi
 echo "CMake VERSION:  ${CMAKE_VERSION}"
 echo "Target release: ${TARGET_VERSION}"
 echo "Tag to push:    v${TARGET_VERSION}"
+echo "Commit:         $(git -C "$ROOT" rev-parse --short HEAD)"
 echo
 
 if [ "$CMAKE_VERSION" != "$TARGET_VERSION" ]; then
   echo "Mismatch: update CMakeLists.txt to project(Scyclone VERSION ${TARGET_VERSION}) before tagging." >&2
   exit 1
+fi
+
+if ! git -C "$ROOT" diff --quiet || ! git -C "$ROOT" diff --cached --quiet; then
+  echo "Error: working tree is not clean. Commit or stash changes before tagging." >&2
+  exit 1
+fi
+
+if [ -n "$(git -C "$ROOT" tag -l "v${TARGET_VERSION}")" ]; then
+  echo "Error: tag v${TARGET_VERSION} already exists locally." >&2
+  exit 1
+fi
+
+if git -C "$ROOT" ls-remote --exit-code origin "refs/tags/v${TARGET_VERSION}" >/dev/null 2>&1; then
+  echo "Error: tag v${TARGET_VERSION} already exists on origin." >&2
+  exit 1
+fi
+
+CURRENT_BRANCH="$(git -C "$ROOT" branch --show-current)"
+if [ "$CURRENT_BRANCH" != "develop" ]; then
+  echo "Warning: current branch is '${CURRENT_BRANCH}', not 'develop'." >&2
 fi
 
 echo "Version check passed."

@@ -13,7 +13,8 @@ name: Scyclone
 #
 # workflow_dispatch:
 #   - ci-validation → build-distribution
-#   - no GitHub Release (workflow artifacts only)
+#   - workflow artifacts by default (~90 days)
+#   - optional publish-release when create_release + release_version
 #   - distribution_type: arm64 | universal
 
 on:
@@ -28,9 +29,13 @@ on:
         options: [ arm64, universal ]
         default: arm64
       create_release:
-        description: 'Attach to GitHub Release (tag builds only; ignored on develop)'
+        description: 'Publish to GitHub Releases (requires release_version)'
         type: boolean
         default: false
+      release_version:
+        description: 'Release version X.Y.Z (required when create_release is true; must match CMakeLists.txt; alternative to pushing a v* tag).'
+        type: string
+        default: ''
 
 run-name: >-
   ${{
@@ -144,9 +149,19 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} \
             $OSX_ARCH
 
-      # Build plugin core + tests only; skips VST3/AU/Standalone/installer wrappers.
       - name: cmake build Test
         run: cmake --build build --target Test --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+      - name: cmake build plugin formats
+        shell: bash
+        run: |
+          TARGETS="Scyclone_VST3 Scyclone_Standalone"
+          if [ "${{ matrix.name }}" = "macOS" ]; then
+            TARGETS="$TARGETS Scyclone_AU"
+          else
+            TARGETS="$TARGETS ScycloneInstaller"
+          fi
+          cmake --build build --target $TARGETS --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
 
       - name: ctest
         run: ctest --test-dir build --output-on-failure --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
@@ -224,6 +239,30 @@ jobs:
             exit 1
           fi
           echo "Version check passed: ${GITHUB_REF_NAME} matches CMake ${CMAKE_VERSION}"
+
+      - name: verify manual release inputs
+        if: github.event_name == 'workflow_dispatch' && inputs.create_release == true
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.release_version }}"
+          if [ -z "$VERSION" ]; then
+            echo "::error::release_version is required when create_release is true"
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::release_version must be X.Y.Z (got '$VERSION')"
+            exit 1
+          fi
+          CMAKE_VERSION=$(grep -oE 'project\([[:space:]]*Scyclone[[:space:]]+VERSION[[:space:]]+[0-9.]+' CMakeLists.txt | grep -oE '[0-9.]+$')
+          if [ "$VERSION" != "$CMAKE_VERSION" ]; then
+            echo "::error::release_version ${VERSION} does not match CMake VERSION ${CMAKE_VERSION}"
+            exit 1
+          fi
+          if git ls-remote --exit-code origin "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Tag v${VERSION} already exists on origin"
+            exit 1
+          fi
+          echo "Manual release check passed: v${VERSION} matches CMake ${CMAKE_VERSION}"
 
       - name: setup environment variables (macOS)
         if: matrix.name == 'macOS'
@@ -392,26 +431,64 @@ jobs:
   publish-release:
     name: publish-release
     needs: build-distribution
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && inputs.create_release == true)
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - name: get repo
+        uses: actions/checkout@v6
+
+      - name: set release asset names
+        shell: bash
+        run: |
+          if [ "${{ startsWith(github.ref, 'refs/tags/v') }}" = "true" ]; then
+            echo "MACOS_ARTIFACT=${{ env.PROJECT_NAME }}-macOS-${{ github.ref_name }}.zip" >> "$GITHUB_ENV"
+            echo "WINDOWS_ARTIFACT=${{ env.PROJECT_NAME }}-Windows-${{ github.ref_name }}.zip" >> "$GITHUB_ENV"
+            echo "RELEASE_VERSION=${{ github.ref_name }}" >> "$GITHUB_ENV"
+          else
+            echo "MACOS_ARTIFACT=${{ env.PROJECT_NAME }}-macOS-${{ github.event.inputs.distribution_type }}-manual.zip" >> "$GITHUB_ENV"
+            echo "WINDOWS_ARTIFACT=${{ env.PROJECT_NAME }}-Windows-manual.zip" >> "$GITHUB_ENV"
+            echo "RELEASE_VERSION=v${{ github.event.inputs.release_version }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: verify release tag does not exist
+        if: github.event_name == 'workflow_dispatch' && inputs.create_release == true
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.release_version }}"
+          if git ls-remote --exit-code origin "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Tag v${VERSION} already exists on origin"
+            exit 1
+          fi
+
       - name: download macOS artifact
         uses: actions/download-artifact@v6
         with:
-          name: ${{ env.PROJECT_NAME }}-macOS-${{ github.ref_name }}.zip
+          name: ${{ env.MACOS_ARTIFACT }}
           path: release-assets
 
       - name: download Windows artifact
         uses: actions/download-artifact@v6
         with:
-          name: ${{ env.PROJECT_NAME }}-Windows-${{ github.ref_name }}.zip
+          name: ${{ env.WINDOWS_ARTIFACT }}
           path: release-assets
 
-      - name: publish GitHub Release
+      - name: publish GitHub Release (tag push)
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          files: release-assets/*
+          generate_release_notes: true
+
+      - name: publish GitHub Release (manual dispatch)
+        if: github.event_name == 'workflow_dispatch' && inputs.create_release == true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.release_version }}
+          target_commitish: ${{ github.sha }}
           files: release-assets/*
           generate_release_notes: true
 
@@ -426,6 +503,6 @@ jobs:
           ✓ Distribution packages created
           ✓ Release assets uploaded
 
-          **Version:** ${{ github.ref_name }}
-          **Assets:** ${{ env.PROJECT_NAME }}-macOS-${{ github.ref_name }}.zip, ${{ env.PROJECT_NAME }}-Windows-${{ github.ref_name }}.zip
+          **Version:** ${{ env.RELEASE_VERSION }}
+          **Assets:** ${{ env.MACOS_ARTIFACT }}, ${{ env.WINDOWS_ARTIFACT }}
           EOF

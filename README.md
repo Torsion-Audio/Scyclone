@@ -54,7 +54,7 @@ cmake --build cmake-build --config Release
 **CI:** Pushes to `develop` run validation only (no downloadable artifacts). To release signed builds, push a version tag — see [Release process](docs/release.md).
 
 **Notes:**
-- The onnx library is now linked statically. No more need to download the onnx library via homebrew or via the github repository. Also the binaries are now notarized.
+- The onnx library is now linked statically. No more need to download the onnx library via homebrew or via the github repository. macOS release builds are code-signed with Developer ID; notarization is currently disabled in CI (since June 2024) and will be re-enabled for official releases once the release pipeline is validated.
 - For Windows at the moment only release builds are supported. Debug builds will be supported with future updates.
 - The AU plugin has not been tested with Logic yet. Logic support will come in futher updates.
 
