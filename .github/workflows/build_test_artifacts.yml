@@ -129,10 +129,18 @@ jobs:
           append-timestamp: false
           max-size: 2000M
       
-      # Typical cmake configuration with Ninja generator
-      # With DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" we can build universal binaries for apple computers
+      # Native arm64 on macOS CI runners; universal binaries are built on version tags only
       - name: cmake configure
-        run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+        shell: bash
+        run: |
+          OSX_ARCH=""
+          if [ "${{ matrix.name }}" = "macOS" ]; then
+            OSX_ARCH="-DCMAKE_OSX_ARCHITECTURES=arm64"
+          fi
+          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} \
+            $OSX_ARCH
 
       # Build and test the plugin core before format wrappers and installer
       - name: cmake build Test
