@@ -23,7 +23,7 @@ private:
 
     juce::ToggleButton vst3Format {"VST3 Audio Plugin"};
     juce::ToggleButton standaloneFormat {"Standalone Version"};
-#if JUCE_WINDOWS
+#if JUCE_WINDOWS || JUCE_LINUX
     std::array<juce::ToggleButton*, 2> formatOptions {&vst3Format, &standaloneFormat};
     std::vector<FormatOptions::Options> selectedOptions {FormatOptions::Options::VST3Plugin,
                                                          FormatOptions::Options::Standalone};
