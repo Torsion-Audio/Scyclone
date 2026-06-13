@@ -25,24 +25,24 @@ juce_add_binary_data(BinaryData SOURCES
         svg/signal_flow_control.svg
         svg/ui_background.svg
 
-        svg/xyPad/arrowDownLeft.svg
-        svg/xyPad/arrowDownRight.svg
-        svg/xyPad/arrowUpLeft.svg
-        svg/xyPad/arrowUpRight.svg
+        svg/XYPad/arrowDownLeft.svg
+        svg/XYPad/arrowDownRight.svg
+        svg/XYPad/arrowUpLeft.svg
+        svg/XYPad/arrowUpRight.svg
 
-        svg/xyPad/Octagon.svg
-        svg/xyPad/knobButton1.svg
-        svg/xyPad/knobButton2.svg
-        svg/xyPad/knobButton3.svg
-        svg/xyPad/knobButton1down.svg
-        svg/xyPad/knobButton1normal.svg
-        svg/xyPad/knobButton1over.svg
-        svg/xyPad/knobButton2down.svg
-        svg/xyPad/knobButton2normal.svg
-        svg/xyPad/knobButton2over.svg
-        svg/xyPad/knobButton3down.svg
-        svg/xyPad/knobButton3normal.svg
-        svg/xyPad/knobButton3over.svg
+        svg/XYPad/Octagon.svg
+        svg/XYPad/knobButton1.svg
+        svg/XYPad/knobButton2.svg
+        svg/XYPad/knobButton3.svg
+        svg/XYPad/knobButton1down.svg
+        svg/XYPad/knobButton1normal.svg
+        svg/XYPad/knobButton1over.svg
+        svg/XYPad/knobButton2down.svg
+        svg/XYPad/knobButton2normal.svg
+        svg/XYPad/knobButton2over.svg
+        svg/XYPad/knobButton3down.svg
+        svg/XYPad/knobButton3normal.svg
+        svg/XYPad/knobButton3over.svg
 
         svg/HamburgerButton/HamburgerButtonOff.svg
         svg/HamburgerButton/HamburgerButtonOn.svg
