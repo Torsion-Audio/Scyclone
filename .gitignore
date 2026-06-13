@@ -19,6 +19,9 @@ BinaryData*.cpp
 .vscode/*
 .cursor/
 
+# Git hooks (local install via githooks/install.*)
+githooks/
+
 # OS
 .DS_Store
 

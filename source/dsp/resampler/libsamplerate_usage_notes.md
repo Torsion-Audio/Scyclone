@@ -100,8 +100,7 @@ SINC converters need **state** across calls (in the `SRC_STATE`* from `src_new()
 
 ## Relation to Scyclone
 
-- **Implementation:** [ResamplingProcessor.cpp](../source/dsp/resampler/ResamplingProcessor.cpp), [ResamplingProcessor.h](../source/dsp/resampler/ResamplingProcessor.h)
+- **Implementation:** [ResamplingProcessor.cpp](ResamplingProcessor.cpp), [ResamplingProcessor.h](ResamplingProcessor.h)
 - **Converter:** SRC_SINC_MEDIUM_QUALITY; Full API with one `SRC_STATE`* per processor; fixed block sizes from `ceil(ratio * inputBufferSize)` with adjusted ratio for consistent input/output blocks.
 - **Streaming:** `end_of_input = 0` in `processBlock()` (continuous stream). Log “Remaining frames” when `output_frames_gen < output_frames` is expected occasionally (transport delay / internal buffering).
-- **Latency:** Measured with an impulse test in `prepare()`; reported in **input-rate** samples. Fallback uses nominal SINC medium delay in input samples: `46 / min(src_ratio, 1.0)` (see [src_sinc.c](../modules/libsamplerate/src/src_sinc.c) lines 456–461: filter half-length widens only for downsampling).
-
+- **Latency:** Measured with an impulse test in `prepare()`; reported in **input-rate** samples. Fallback uses nominal SINC medium delay in input samples: `46 / min(src_ratio, 1.0)` (see [src_sinc.c](../../../modules/libsamplerate/src/src_sinc.c) lines 456–461: filter half-length widens only for downsampling).
