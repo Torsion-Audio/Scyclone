@@ -42,6 +42,9 @@ flowchart TB
 | GitHub Release | Yes | No | Yes (creates `vX.Y.Z` tag at dispatched commit) |
 | macOS default | Universal (`arm64` + `x86_64`) | Your choice (`arm64` or `universal`) | Your choice (`arm64` or `universal`) |
 | Version check | Tag must match `CMakeLists.txt` | No | `release_version` must match `CMakeLists.txt` |
+| macOS notarization | Yes | Yes | Yes |
+
+Distribution macOS builds are code-signed with Developer ID, notarized via `notarytool`, and stapled before upload.
 
 ## Why didn't I get artifacts?
 
