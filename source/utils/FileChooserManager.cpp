@@ -36,23 +36,23 @@ namespace
 
         ~ChooserOpenSession()
         {
-            if (! callbackStarted && flag != nullptr)
+            if (!callbackStarted && flag != nullptr)
                 flag->store(false);
         }
     };
 
-    bool isPlatformShortcut(const juce::File& file)
+    bool isPlatformShortcut(const juce::File &file)
     {
-       #if JUCE_WINDOWS
+#if JUCE_WINDOWS
         return file.isShortcut();
-       #else
+#else
         return false;
-       #endif
+#endif
     }
 
-    juce::File getChosenLocalFile(const juce::FileChooser& chooser)
+    juce::File getChosenLocalFile(const juce::FileChooser &chooser)
     {
-        for (const auto& result : chooser.getURLResults())
+        for (const auto &result : chooser.getURLResults())
         {
             if (result.isLocalFile())
                 return result.getLocalFile();
@@ -61,12 +61,12 @@ namespace
         return {};
     }
 
-    bool fileHasValidExtension(const juce::File& file, const juce::String& filePatterns)
+    bool fileHasValidExtension(const juce::File &file, const juce::String &filePatterns)
     {
         juce::StringArray validExtensions;
         validExtensions.addTokens(filePatterns, ";,", "*");
 
-        for (auto& ext : validExtensions)
+        for (auto &ext : validExtensions)
         {
             ext = ext.trimCharactersAtStart("*.");
             if (file.hasFileExtension(ext))
@@ -76,16 +76,13 @@ namespace
         return false;
     }
 
-    bool isSupportedFile(const juce::File& file, const juce::String& filePatterns)
+    bool isSupportedFile(const juce::File &file, const juce::String &filePatterns)
     {
-        return file.existsAsFile()
-            && file.getSize() > 0
-            && ! isPlatformShortcut(file)
-            && fileHasValidExtension(file, filePatterns);
+        return file.existsAsFile() && file.getSize() > 0 && !isPlatformShortcut(file) && fileHasValidExtension(file, filePatterns);
     }
 
-    bool isDestroyed(const std::shared_ptr<std::atomic<bool>>& alive,
-                     const std::shared_ptr<std::atomic<bool>>& open)
+    bool isDestroyed(const std::shared_ptr<std::atomic<bool>> &alive,
+                     const std::shared_ptr<std::atomic<bool>> &open)
     {
         if (alive->load())
             return false;
@@ -94,20 +91,20 @@ namespace
         return true;
     }
 
-    void handleAsyncFileChooserResult(const juce::FileChooser& chooser,
-                                      const std::shared_ptr<std::atomic<bool>>& alive,
-                                      const std::shared_ptr<std::atomic<bool>>& open,
-                                      const std::shared_ptr<ChooserOpenSession>& session,
-                                      const juce::String& filePatterns,
-                                      const std::function<void(const juce::File&)>& onValidFileChosenCallback,
-                                      juce::File& lastOpenedFolder,
-                                      WarningWindow& warningWindow)
+    void handleAsyncFileChooserResult(const juce::FileChooser &chooser,
+                                      const std::shared_ptr<std::atomic<bool>> &alive,
+                                      const std::shared_ptr<std::atomic<bool>> &open,
+                                      const std::shared_ptr<ChooserOpenSession> &session,
+                                      const juce::String &filePatterns,
+                                      const std::function<void(const juce::File &)> &onValidFileChosenCallback,
+                                      juce::File &lastOpenedFolder,
+                                      WarningWindow &warningWindow)
     {
         if (isDestroyed(alive, open))
             return;
 
         session->onCallbackStarted();
-        ChooserOpenGuard chooserGuard { open };
+        ChooserOpenGuard chooserGuard{open};
 
         if (chooser.getURLResults().isEmpty())
             return;
@@ -130,10 +127,10 @@ namespace
     }
 }
 
-FileChooserManager::FileChooserManager(AudioPluginAudioProcessor& processor)
-        : processorRef(processor),
-          callbackAlive(std::make_shared<std::atomic<bool>>(true)),
-          chooserOpen(std::make_shared<std::atomic<bool>>(false))
+FileChooserManager::FileChooserManager(AudioPluginAudioProcessor &processor)
+    : processorRef(processor),
+      callbackAlive(std::make_shared<std::atomic<bool>>(true)),
+      chooserOpen(std::make_shared<std::atomic<bool>>(false))
 {
     lastOpenedFolder = juce::File::getSpecialLocation(juce::File::SpecialLocationType::userHomeDirectory);
 }
@@ -145,11 +142,25 @@ FileChooserManager::~FileChooserManager()
 }
 
 // Generalized function, atm for single files only
-void FileChooserManager::openFileChooser(const juce::String& dialogTitle,
-                                         const juce::File& initialDirectory,
-                                         const juce::String& filePatterns,
-                                         std::function<void(const juce::File&)> onValidFileChosenCallback)
+void FileChooserManager::openFileChooser(const juce::String &dialogTitle,
+                                         const juce::File &initialDirectory,
+                                         const juce::String &filePatterns,
+                                         std::function<void(const juce::File &)> onValidFileChosenCallback,
+                                         juce::Component *parentComponent)
 {
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
+    {
+        auto alive = callbackAlive;
+        juce::MessageManager::callAsync([this, alive, dialogTitle, initialDirectory, filePatterns,
+                                         onValidFileChosenCallback, parentComponent]()
+                                        {
+            if (! alive->load())
+                return;
+
+            openFileChooser(dialogTitle, initialDirectory, filePatterns, onValidFileChosenCallback, parentComponent); });
+        return;
+    }
+
     if (chooserOpen->exchange(true))
         return;
 
@@ -162,16 +173,16 @@ void FileChooserManager::openFileChooser(const juce::String& dialogTitle,
 
     try
     {
-        fileChooser = std::make_unique<juce::FileChooser>(dialogTitle, dirToOpen, filePatterns, true);
+        fileChooser = std::make_unique<juce::FileChooser>(dialogTitle,
+                                                          dirToOpen,
+                                                          filePatterns,
+                                                          true,
+                                                          false,
+                                                          parentComponent);
 
         fileChooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-                                 [alive = callbackAlive,
-                                  open = chooserOpen,
-                                  session,
-                                  filePatterns,
-                                  onValidFileChosenCallback,
-                                  lastOpenedFolder = std::ref(lastOpenedFolder),
-                                  warningWindow = std::ref(warningWindow)](const juce::FileChooser& chooser)
+                                 [this, alive = callbackAlive, open = chooserOpen, session, filePatterns, onValidFileChosenCallback](
+                                     const juce::FileChooser &chooser)
                                  {
                                      handleAsyncFileChooserResult(chooser,
                                                                   alive,
@@ -179,8 +190,8 @@ void FileChooserManager::openFileChooser(const juce::String& dialogTitle,
                                                                   session,
                                                                   filePatterns,
                                                                   onValidFileChosenCallback,
-                                                                  lastOpenedFolder.get(),
-                                                                  warningWindow.get());
+                                                                  lastOpenedFolder,
+                                                                  warningWindow);
                                  });
     }
     catch (...)
@@ -192,7 +203,7 @@ void FileChooserManager::openFileChooser(const juce::String& dialogTitle,
 }
 
 // Use case: Network-specific file chooser
-void FileChooserManager::openFileChooserForNetwork(int networkID)
+void FileChooserManager::openFileChooserForNetwork(int networkID, juce::Component *parentComponent)
 {
     if (networkID != 1 && networkID != 2)
     {
@@ -200,7 +211,7 @@ void FileChooserManager::openFileChooserForNetwork(int networkID)
         return;
     }
 
-    auto onFileChosen = [this, networkID](const juce::File& file)
+    auto onFileChosen = [this, networkID](const juce::File &file)
     {
         processorRef.loadExternalModel(file.getFullPathName(), networkID);
     };
@@ -208,5 +219,6 @@ void FileChooserManager::openFileChooserForNetwork(int networkID)
     openFileChooser("Choose a model file...",
                     juce::File::getSpecialLocation(juce::File::SpecialLocationType::userHomeDirectory),
                     "*.ort",
-                    onFileChosen);
+                    onFileChosen,
+                    parentComponent);
 }

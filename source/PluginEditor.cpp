@@ -165,9 +165,19 @@ void AudioPluginAudioProcessorEditor::resized()
 void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &parameterID, float newValue) {
     parameterControl.parameterChanged(parameterID, newValue);
     if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && newValue == 1.f) {
-        fileChooserManager.openFileChooserForNetwork(1);
+        juce::Component::SafePointer<AudioPluginAudioProcessorEditor> safeThis(this);
+        juce::MessageManager::callAsync([safeThis]()
+        {
+            if (safeThis != nullptr)
+                safeThis->fileChooserManager.openFileChooserForNetwork(1, safeThis.getComponent());
+        });
     } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && newValue == 1.f) {
-        fileChooserManager.openFileChooserForNetwork(2);
+        juce::Component::SafePointer<AudioPluginAudioProcessorEditor> safeThis(this);
+        juce::MessageManager::callAsync([safeThis]()
+        {
+            if (safeThis != nullptr)
+                safeThis->fileChooserManager.openFileChooserForNetwork(2, safeThis.getComponent());
+        });
     }
 }
 
