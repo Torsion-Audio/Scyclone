@@ -6,64 +6,75 @@
 #define VAESYNTH_WARNINGWINDOW_H
 
 #include "JuceHeader.h"
-#include "../../utils/colors.h"
 
-enum WarningType {
+enum WarningType
+{
     SampleRateWarning,
     SystemTooSlow,
     UnsupportedFileType
 };
 
-class WarningWindow {
+class WarningWindow
+{
 public:
-    WarningWindow() {
-
-    }
-    void showWarningWindow(WarningType type) {
-
+    void showWarningWindow(WarningType type, const juce::String& expectedFilePatterns = {})
+    {
         juce::String errorMessage;
         juce::String title;
 
-        switch (type) {
-            case SampleRateWarning:
-                title = "Warning: unsupported sample rate";
-                errorMessage = "This plugin is still in alpha. At the moment only a sample rate of 48kHz is supported.";
-                break;
-            case SystemTooSlow:
-                title = "Warning: system load to high";
-                errorMessage = "It seems that this system is not fast enough to process the audio data. Try to only use one network.";
-                break;
-            case UnsupportedFileType:
-                title = "Warning: Unsupported file type";
-                errorMessage = "It seems that you have tried to load an unsupported file (i.e. a shortcut). Please try again.";
+        switch (type)
+        {
+        case SampleRateWarning:
+            title = "Warning: unsupported sample rate";
+            errorMessage = "This plugin is still in alpha. At the moment only a sample rate of 48kHz is supported.";
+            break;
+        case SystemTooSlow:
+            title = "Warning: system load too high";
+            errorMessage = "It seems that this system is not fast enough to process the audio data. Try to only use one network.";
+            break;
+        case UnsupportedFileType:
+            title = "Could not load file";
+            errorMessage = makeUnsupportedFileMessage(expectedFilePatterns);
+            break;
         }
 
-        juce::AlertWindow window {title, errorMessage, juce::MessageBoxIconType::NoIcon};
-        setLookAndFeel(window);
-
-        auto options = juce::MessageBoxOptions()
+        juce::AlertWindow::showAsync(
+            juce::MessageBoxOptions()
                 .withTitle(title)
                 .withMessage(errorMessage)
                 .withIconType(juce::MessageBoxIconType::NoIcon)
-                .withButton("OK") ;
-        window.showAsync(options, nullptr);
-
+                .withButton("OK"),
+            nullptr);
     }
 
 private:
-    void setLookAndFeel(juce::AlertWindow& window) {
-        auto& lookAndFeel = window.getLookAndFeel();
+    static juce::String formatExpectedExtensions(const juce::String& filePatterns)
+    {
+        juce::StringArray extensions;
+        extensions.addTokens(filePatterns, ";,", "*");
 
-        lookAndFeel.setColour(juce::AlertWindow::ColourIds::outlineColourId, juce::Colour::fromString(ColorPallete::BG));
-        lookAndFeel.setColour(juce::AlertWindow::ColourIds::backgroundColourId, juce::Colour::fromString(ColorPallete::BG));
-        lookAndFeel.setColour(juce::AlertWindow::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::TEXT2));
-        lookAndFeel.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colour::fromString(ColorPallete::TEXT2));
-        lookAndFeel.setColour(juce::TextButton::ColourIds::buttonOnColourId, juce::Colour::fromString(ColorPallete::TEXT2));
-        lookAndFeel.setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colour::fromString(ColorPallete::BG));
-        lookAndFeel.setColour(juce::TextButton::ColourIds::textColourOffId, juce::Colour::fromString(ColorPallete::BG));
+        juce::StringArray formatted;
 
-        window.setLookAndFeel(&lookAndFeel);
+        for (auto ext : extensions)
+        {
+            ext = ext.trim().trimCharactersAtStart("*.");
+
+            if (ext.isNotEmpty())
+                formatted.add("." + ext);
+        }
+
+        return formatted.joinIntoString(" or ");
+    }
+
+    static juce::String makeUnsupportedFileMessage(const juce::String& expectedFilePatterns)
+    {
+        const auto extensions = formatExpectedExtensions(expectedFilePatterns);
+
+        if (extensions.isNotEmpty())
+            return "Please choose a valid " + extensions + " file. Shortcuts and other file types cannot be loaded.";
+
+        return "Please choose a valid file with a supported extension. Shortcuts and other file types cannot be loaded.";
     }
 };
 
-#endif //VAESYNTH_WARNINGWINDOW_H
+#endif // VAESYNTH_WARNINGWINDOW_H
