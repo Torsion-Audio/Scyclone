@@ -7,6 +7,8 @@
 
 #include "RNBO.h"
 #include "RNBO_Engine.h"
+
+#include <chrono>
 #include "RNBO_NullPatcher.h"
 #include "RNBO_ParameterInterfaceAsyncImpl.h"
 #include "RNBO_ParameterInterfaceSync.h"
