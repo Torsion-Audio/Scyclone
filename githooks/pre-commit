@@ -1,0 +1,17 @@
+#!/bin/sh
+# Normalize line endings on staged files using .gitattributes rules.
+# LF for most text files; CRLF for *.bat, *.cmd, and *.ps1.
+#
+# Install once from the repo root:
+#   git config core.hooksPath githooks
+# or run:  ./githooks/install.sh   (Git Bash / macOS / Linux)
+#         ./githooks/install.ps1  (PowerShell)
+
+set -e
+
+git diff --cached --name-only -z --diff-filter=ACM | while IFS= read -r -d '' file; do
+  git add --renormalize -- "$file"
+  git restore --worktree -- "$file"
+done
+
+exit 0
