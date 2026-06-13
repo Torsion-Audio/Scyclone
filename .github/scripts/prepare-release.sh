@@ -8,7 +8,7 @@ if [ $# -ne 1 ]; then
 fi
 
 TARGET_VERSION="$1"
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CMAKE_FILE="${ROOT}/CMakeLists.txt"
 
 if ! [[ "$TARGET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then

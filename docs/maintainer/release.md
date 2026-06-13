@@ -61,7 +61,7 @@ Develop CI answers: *did the code compile, build plugin formats, and pass all te
 2. Commit and merge to `develop`
 3. Run the prepare-release script (optional but recommended):
    ```bash
-   ./scripts/prepare-release.sh X.Y.Z
+   ./.github/scripts/prepare-release.sh X.Y.Z
    ```
 4. Create and push the tag:
    ```bash

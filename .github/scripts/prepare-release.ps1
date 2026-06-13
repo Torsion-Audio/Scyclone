@@ -10,7 +10,7 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') {
     Write-Error "Version must be semver X.Y.Z (got '$Version')"
 }
 
-$Root = Split-Path -Parent $PSScriptRoot
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $CMakeFile = Join-Path $Root 'CMakeLists.txt'
 
 $Content = Get-Content $CMakeFile -Raw
