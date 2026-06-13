@@ -109,11 +109,25 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ninja
 
-      # Ninja on Windows does not open a VS dev shell; load cl.exe/link.exe onto PATH.
-      # Required because we use -G Ninja (not the Visual Studio generator). Still MSVC (cl), not Clang.
+      # Resolve VS via vswhere (ships with VS; survives VS 2022/2026 runner images).
+      # Exports cl.exe/link.exe env vars to GITHUB_ENV for subsequent bash steps.
       - name: setup MSVC
         if: runner.os == 'Windows'
-        uses: ilam-ms/msvc-dev-cmd@v1
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (Test-Path $vswhere)) { throw "vswhere.exe not found" }
+          $vsPath = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath
+          if (-not $vsPath) { throw "Visual Studio with C++ tools not found" }
+          $vcvars = Join-Path $vsPath 'VC\Auxiliary\Build\vcvars64.bat'
+          if (-not (Test-Path $vcvars)) { throw "vcvars64.bat not found at $vcvars" }
+          cmd /c "`"$vcvars`" && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+              Add-Content -Path $env:GITHUB_ENV -Value "$($matches[1])=$($matches[2])"
+            }
+          }
 
       # Use all runner CPU cores (replaces the old fixed CMAKE_BUILD_PARALLEL_LEVEL: 4).
       - name: set parallel build level
@@ -306,11 +320,25 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ninja
 
-      # Ninja on Windows does not open a VS dev shell; load cl.exe/link.exe onto PATH.
-      # Required because we use -G Ninja (not the Visual Studio generator). Still MSVC (cl), not Clang.
+      # Resolve VS via vswhere (ships with VS; survives VS 2022/2026 runner images).
+      # Exports cl.exe/link.exe env vars to GITHUB_ENV for subsequent bash steps.
       - name: setup MSVC
         if: runner.os == 'Windows'
-        uses: ilam-ms/msvc-dev-cmd@v1
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (Test-Path $vswhere)) { throw "vswhere.exe not found" }
+          $vsPath = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath
+          if (-not $vsPath) { throw "Visual Studio with C++ tools not found" }
+          $vcvars = Join-Path $vsPath 'VC\Auxiliary\Build\vcvars64.bat'
+          if (-not (Test-Path $vcvars)) { throw "vcvars64.bat not found at $vcvars" }
+          cmd /c "`"$vcvars`" && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+              Add-Content -Path $env:GITHUB_ENV -Value "$($matches[1])=$($matches[2])"
+            }
+          }
 
       # Use all runner CPU cores (replaces the old fixed CMAKE_BUILD_PARALLEL_LEVEL: 4).
       - name: set parallel build level
