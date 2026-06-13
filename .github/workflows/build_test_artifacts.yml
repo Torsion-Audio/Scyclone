@@ -46,12 +46,6 @@ jobs:
         if: ${{ matrix.name == 'macOS' }}
         run: brew install osxutils
 
-      # This lets us use sscache on Windows
-      # We need to install ccache here for Windows to grab the right version
-      - name: install Windows deps
-        if: runner.os == 'Windows'
-        run: choco install ccache
-      
       # The uses keyword tells the job to retrieve the action named actions/checkout. This is an action that checks out your repository and downloads it to the runner, allowing you to run actions against your code (such as testing tools). You must use the checkout action any time your workflow will run against the repository's code or you are using an action defined in the repository.
       # The uses keyword retrieves the action from the actions/checkout repository
       # With this we checkout to our repo
@@ -103,10 +97,14 @@ jobs:
       
       # Using the ccache action to store the build cache and speed up the next builds
       - name: ccache
-        uses: hendrikmuhs/ccache-action@main
+        uses: hendrikmuhs/ccache-action@v1.2.20
         with:
-          key: v3-${{ matrix.os }}-${{ env.BUILD_TYPE }}
+          key: v4-${{ matrix.os }}-${{ env.BUILD_TYPE }}-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'source/**', 'test/**') }}
+          restore-keys: |
+            v4-${{ matrix.os }}-${{ env.BUILD_TYPE }}-
           variant: ${{ matrix.ccache }}
+          append-timestamp: false
+          max-size: 2000M
       
       # Typical cmake configuration with default generator
       # With DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" we can build universal binaries for apple computers
@@ -116,6 +114,10 @@ jobs:
       # Build the project
       - name: cmake build
         run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+      - name: compiler cache stats
+        if: always()
+        run: ${{ matrix.ccache }} -s
       
       # Test the project
       - name: ctest
