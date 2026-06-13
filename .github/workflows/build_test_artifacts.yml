@@ -31,8 +31,10 @@ jobs:
       # generate a matrix of jobs for different platforms
       matrix:
         include:
+          # macos-14 (not macos-latest): JUCE 7.0.5 does not build juceaide against the
+          # macOS 15 SDK in Xcode 16+. See the "pin Xcode" step below.
           - name: macOS
-            os: macos-latest
+            os: macos-14
             ccache: ccache
           - name: Windows
             os: windows-latest
@@ -58,6 +60,18 @@ jobs:
       # Here we get the submodules like juce
         with:
           submodules: true
+
+      # TEMPORARY: JUCE 7.0.5 calls CGWindowListCreateImage, which Apple removed from the
+      # macOS 15 SDK (Xcode 16+). That breaks juceaide during cmake configure - unrelated to
+      # our deployment target; binaries can still run on macOS 10.13+ (see configure_platform.cmake).
+      # Pin Xcode 15.4 (macOS 14.5 SDK) until we upgrade JUCE to develop or JUCE 8, where the
+      # ScreenCaptureKit fix is proven upstream (https://github.com/juce-framework/JUCE/issues/1427).
+      # Then switch back to macos-latest and remove this step.
+      - name: pin Xcode for JUCE 7 compatibility (macOS)
+        if: ${{ matrix.name == 'macOS' }}
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
       
       # Setting up the environment variables for the paths so we can use them later
       - name: setup environment variables (macOS)
