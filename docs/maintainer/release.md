@@ -57,7 +57,7 @@ Develop CI answers: *did the code compile, build plugin formats, and pass all te
 
 ## Release checklist
 
-1. Update version in [`CMakeLists.txt`](../CMakeLists.txt): `project(Scyclone VERSION X.Y.Z)`
+1. Update version in [`CMakeLists.txt`](../../CMakeLists.txt): `project(Scyclone VERSION X.Y.Z)`
 2. Commit and merge to `develop`
 3. Run the prepare-release script (optional but recommended):
    ```bash

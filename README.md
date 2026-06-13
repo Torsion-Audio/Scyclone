@@ -49,7 +49,7 @@ cmake . -B cmake-build
 cmake --build cmake-build --config Release
 ```
 
-**CI:** Pushes to `develop` run validation only (no downloadable artifacts). To release signed builds, push a version tag — see [Release process](docs/release.md).
+**CI:** Pushes to `develop` run validation only (no downloadable artifacts). To release signed builds, push a version tag — see [Release process](docs/maintainer/release.md).
 
 **Notes:**
 - The onnx library is now linked statically. No more need to download the onnx library via homebrew or via the github repository. macOS distribution builds are code-signed with Developer ID and notarized in CI.
