@@ -16,7 +16,7 @@ BinaryData*.cpp
 
 # IDE
 .idea/
-.vscode/*
+.vscode/
 .cursor/
 
 # Git hooks (local install via githooks/install.*)
