@@ -1,9 +1,43 @@
 name: Scyclone
 
+# CI Model
+#
+# develop push:
+#   - ci-validation only
+#   - no distributable artifacts (this is intentional)
+#
+# version tag (v*):
+#   - ci-validation → build-distribution → publish-release
+#   - universal macOS binary
+#   - assets attached to GitHub Release
+#
+# workflow_dispatch:
+#   - ci-validation → build-distribution
+#   - no GitHub Release (workflow artifacts only)
+#   - distribution_type: arm64 | universal
+
 on:
-  workflow_dispatch:
   push:
     branches: [ develop ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      distribution_type:
+        description: 'macOS architecture for distribution build'
+        type: choice
+        options: [ arm64, universal ]
+        default: arm64
+      create_release:
+        description: 'Attach to GitHub Release (tag builds only; ignored on develop)'
+        type: boolean
+        default: false
+
+run-name: >-
+  ${{
+    startsWith(github.ref, 'refs/tags/v') && format('Release {0}', github.ref_name) ||
+    github.event_name == 'workflow_dispatch' && format('Manual build ({0}, {1})', inputs.distribution_type, github.ref_name) ||
+    format('Validation ({0})', github.ref_name)
+  }}
 
 # Cancel in-progress runs when a new commit is pushed to the same ref.
 concurrency:
@@ -121,9 +155,33 @@ jobs:
         if: always()
         run: ${{ matrix.ccache }} -s
 
+      - name: validation summary
+        if: success()
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          # Validation complete
+
+          ✓ Build succeeded
+          ✓ Tests passed
+
+          EOF
+          if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          **No distributable artifacts were produced.** This is expected for develop pushes.
+
+          To create downloadable builds:
+          - Push a version tag (`vX.Y.Z`)
+          - Or run **Actions → Scyclone → Run workflow**
+          EOF
+          fi
+
   build-distribution:
     name: build-distribution (${{ matrix.name }})
     needs: ci-validation
+    if: >
+      startsWith(github.ref, 'refs/tags/v') ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
