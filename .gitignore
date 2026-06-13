@@ -17,7 +17,6 @@ BinaryData*.cpp
 # IDE
 .idea/
 .vscode/*
-!.vscode/settings.json
 .cursor/
 
 # OS
