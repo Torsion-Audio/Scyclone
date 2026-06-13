@@ -105,6 +105,10 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ninja
 
+      - name: setup MSVC
+        if: runner.os == 'Windows'
+        uses: ilam-ms/msvc-dev-cmd@v1
+
       - name: set parallel build level
         shell: bash
         run: |
