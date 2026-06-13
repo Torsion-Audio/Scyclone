@@ -3,76 +3,70 @@
 //
 
 #include "FooterComponent.h"
+#include "BuildInfo.h"
 
-FooterComponent::FooterComponent(AudioPluginAudioProcessor &p, juce::AudioProcessorValueTreeState &parameters) : processor(p), parameters(parameters) {
+FooterComponent::FooterComponent(AudioPluginAudioProcessor &p, juce::AudioProcessorValueTreeState &parameters) : processor(p), parameters(parameters)
+{
     updateSpecs();
     startTimerHz(1);
     setLookAndFeel(&customFontLookAndFeel);
-    //font = CustomFontLookAndFeel::getCustomFont();
+    // font = CustomFontLookAndFeel::getCustomFont();
 
-    //cpuLabel.setFont(font);
-    cpuLabel.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::TEXT2));
-    addAndMakeVisible(cpuLabel);
+    // cpuLabel.setFont(font);
+    statusLabel.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::TEXT2));
+    addAndMakeVisible(statusLabel);
 
-    //latencyLabel.setFont(font);
-    latencyLabel.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::TEXT2));
-    addAndMakeVisible(latencyLabel);
-
-    //tooltipLabel.setFont(font);
+    // tooltipLabel.setFont(font);
     tooltipLabel.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::TEXT2));
     addAndMakeVisible(tooltipLabel);
 }
 
-FooterComponent::~FooterComponent() {
+FooterComponent::~FooterComponent()
+{
     stopTimer();
     setLookAndFeel(nullptr);
 }
 
-
-void FooterComponent::resized() {
+void FooterComponent::resized()
+{
     auto r = getLocalBounds();
 
     r.removeFromRight(8);
     r.removeFromLeft(8);
     r.removeFromBottom(5);
 
-
-    auto cpuSection = r.removeFromRight(130);
-    cpuSection.removeFromRight(37);
-    cpuLabel.setBounds(cpuSection);
-    cpuLabel.setJustificationType(juce::Justification::right);
-
-    auto latencySection = r.removeFromRight(130);
-    latencyLabel.setBounds(latencySection);
-    latencyLabel.setJustificationType(juce::Justification::right);
-
     r.removeFromLeft(35);
     auto tooltipSection = r.removeFromLeft(500);
     tooltipLabel.setBounds(tooltipSection);
+
+    statusLabel.setBounds(r);
+    statusLabel.setJustificationType(juce::Justification::right);
 }
 
-void FooterComponent::paint(juce::Graphics &) {
+void FooterComponent::paint(juce::Graphics &)
+{
 }
 
-void FooterComponent::updateSpecs(){
+void FooterComponent::updateSpecs()
+{
     latencySamples = processor.getLatencySamples();
     sampleRate = static_cast<int>(processor.getSampleRate());
     latencySeconds = (float)latencySamples / float(sampleRate);
 
-    //processorUse = processor.getCpuLoad();
     processorUse = processor.getCpuLoad();
 
-    std::string cpuString = "CPU: " + std::to_string((int)processorUse ) + " %";
-    cpuLabel.setText(cpuString, juce::dontSendNotification);
-    std::string latencyString = "Latency: " + std::to_string(int(latencySeconds * 1000)) + " ms";
-    latencyLabel.setText(latencyString, juce::dontSendNotification);
+    const auto statusText = juce::String("Latency: ") + juce::String((int)(latencySeconds * 1000)) + " ms | CPU: "
+                          + juce::String((int)processorUse) + "% | " + BuildInfo::commitHash + " \u2022 "
+                          + BuildInfo::commitDate;
+    statusLabel.setText(statusText, juce::dontSendNotification);
 }
 
-void FooterComponent::timerCallback() {
+void FooterComponent::timerCallback()
+{
     updateSpecs();
 }
 
-void FooterComponent::setTooltipText(juce::String newText) {
+void FooterComponent::setTooltipText(juce::String newText)
+{
     tooltipLabel.setText(newText, juce::dontSendNotification);
 }
-

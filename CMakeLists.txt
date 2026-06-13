@@ -11,6 +11,7 @@ include(cmake/configure_platform.cmake)
 add_subdirectory(modules/JUCE)
 # JUCE plugin setup
 include(cmake/juce_plugin_setup.cmake)
+include(cmake/generate_build_info.cmake)
 
 
 # ONNX Runtime and libsamplerate
