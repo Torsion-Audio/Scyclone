@@ -24,6 +24,9 @@ include(cmake/setup_tests_and_benchmarks.cmake)
 # JUCE compile definitions and linking
 include(cmake/juce_compile_config.cmake)
 
+# Ad-hoc sign plugin bundles after build (macOS dev convenience)
+include(cmake/sign_plugin.cmake)
+
 # Add Installer and RNBO
 add_subdirectory(installer)
 add_subdirectory(modules/RnboExport)
