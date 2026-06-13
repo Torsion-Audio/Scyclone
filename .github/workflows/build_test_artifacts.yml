@@ -15,8 +15,6 @@ env:
   PROJECT_NAME: Scyclone
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
-  # Use up to 4 cpus to build juceaide, etc
-  CMAKE_BUILD_PARALLEL_LEVEL: 4 
   # Name of the build directory
   BUILD_DIR: build
 
@@ -44,7 +42,7 @@ jobs:
       # We need the osxutils to get the codesign and notorization tools
       - name: install macOS deps
         if: ${{ matrix.name == 'macOS' }}
-        run: brew install osxutils
+        run: brew install osxutils ninja
 
       # The uses keyword tells the job to retrieve the action named actions/checkout. This is an action that checks out your repository and downloads it to the runner, allowing you to run actions against your code (such as testing tools). You must use the checkout action any time your workflow will run against the repository's code or you are using an action defined in the repository.
       # The uses keyword retrieves the action from the actions/checkout repository
@@ -94,6 +92,27 @@ jobs:
           echo "ccache: ${{ matrix.ccache }}"
           echo "BUILD_TYPE: ${{ env.BUILD_TYPE }}"
           echo "VST3_PATH: ${{ env.VST3_PATH }}"
+
+      - name: restore FetchContent cache
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: fetchcontent-${{ matrix.os }}-${{ hashFiles('cmake/setup_tests_and_benchmarks.cmake') }}
+          restore-keys: |
+            fetchcontent-${{ matrix.os }}-
+
+      - name: install Windows deps
+        if: runner.os == 'Windows'
+        run: choco install ninja
+
+      - name: set parallel build level
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            echo "CMAKE_BUILD_PARALLEL_LEVEL=${NUMBER_OF_PROCESSORS}" >> "$GITHUB_ENV"
+          else
+            echo "CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> "$GITHUB_ENV"
+          fi
       
       # Using the ccache action to store the build cache and speed up the next builds
       - name: ccache
@@ -106,10 +125,10 @@ jobs:
           append-timestamp: false
           max-size: 2000M
       
-      # Typical cmake configuration with default generator
+      # Typical cmake configuration with Ninja generator
       # With DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" we can build universal binaries for apple computers
       - name: cmake configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+        run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 
       # Build the project
       - name: cmake build
