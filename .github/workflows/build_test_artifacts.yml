@@ -134,19 +134,19 @@ jobs:
       - name: cmake configure
         run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
 
-      # Build the project
+      # Build and test the plugin core before format wrappers and installer
+      - name: cmake build Test
+        run: cmake --build build --target Test --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+      - name: ctest
+        run: ctest --test-dir build --output-on-failure --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
       - name: cmake build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+        run: cmake --build build --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
 
       - name: compiler cache stats
         if: always()
         run: ${{ matrix.ccache }} -s
-      
-      # Test the project
-      - name: ctest
-        working-directory: ${{github.workspace}}/build
-        run: ctest --verbose
-
       # We need to import the apple developer certificate so that we can codesign our binaries
       - name: import certificates (macOS)
         uses: apple-actions/import-codesign-certs@v1
