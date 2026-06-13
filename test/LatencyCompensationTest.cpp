@@ -8,16 +8,12 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+#include "ResamplingTestHelpers.h"
 #include "dsp/utils/utils.h"
 #include "dsp/resampler/ResamplingProcessor.h"
-#include "dsp/IProcessor.h"
 #include "dsp/mixer/DryWetMixer.h"
 
-// Test-only: zero-latency pass-through (replaces ONNX in dry/wet alignment tests).
-class PassthroughProcessor : public IProcessor {
-public:
-    void processBlock(juce::AudioBuffer<float>& buffer) override { (void)buffer; }
-};
+using namespace resampling_test;
 
 // --- computeTotalLatencyInSamples: delays at two rates -> host samples (std::round) ---
 // Params: delayAtOutputRateSamples (in host/output rate), delayAtProcessingRate 1 & 2 (in 48k), processingRate, outputSampleRate (host).
@@ -128,108 +124,82 @@ TEST(LatencyCompensation, Resampler_RoundTrip_PeakWithinTolerance) {
     juce::ScopedJuceInitialiser_GUI init;
     const double hostSR = 44100.0;
     const uint32_t blockSize = 512;
-    juce::dsp::ProcessSpec monoSpec{ hostSR, blockSize, 1 };
-    ResamplingProcessor up, down;
+    auto chain = prepareRoundTripChain(hostSR, static_cast<int>(blockSize));
+    const int upLat = chain.up.getLatencyInSamples();
+    const int downLat = chain.down.getLatencyInSamples();
+    const int expectedPeak = upLat + static_cast<int>(std::round(static_cast<double>(downLat) * hostSR / kOnnxRate));
 
-    int upOutSize = up.prepare(monoSpec, 48000.0, "up");
-    juce::dsp::ProcessSpec onnxSpec{ 48000.0, static_cast<uint32_t>(upOutSize), 1 };
-    down.prepare(onnxSpec, hostSR, "down");
-    int upLat = up.getLatencyInSamples();
-    int downLat = down.getLatencyInSamples();
-    // Peak expected at: up latency (host samples) + down latency converted to host samples.
-    int expectedPeak = upLat + static_cast<int>(std::round(static_cast<double>(downLat) * hostSR / 48000.0));
+    runSilencePreRoll(chain, 4);
 
-    // Pre-roll silence blocks so startup transient does not dominate this latency check.
-    juce::AudioBuffer<float> inBuf(1, static_cast<int>(blockSize));
-    inBuf.clear();
-    constexpr int preRollBlocks = 4;
-    for (int n = 0; n < preRollBlocks; ++n) {
-        juce::AudioBuffer<float>& upOut = up.processBlock(inBuf);
-        (void)down.processBlock(upOut);
-    }
-
-    // Collect output samples across blocks until we are well past the expected peak.
+    chain.hostBuffer.setSample(0, 0, 1.0f);
     const int collectSamples = expectedPeak + static_cast<int>(blockSize);
     std::vector<float> collected;
     collected.reserve(static_cast<size_t>(collectSamples));
 
-    inBuf.setSample(0, 0, 1.0f);  // impulse in first block only
-
     while (static_cast<int>(collected.size()) < collectSamples) {
-        juce::AudioBuffer<float>& upOut = up.processBlock(inBuf);
-        juce::AudioBuffer<float>& downOut = down.processBlock(upOut);
-        for (int i = 0; i < downOut.getNumSamples(); ++i)
+        juce::AudioBuffer<float>& upOut = chain.up.processBlock(chain.hostBuffer);
+        juce::AudioBuffer<float>& downOut = chain.down.processBlock(upOut);
+        for (int i = 0; i < downOut.getNumSamples(); ++i) {
             collected.push_back(downOut.getSample(0, i));
-        inBuf.clear();  // subsequent blocks are silence to flush the filter
+        }
+        chain.hostBuffer.clear();
     }
 
-    // First significant peak after expected-5 in steady-state output.
-    const float peakThresh = 0.01f;
     const int searchStart = std::max(0, expectedPeak - 5);
     const int searchEnd = std::min(static_cast<int>(collected.size()), expectedPeak + static_cast<int>(blockSize));
-    int peakPos = -1;
-    float peakVal = 0.0f;
-    for (int i = searchStart; i < searchEnd; ++i) {
-        float v = std::abs(collected[static_cast<size_t>(i)]);
-        if (v >= peakThresh) {
-            peakPos = i;
-            peakVal = v;
-            break;
-        }
+    const int peakPos = findImpulsePeak(collected, searchStart, searchEnd);
+    EXPECT_GE(peakPos, expectedPeak - 5) << "peak within 5 samples (early), expectedPeak=" << expectedPeak;
+    EXPECT_LE(peakPos, expectedPeak + 5) << "peak within 5 samples (late), expectedPeak=" << expectedPeak;
+}
+
+TEST(LatencyCompensation, Resampler_SteadyState_FullFillAfterPreRoll) {
+    juce::ScopedJuceInitialiser_GUI init;
+    auto chain = prepareRoundTripChain(44100.0, 512);
+    runSilencePreRoll(chain, 4);
+    chain.hostBuffer.clear();
+    for (int n = 0; n < 4; ++n) {
+        juce::AudioBuffer<float>& upOut = chain.up.processBlock(chain.hostBuffer);
+        assertSteadyStateFullOutput(chain.up);
+        juce::AudioBuffer<float>& downOut = chain.down.processBlock(upOut);
+        assertSteadyStateFullOutput(chain.down);
+        EXPECT_EQ(downOut.getNumSamples(), 512);
     }
-    EXPECT_GE(peakVal, peakThresh) << "round-trip impulse should produce a clear peak";
-    EXPECT_GE(peakPos, expectedPeak - 5) << "peak within 5 samples of expected (early), expectedPeak=" << expectedPeak;
-    EXPECT_LE(peakPos, expectedPeak + 5) << "peak within 5 samples of expected (late), expectedPeak=" << expectedPeak;
 }
 
 // --- Dry/wet alignment: up -> passthrough -> down; mix dry+wet with setWetLatency(total) ---
 // Pre-roll with silence first to avoid startup transient, then inject impulse and verify alignment.
 
 static void dryWetAlignmentMultiBlock(double hostSR, uint32_t blockSize) {
-    juce::dsp::ProcessSpec monoSpec{ hostSR, blockSize, 1 };
-    ResamplingProcessor up, down;
+    auto chain = prepareRoundTripChain(hostSR, static_cast<int>(blockSize));
     PassthroughProcessor passthrough;
-    int upOutSize = up.prepare(monoSpec, 48000.0, "up");
-    juce::dsp::ProcessSpec onnxSpec{ 48000.0, static_cast<uint32_t>(upOutSize), 1 };
-    down.prepare(onnxSpec, hostSR, "down");
-    int totalLatency = utils::computeTotalLatencyInSamples(
-        up.getLatencyInSamples(), 0, down.getLatencyInSamples(), 48000.0, hostSR);
+    const int totalLatency = utils::computeTotalLatencyInSamples(
+        chain.up.getLatencyInSamples(), 0, chain.down.getLatencyInSamples(), kOnnxRate, hostSR);
 
-    // Pre-roll silence blocks so startup transient does not dominate this alignment check.
-    juce::AudioBuffer<float> inBuf(1, static_cast<int>(blockSize));
-    inBuf.clear();
-    constexpr int preRollBlocks = 4;
-    for (int n = 0; n < preRollBlocks; ++n) {
-        juce::AudioBuffer<float>& upOut = up.processBlock(inBuf);
-        passthrough.processBlock(upOut);
-        (void)down.processBlock(upOut);
-    }
+    runSilencePreRoll(chain, 4);
 
-    // Collect enough samples to see the peak arrive (totalLatency + one extra block).
     const int collectSamples = totalLatency + static_cast<int>(blockSize);
     std::vector<float> wetCollected;
     std::vector<float> dryCollected;
     wetCollected.reserve(static_cast<size_t>(collectSamples));
     dryCollected.reserve(static_cast<size_t>(collectSamples));
 
-    inBuf.setSample(0, 0, 1.0f);  // impulse at t=0; subsequent blocks are silence
+    chain.hostBuffer.setSample(0, 0, 1.0f);
 
     while (static_cast<int>(wetCollected.size()) < collectSamples) {
-        // Dry path: raw input block (impulse then silence)
-        for (int i = 0; i < static_cast<int>(blockSize); ++i)
-            dryCollected.push_back(inBuf.getSample(0, i));
+        for (int i = 0; i < chain.hostBuffer.getNumSamples(); ++i) {
+            dryCollected.push_back(chain.hostBuffer.getSample(0, i));
+        }
 
-        // Wet path: up -> passthrough -> down
-        juce::AudioBuffer<float>& upOut = up.processBlock(inBuf);
+        juce::AudioBuffer<float>& upOut = chain.up.processBlock(chain.hostBuffer);
         passthrough.processBlock(upOut);
-        juce::AudioBuffer<float>& wetOut = down.processBlock(upOut);
-        for (int i = 0; i < wetOut.getNumSamples(); ++i)
+        juce::AudioBuffer<float>& wetOut = chain.down.processBlock(upOut);
+        for (int i = 0; i < wetOut.getNumSamples(); ++i) {
             wetCollected.push_back(wetOut.getSample(0, i));
+        }
 
-        inBuf.clear();  // silence for subsequent blocks
+        chain.hostBuffer.clear();
     }
 
-    // Build aligned mix: DryWetMixer delays dry by totalLatency then blends 50/50.
     const int mixLen = std::min(static_cast<int>(wetCollected.size()),
                                 static_cast<int>(dryCollected.size()));
     juce::AudioBuffer<float> dryBuf(1, mixLen);
@@ -245,18 +215,34 @@ static void dryWetAlignmentMultiBlock(double hostSR, uint32_t blockSize) {
     mixer.setDrySamples(dryBuf);
     mixer.setWetSamples(mixBuf);
 
-    // Peak in a small window around totalLatency.
     const int searchStart = std::max(0, totalLatency - 10);
     const int searchEnd = std::min(mixLen, totalLatency + 11);
-    int peakPos = -1;
-    float peakVal = 0.0f;
-    for (int i = searchStart; i < searchEnd; ++i) {
-        float v = std::abs(mixBuf.getSample(0, i));
-        if (v > peakVal) { peakVal = v; peakPos = i; }
-    }
-    EXPECT_GE(peakVal, 0.01f) << "mixed signal should have a detectable peak; totalLatency=" << totalLatency;
+    std::vector<float> mixed(mixBuf.getReadPointer(0), mixBuf.getReadPointer(0) + mixLen);
+    const int peakPos = findImpulsePeak(mixed, searchStart, searchEnd);
+    EXPECT_GE(mixed[static_cast<size_t>(std::max(0, peakPos))], 0.01f)
+        << "mixed signal should have a detectable peak; totalLatency=" << totalLatency;
     EXPECT_GE(peakPos, totalLatency - 5) << "peak aligned within 5 samples (early); totalLatency=" << totalLatency;
     EXPECT_LE(peakPos, totalLatency + 5) << "peak aligned within 5 samples (late); totalLatency=" << totalLatency;
+}
+
+TEST(LatencyCompensation, DryWetAlignment_BlockSize512_44100) {
+    juce::ScopedJuceInitialiser_GUI init;
+    dryWetAlignmentMultiBlock(44100.0, 512);
+}
+
+TEST(LatencyCompensation, DryWetAlignment_BlockSize2048_44100) {
+    juce::ScopedJuceInitialiser_GUI init;
+    dryWetAlignmentMultiBlock(44100.0, 2048);
+}
+
+TEST(LatencyCompensation, DryWetAlignment_BlockSize512_48000) {
+    juce::ScopedJuceInitialiser_GUI init;
+    dryWetAlignmentMultiBlock(48000.0, 512);
+}
+
+TEST(LatencyCompensation, DryWetAlignment_BlockSize2048_48000) {
+    juce::ScopedJuceInitialiser_GUI init;
+    dryWetAlignmentMultiBlock(48000.0, 2048);
 }
 
 TEST(LatencyCompensation, DryWetAlignment_BlockSize32) {

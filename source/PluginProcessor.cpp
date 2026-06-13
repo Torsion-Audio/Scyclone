@@ -193,8 +193,10 @@ int AudioPluginAudioProcessor::prepareResamplingAndOnnx(juce::dsp::ProcessSpec &
     onnxProcessor1.prepare(onnxSpec);
     onnxProcessor2.prepare(onnxSpec);
 
-    downsamplerOne.prepare(onnxSpec, monoSpec.sampleRate, "Downsampler 1");
-    downsamplerTwo.prepare(onnxSpec, monoSpec.sampleRate, "Downsampler 2");
+    downsamplerOne.prepare(onnxSpec, monoSpec.sampleRate, "Downsampler 1",
+                           static_cast<int>(monoSpec.maximumBlockSize));
+    downsamplerTwo.prepare(onnxSpec, monoSpec.sampleRate, "Downsampler 2",
+                           static_cast<int>(monoSpec.maximumBlockSize));
 
     int onnxDelay48k = std::max(onnxProcessor1.getLatencyInSamples(), onnxProcessor2.getLatencyInSamples());
     return utils::computeTotalLatencyInSamples(
@@ -265,10 +267,9 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         onnxProcessor1.processBlock(onnxbuffer1);
         onnxProcessor2.processBlock(onnxbuffer2);
 
-        // some buffer size + target samplerate
+        // Downsampler output block matches host block (monoSpec.maximumBlockSize).
         juce::AudioBuffer<float> &networkOut1 = downsamplerOne.processBlock(onnxbuffer1);
         juce::AudioBuffer<float> &networkOut2 = downsamplerTwo.processBlock(onnxbuffer2);
-        // --> fixed output buffer size + pluginSampleRate (processSpec)
 
         levelAnalyser1.processBlock(networkOut1);
         levelAnalyser2.processBlock(networkOut2);
@@ -276,12 +277,14 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         grain1DryBuffer.makeCopyOf(networkOut1);
         grain1DryWetMixer.setDrySamples(grain1DryBuffer);
         grainDelay1.processBlock(networkOut1);
-        grain1DryWetMixer.setWetSamples(network1Buffer);
+        grain1DryWetMixer.setWetSamples(networkOut1);
+        network1Buffer.makeCopyOf(networkOut1);
 
         grain2DryBuffer.makeCopyOf(networkOut2);
         grain2DryWetMixer.setDrySamples(grain2DryBuffer);
         grainDelay2.processBlock(networkOut2);
-        grain2DryWetMixer.setWetSamples(network2Buffer);
+        grain2DryWetMixer.setWetSamples(networkOut2);
+        network2Buffer.makeCopyOf(networkOut2);
 
         if (parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load() == 0.f)
             network1Buffer.clear();
@@ -407,7 +410,7 @@ void AudioPluginAudioProcessor::setInitialMuteParameters()
     auto onOffGrain2 = parameters.getRawParameterValue(PluginParameters::GRAIN_ON_OFF_NETWORK2_ID.getParamID())->load();
 
     auto onOffNetwork1 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load();
-    auto onOffNetwork2 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load();
+    auto onOffNetwork2 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK2_ID.getParamID())->load();
 
     parameterChanged(PluginParameters::ON_OFF_NETWORK1_ID.getParamID(), onOffNetwork1);
     parameterChanged(PluginParameters::ON_OFF_NETWORK2_ID.getParamID(), onOffNetwork2);

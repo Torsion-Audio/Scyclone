@@ -11,7 +11,9 @@ This enables a new artificial layering technique to be applied on the incoming s
 
 **Signal flow**: <br />
 
-Scyclone offers an intuitive signal flow allowing for a seamless influence over inference and sound synthesis. The pre-processing modules are:
+Scyclone offers an intuitive signal flow allowing for a seamless influence over inference and sound synthesis. Audio is resampled to 48 kHz for ONNX inference and back to the host rate; see [Resampling architecture](docs/resampling_architecture.md) for block sizes, latency, and graph contracts.
+
+The pre-processing modules are:
 
 - Transient Controller: Shaping the attack and sustain of the singal
 - Low-/High-Cut Filter: Refining the frequency range of input audio favouring a consistent sound

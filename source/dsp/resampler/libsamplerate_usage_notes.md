@@ -87,6 +87,8 @@ SINC converters need **state** across calls (in the `SRC_STATE`* from `src_new()
 
 [FAQ Q7](https://libsndfile.github.io/libsamplerate/faq.html): `src_ratio` is a `double` (output/input). Double precision is enough for any practical run; ratio drift is sub-sample even over long sessions.
 
+**Q7 vs per-block ratio forcing:** Q7 addresses long-run drift from double precision. Scyclone also uses [FAQ Q6 technique 2](https://libsndfile.github.io/libsamplerate/faq.html) — adjusting `src_ratio` per block to hit exact output counts — which is valid API use but a separate design choice. See [resampling_architecture.md](../../../docs/resampling_architecture.md#design-decision-enforcing-n_out-equals-n) for technique 1 (ring buffer, not adopted) vs technique 2 (chosen) and magnitude bounds.
+
 ---
 
 ## Other practical points
@@ -100,7 +102,11 @@ SINC converters need **state** across calls (in the `SRC_STATE`* from `src_new()
 
 ## Relation to Scyclone
 
+**Architecture (graph, block contracts, latency):** [resampling_architecture.md](../../../docs/resampling_architecture.md)
+
 - **Implementation:** [ResamplingProcessor.cpp](ResamplingProcessor.cpp), [ResamplingProcessor.h](ResamplingProcessor.h)
-- **Converter:** SRC_SINC_MEDIUM_QUALITY; Full API with one `SRC_STATE`* per processor; fixed block sizes from `ceil(ratio * inputBufferSize)` with adjusted ratio for consistent input/output blocks.
-- **Streaming:** `end_of_input = 0` in `processBlock()` (continuous stream). Log “Remaining frames” when `output_frames_gen < output_frames` is expected occasionally (transport delay / internal buffering).
-- **Latency:** Measured with an impulse test in `prepare()`; reported in **input-rate** samples. Fallback uses nominal SINC medium delay in input samples: `46 / min(src_ratio, 1.0)` (see [src_sinc.c](../../../modules/libsamplerate/src/src_sinc.c) lines 456–461: filter half-length widens only for downsampling).
+- **Converter:** SRC_SINC_MEDIUM_QUALITY; Full API with one `SRC_STATE`* per processor.
+- **Upsampler:** `ceil(48000/hostSR × N)` output block; adjusted `srcRatio = N_up/N`.
+- **Downsampler:** optional `forcedOutputBlockSize` (host `N`); `srcRatio = N/N_up` (technique 2 — see [architecture doc](../../../docs/resampling_architecture.md#design-decision-enforcing-n_out-equals-n)).
+- **Streaming:** `end_of_input = 0` in `processBlock()` (continuous stream). Partial first blocks after reset are expected (transport delay).
+- **Latency:** Measured with an impulse test in `prepare()` using streaming `srcRatio`; reported in **input-rate** samples. Fallback uses nominal SINC medium delay in input samples: `46 / min(src_ratio, 1.0)` (see [src_sinc.c](../../../modules/libsamplerate/src/src_sinc.c) lines 456–461: filter half-length widens only for downsampling).

@@ -10,13 +10,20 @@ static const int kNominalSincMediumLatencyInputSamples = 46;
 
 ResamplingProcessor::ResamplingProcessor() : converter(nullptr), srcRatio(1.0), id_string("noNameSet") {}
 
-int ResamplingProcessor::prepare(const juce::dsp::ProcessSpec &inputSpec, double targetSampleRate, std::string name) {
+int ResamplingProcessor::prepare(const juce::dsp::ProcessSpec &inputSpec, double targetSampleRate, std::string name,
+                               std::optional<int> forcedOutputBlockSize) {
     id_string = name;
     inputSampleRate =  inputSpec.sampleRate;
     inputBufferSize = static_cast<int>(inputSpec.maximumBlockSize);
     outputSampleRate = targetSampleRate;
 
-    setSamplerateRatio();
+    if (forcedOutputBlockSize.has_value()) {
+        outputBufferSize = *forcedOutputBlockSize;
+        srcRatio = static_cast<double>(outputBufferSize) / static_cast<double>(inputBufferSize);
+        outputBufferMono.setSize(1, outputBufferSize);
+    } else {
+        setSamplerateRatio();
+    }
 
     int error;
     converter = src_new(SRC_SINC_MEDIUM_QUALITY, 1, &error);
@@ -35,8 +42,7 @@ int ResamplingProcessor::prepare(const juce::dsp::ProcessSpec &inputSpec, double
     testData.data_out = testOut.data();
     testData.input_frames = testInputSize;
     testData.output_frames = testOutputSize;
-    const double impulseTestRatio = outputSampleRate / inputSampleRate;
-    testData.src_ratio = impulseTestRatio;
+    testData.src_ratio = srcRatio;
     testData.end_of_input = 1;
     error = src_process(converter, &testData);
     if (error == 0) {
@@ -48,7 +54,7 @@ int ResamplingProcessor::prepare(const juce::dsp::ProcessSpec &inputSpec, double
         }
         // Convert peak position (output samples at impulse-test ratio) to input-rate samples.
         if (peakVal >= 0.01f && peakPos > 0) {
-            latencyInSamples = static_cast<int>(std::round(static_cast<double>(peakPos) / impulseTestRatio));
+            latencyInSamples = static_cast<int>(std::round(static_cast<double>(peakPos) / srcRatio));
         } else {
             // For upsampling (srcRatio >= 1) filter half-length stays at 46 input samples.
             // For downsampling (srcRatio < 1) filter widens to 46 / srcRatio input samples.
@@ -76,10 +82,7 @@ void ResamplingProcessor::setSamplerateRatio()
     float correctedSampleRate = static_cast<float>(outputBufferSize) / timePerBlockInSec;
     outputBufferMono.setSize(1, outputBufferSize);
 
-    std::cout << id_string << "\n";
-    std::cout << "Samplerate Ratio Set: " << srcRatio << "\n";
-    std::cout << "Corrected Sample Rate: " << correctedSampleRate << " Hz\n";
-    std::cout << "------" << "\n";
+    juce::ignoreUnused(timePerBlockInSec, correctedSampleRate);
 }
 
 
@@ -99,8 +102,10 @@ juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<fl
     srcData.end_of_input = 0;
 
     int error = src_process(converter, &srcData);
+    lastOutputFramesGenerated = srcData.output_frames_gen;
+    lastInputFramesUsed = srcData.input_frames_used;
     if (error != 0) {
-        std::cout << "Error during sample rate conversion: " << std::to_string(error) << std::endl;
+        jassertfalse;
     }
     // output_frames_gen can be < output_frames due to SINC transport delay or internal buffering (libsamplerate FAQ).
     if (srcData.output_frames_gen < srcData.output_frames) {
@@ -108,9 +113,6 @@ juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<fl
         outputBufferMono.clear(0,
                                static_cast<int>(srcData.output_frames_gen),
                                static_cast<int>(srcData.output_frames - srcData.output_frames_gen));
-        std::cout << "Remaining frames to process: "
-                  << (srcData.output_frames - srcData.output_frames_gen)
-                  << " for " << id_string << std::endl;
     }
     return outputBufferMono;
 }

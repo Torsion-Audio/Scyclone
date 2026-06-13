@@ -76,7 +76,7 @@ void OnnxProcessor::processOutput(juce::AudioBuffer<float> &buffer, const int nu
             }
         } else {
             inferenceCounter++;
-            std::cout << "missing samples" << std::endl;
+            juce::ignoreUnused(inferenceCounter);
             for (int sample = 0; sample < numSamples; ++sample) {
                 buffer.setSample(0, sample, 0.0f);
             }
