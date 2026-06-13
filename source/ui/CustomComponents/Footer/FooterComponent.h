@@ -6,29 +6,31 @@
 #define SCYCLONE_FOOTERCOMPONENT_H
 
 #include "JuceHeader.h"
+#include "../../../utils/colors.h"
 #include "../../../PluginParameters.h"
 #include "../../../PluginProcessor.h"
 #include "../../../ui/LookAndFeel/CustomFontLookAndFeel.h"
 
-class FooterComponent : public juce::Component, juce::Timer {
+class FooterComponent : public juce::Component, juce::Timer
+{
 public:
-    FooterComponent(AudioPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parameters);
+    FooterComponent(AudioPluginAudioProcessor &p, juce::AudioProcessorValueTreeState &parameters);
     ~FooterComponent();
 
     void resized() override;
-    void paint(juce::Graphics& g) override;
+    void paint(juce::Graphics &g) override;
     void timerCallback() override;
 
     void updateSpecs();
 
     void setTooltipText(juce::String newText);
+
 private:
-    AudioPluginAudioProcessor& processor;
-    juce::AudioProcessorValueTreeState& parameters;
+    AudioPluginAudioProcessor &processor;
+    juce::AudioProcessorValueTreeState &parameters;
 
     juce::Label tooltipLabel;
-    juce::Label latencyLabel;
-    juce::Label cpuLabel;
+    juce::Label statusLabel;
 
     int latencySamples = 0;
     int sampleRate = 0;
@@ -37,8 +39,6 @@ private:
 
     CustomFontLookAndFeel customFontLookAndFeel;
     juce::Font font;
-
 };
 
-
-#endif //SCYCLONE_FOOTERCOMPONENT_H
+#endif // SCYCLONE_FOOTERCOMPONENT_H

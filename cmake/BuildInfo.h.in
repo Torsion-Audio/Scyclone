@@ -1,0 +1,7 @@
+#pragma once
+
+namespace BuildInfo
+{
+    inline constexpr const char* commitHash = "@GIT_COMMIT_HASH@";
+    inline constexpr const char* commitDate = "@GIT_COMMIT_DATE_FORMATTED@";
+}

@@ -106,55 +106,88 @@ void InferenceThread::modelInputSizeChanged(int newModelInputSize) {
     onnxOutputData.resize(newModelInputSize, 0.0f);
 }
 
+bool InferenceThread::stopInferenceThreadAndWait()
+{
+    if (! isThreadRunning())
+        return true;
+
+    stopThread(10000);
+
+    constexpr int maxWaitMs = 10000;
+    const auto deadline = juce::Time::getMillisecondCounter() + (uint32_t) maxWaitMs;
+
+    while (isThreadRunning())
+    {
+        if (juce::Time::getMillisecondCounter() >= deadline)
+        {
+            std::cout << "InferenceThread: timed out waiting for inference thread to stop" << std::endl;
+            return false;
+        }
+
+        juce::Thread::sleep(1);
+    }
+
+    return true;
+}
+
 void InferenceThread::loadExternalModel(juce::File modelPath) {
     loadingModel = true;
 
-    if (isThreadRunning()) {
-        stopThread(10);
+    struct LoadingModelGuard
+    {
+        InferenceThread& owner;
+        ~LoadingModelGuard() { owner.loadingModel = false; }
+    } loadingGuard { *this };
 
-        while (!isThreadRunning()) {
-            juce::Time::waitForMillisecondCounter(juce::Time::getMillisecondCounter() + 1);
-        }
-    }
+    if (! stopInferenceThreadAndWait())
+        return;
 
+    try
+    {
 #if JUCE_WINDOWS
-    auto modelPathToLoad = modelPath.getFullPathName().toStdString();
-    std::wstring modelWideStr = std::wstring(modelPathToLoad.begin(), modelPathToLoad.end());
-    const wchar_t* modelWideCStr = modelWideStr.c_str();
+        auto modelPathToLoad = modelPath.getFullPathName().toStdString();
+        std::wstring modelWideStr = std::wstring(modelPathToLoad.begin(), modelPathToLoad.end());
+        const wchar_t* modelWideCStr = modelWideStr.c_str();
 
-    session = Ort::Session(env,
-                       modelWideCStr,
-                       sessionOptions);
+        session = Ort::Session(env,
+                           modelWideCStr,
+                           sessionOptions);
 #else
 
-    auto modelPathToLoad = modelPath.getFullPathName().toStdString();
-    const char* modelCStr = modelPathToLoad.c_str();
+        auto modelPathToLoad = modelPath.getFullPathName().toStdString();
+        const char* modelCStr = modelPathToLoad.c_str();
 
-    session = Ort::Session(env,
-                           modelCStr,
-                           sessionOptions);
+        session = Ort::Session(env,
+                               modelCStr,
+                               sessionOptions);
 #endif
 
-    prepare(last_spec);
+        prepare(last_spec);
 
-    auto shape = getInputShape(&session);
+        auto shape = getInputShape(&session);
 
-    for (int i = 0; i < shape.size(); ++i) {
-//        std::cout << "shape[" <<  i << "]: " << shape[i] << std::endl;
+        for (int i = 0; i < shape.size(); ++i) {
+    //        std::cout << "shape[" <<  i << "]: " << shape[i] << std::endl;
+        }
+        onModelLoaded(modelPath.getFileNameWithoutExtension());
     }
-    onModelLoaded(modelPath.getFileNameWithoutExtension());
-    loadingModel = false;
+    catch (const Ort::Exception& e)
+    {
+        std::cout << e.what() << std::endl;
+    }
+    catch (const std::exception& e)
+    {
+        std::cout << e.what() << std::endl;
+    }
 }
 
 void InferenceThread::loadInternalModel(RaveModel modelToLoad) {
     loadingModel = true;
 
-    if (isThreadRunning()) {
-        stopThread(10);
-
-        while (!isThreadRunning()) {
-            juce::Time::waitForMillisecondCounter(juce::Time::getMillisecondCounter() + 1);
-        }
+    if (! stopInferenceThreadAndWait())
+    {
+        loadingModel = false;
+        return;
     }
 
     switch (modelToLoad) {

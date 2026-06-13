@@ -3,19 +3,20 @@
 #include "PluginParameters.h"
 
 //==============================================================================
-AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parameters)
-    : AudioProcessorEditor (&p), apvts(parameters), processorRef (p), fileChooserManager(p), transientViewer(p)/*, openGLBackground(parameters, p)*/, advancedParameterControl(parameters), parameterControl(parameters),
+AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor &p, juce::AudioProcessorValueTreeState &parameters)
+    : AudioProcessorEditor(&p), apvts(parameters), processorRef(p), fileChooserManager(p), transientViewer(p) /*, openGLBackground(parameters, p)*/, advancedParameterControl(parameters), parameterControl(parameters),
       footerComponent(p, parameters), headerComponent(p, parameters)
 {
-    juce::ignoreUnused (processorRef);
+    juce::ignoreUnused(processorRef);
 
     openGLBackground = std::make_unique<OpenGLBackground>(parameters, p);
 
-    for (auto & parameterID : PluginParameters::getPluginParameterList()) {
+    for (auto &parameterID : PluginParameters::getPluginParameterList())
+    {
         parameters.addParameterListener(parameterID, this);
     }
 
-    juce::LookAndFeel::setDefaultLookAndFeel (&customFontLookAndFeel);
+    juce::LookAndFeel::setDefaultLookAndFeel(&customFontLookAndFeel);
 
     headerComponent.onParameterControlViewChange = [this](bool newState)
     {
@@ -53,9 +54,10 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize (1400, 700);
+    setSize(1400, 700);
 
-    processorRef.setExternalModelName = [this] (int modelID, juce::String& modelName) {
+    processorRef.setExternalModelName = [this](int modelID, juce::String &modelName)
+    {
         openGLBackground->externalModelLoaded(modelID, modelName);
     };
 
@@ -63,7 +65,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     // dirty work around to make the blobs appear correctly from the beginning
     auto fadeParam = parameters.getParameter(PluginParameters::FADE_ID.getParamID());
     auto fadeStatus = fadeParam->getValue();
-    fadeParam->setValueNotifyingHost(0.5f*fadeStatus);
+    fadeParam->setValueNotifyingHost(0.5f * fadeStatus);
     fadeParam->setValueNotifyingHost(fadeStatus);
 
     xyPadComponents = openGLBackground->getXYPad()->getTooltipPointers();
@@ -75,31 +77,37 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     addMouseListener(this, true);
 
     headerComponent.onScyloneButtonClick = [this](bool newState)
+    {
+        if (newState)
+        {
+            componentAnimator->fadeOut(&transientViewer, fadeTime);
+            if (headerComponent.detailButton.getToggleState())
             {
-                if (newState) {
-                    componentAnimator->fadeOut(&transientViewer, fadeTime);
-                    if (headerComponent.detailButton.getToggleState()) {
-                        componentAnimator->fadeOut(&advancedParameterControl, fadeTime);
-                    }
-                    else {
-                        componentAnimator->fadeOut(&parameterControl, fadeTime);
-                    }
-                }
-                else {
-                    if (headerComponent.detailButton.getToggleState()) {
-                        componentAnimator->fadeIn(&advancedParameterControl, fadeTime);
-                    }
-                    else {
-                        componentAnimator->fadeIn(&parameterControl, fadeTime);
-                        componentAnimator->fadeIn(&transientViewer, fadeTime);
-                    }
-                }
+                componentAnimator->fadeOut(&advancedParameterControl, fadeTime);
+            }
+            else
+            {
+                componentAnimator->fadeOut(&parameterControl, fadeTime);
+            }
+        }
+        else
+        {
+            if (headerComponent.detailButton.getToggleState())
+            {
+                componentAnimator->fadeIn(&advancedParameterControl, fadeTime);
+            }
+            else
+            {
+                componentAnimator->fadeIn(&parameterControl, fadeTime);
+                componentAnimator->fadeIn(&transientViewer, fadeTime);
+            }
+        }
 
-                openGLBackground->showSignalFlowChart(newState);
-                resized();
+        openGLBackground->showSignalFlowChart(newState);
+        resized();
 
-                headerComponent.detailButton.setEnabled(!newState);
-            };
+        headerComponent.detailButton.setEnabled(!newState);
+    };
 
     componentAnimator = std::make_unique<juce::ComponentAnimator>();
     initializeTooltipMap();
@@ -107,14 +115,15 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
 {
-    juce::LookAndFeel::setDefaultLookAndFeel (nullptr);
-    for (auto & parameterID : PluginParameters::getPluginParameterList()) {
+    juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
+    for (auto &parameterID : PluginParameters::getPluginParameterList())
+    {
         apvts.removeParameterListener(parameterID, this);
     }
 }
 
 //==============================================================================
-void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
+void AudioPluginAudioProcessorEditor::paint(juce::Graphics &g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll(juce::Colour::fromString(ColorPallete::BG));
@@ -125,7 +134,7 @@ void AudioPluginAudioProcessorEditor::resized()
     auto r = getLocalBounds();
     r.removeFromTop(20);
 
-    auto logoSection = juce::Rectangle<int>{getWidth()/2 - 20, 20, 40, 20};
+    auto logoSection = juce::Rectangle<int>{getWidth() / 2 - 20, 20, 40, 20};
     auto headerSection = r.removeFromTop(32);
     auto padSection = r.removeFromLeft(700);
     padSection.removeFromBottom(35);
@@ -135,7 +144,8 @@ void AudioPluginAudioProcessorEditor::resized()
 
     juce::ignoreUnused(headerSection, miniMapSection, sliderSection);
 
-    if (openGLBackground->isSignalFlowChartVisible()) {
+    if (openGLBackground->isSignalFlowChartVisible())
+    {
         auto window = getLocalBounds();
         window.removeFromTop(headerSection.getHeight() + 20);
         window.removeFromBottom(footerComponent.getHeight() + 20);
@@ -147,7 +157,7 @@ void AudioPluginAudioProcessorEditor::resized()
     transientViewer.setBounds(710, 450, 163, 163);
     advancedParameterControl.setBounds(765, 60, 600, 600);
 
-    auto areaParameter = getLocalBounds().removeFromRight(static_cast<int>((float)getWidth()*0.4f));
+    auto areaParameter = getLocalBounds().removeFromRight(static_cast<int>((float)getWidth() * 0.4f));
     areaParameter.removeFromTop(40);
     parameterControl.setBounds(areaParameter);
 
@@ -159,48 +169,68 @@ void AudioPluginAudioProcessorEditor::resized()
 
     processorRef.onNetwork1NameChange(processorRef.network1Name.toString());
     processorRef.onNetwork2NameChange(processorRef.network2Name.toString());
-
 }
 
-void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &parameterID, float newValue) {
+void AudioPluginAudioProcessorEditor::parameterChanged(const juce::String &parameterID, float newValue)
+{
     parameterControl.parameterChanged(parameterID, newValue);
-    if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && newValue == 1.f) {
-        fileChooserManager.openFileChooserForNetwork(1);
-    } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && newValue == 1.f) {
-        fileChooserManager.openFileChooserForNetwork(2);
+    if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && newValue == 1.f)
+    {
+        juce::Component::SafePointer<AudioPluginAudioProcessorEditor> safeThis(this);
+        juce::MessageManager::callAsync([safeThis]()
+                                        {
+            if (safeThis != nullptr)
+                safeThis->fileChooserManager.openFileChooserForNetwork(1, safeThis.getComponent()); });
+    }
+    else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && newValue == 1.f)
+    {
+        juce::Component::SafePointer<AudioPluginAudioProcessorEditor> safeThis(this);
+        juce::MessageManager::callAsync([safeThis]()
+                                        {
+            if (safeThis != nullptr)
+                safeThis->fileChooserManager.openFileChooserForNetwork(2, safeThis.getComponent()); });
     }
 }
 
 // Tooltips
-void AudioPluginAudioProcessorEditor::mouseEnter(const juce::MouseEvent &event) {
+void AudioPluginAudioProcessorEditor::mouseEnter(const juce::MouseEvent &event)
+{
     auto component = event.originalComponent;
     auto it = tooltipMap.find(component);
-    if (it != tooltipMap.end()) {
+    if (it != tooltipMap.end())
+    {
         footerComponent.setTooltipText(it->second);
     }
 }
 
-void AudioPluginAudioProcessorEditor::mouseExit(const juce::MouseEvent &) {
+void AudioPluginAudioProcessorEditor::mouseExit(const juce::MouseEvent &)
+{
     footerComponent.setTooltipText("");
 }
 
-void AudioPluginAudioProcessorEditor::initializeTooltipMap() {
+void AudioPluginAudioProcessorEditor::initializeTooltipMap()
+{
     tooltipMap.clear();
 
     // Check if all required components are loaded
-    if (!xyPadComponents) {
+    if (!xyPadComponents)
+    {
         throw std::runtime_error("xyPadComponents not loaded");
     }
-    if (!parameterControlComponents) {
+    if (!parameterControlComponents)
+    {
         throw std::runtime_error("parameterControlComponents not loaded");
     }
-    if (!headerComponents) {
+    if (!headerComponents)
+    {
         throw std::runtime_error("headerComponents not loaded");
     }
-    if (!advancedParameterControlComponents) {
+    if (!advancedParameterControlComponents)
+    {
         throw std::runtime_error("advancedParameterControlComponents not loaded");
     }
-    if (!openGLBackground) {
+    if (!openGLBackground)
+    {
         throw std::runtime_error("openGLBackground not loaded");
     }
 
@@ -246,12 +276,12 @@ void AudioPluginAudioProcessorEditor::initializeTooltipMap() {
     tooltipMap[advancedParameterControlComponents[14]] = "RAVE Network 2 Grain Pitch";
     tooltipMap[advancedParameterControlComponents[15]] = "RAVE Network 2 Grain Delay Dry/Wet";
 
-    auto* labels = openGLBackground->getLabels();
-    if (labels) {
+    auto *labels = openGLBackground->getLabels();
+    if (labels)
+    {
         tooltipMap[&labels->sharp] = "Low Cut Filter Frequency";
         tooltipMap[&labels->attack] = "Transient Shaper: Attack";
         tooltipMap[&labels->smooth] = "High Cut Filter Frequency";
         tooltipMap[&labels->sustain] = "Transient Shaper: Sustain";
     }
 }
-
