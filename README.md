@@ -31,9 +31,7 @@ We have provided two pre-trained models (presets) accessible under **assets/mode
 
 ## Installation
 
-Detailed instructions can be found here:
-- [Windows Guide](docs/install_instructions_windows.md).
-- [Mac Guide](docs/install_instructions_mac.md).
+Detailed instructions can be found in the [Installation Guide](docs/install_instructions.md).
 
 ## Build instruction
 
