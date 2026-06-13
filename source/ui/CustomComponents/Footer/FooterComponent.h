@@ -6,6 +6,7 @@
 #define SCYCLONE_FOOTERCOMPONENT_H
 
 #include "JuceHeader.h"
+#include "../../../utils/colors.h"
 #include "../../../PluginParameters.h"
 #include "../../../PluginProcessor.h"
 #include "../../../ui/LookAndFeel/CustomFontLookAndFeel.h"
