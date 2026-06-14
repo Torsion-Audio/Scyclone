@@ -73,6 +73,10 @@ endif()
 # Therefore we steal the compile definitions and include directories from the main target and pass them to our test target
 # Since we linked the shared juce targets in PRIVATE mode, they are not linked to the test target again
 target_compile_definitions(Test PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},COMPILE_DEFINITIONS>)
+
+# INCLUDE_DIRECTORIES copied via genex (evaluated at generate time, after RnboExport). RNBO paths
+# lose the SYSTEM flag, so re-apply them here (matches modules/RnboExport/CMakeLists.txt).
+set(_scyclone_rnbo_include_root "${CMAKE_CURRENT_SOURCE_DIR}/modules/RnboExport/rnbo")
 target_include_directories(Test PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/test/torsion
         ${CMAKE_CURRENT_SOURCE_DIR}/test/torsion/audio
@@ -81,6 +85,13 @@ target_include_directories(Test PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/test/scyclone/resampling
         ${CMAKE_CURRENT_SOURCE_DIR}/test/scyclone/mixer
         $<TARGET_PROPERTY:${PROJECT_NAME},INCLUDE_DIRECTORIES>)
+target_include_directories(Test SYSTEM PRIVATE
+        ${_scyclone_rnbo_include_root}
+        ${_scyclone_rnbo_include_root}/common)
+
+message(WARNING
+        "Test target: RNBO header warnings are suppressed (SYSTEM include, same as ${TARGET_NAME}). "
+        "Unused static inline helpers in RNBO exports can trigger MSVC C4505 at /W4.")
 
 # Make an Xcode Scheme for the test executable so we can run Test in the IDE
 set_target_properties(Test PROPERTIES XCODE_GENERATE_SCHEME ON)
