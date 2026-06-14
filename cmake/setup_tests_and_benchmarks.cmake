@@ -8,6 +8,11 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test PREFIX "" FILES ${TestFiles})
 # This module enables populating content at configure time via any method supported by the ExternalProject module. Whereas ExternalProject_Add() downloads at build time, the FetchContent module makes content available immediately, allowing the configure step to use the content in commands like add_subdirectory(), include() or file() operations.
 include(FetchContent)
 
+if(TARGET scyclone_sanitizer_flags AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fsanitize=address")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /fsanitize=address")
+endif()
+
 FetchContent_Declare(googletest
         URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip)
 
@@ -38,6 +43,9 @@ set_property(TARGET Test PROPERTY CXX_STANDARD 20)
 
 # Link the test executable against gtest_main and google benchmark
 target_link_libraries(Test PRIVATE gtest_main benchmark::benchmark "${TARGET_NAME}")
+if(TARGET scyclone_sanitizer_flags)
+    target_link_libraries(Test PRIVATE scyclone_sanitizer_flags)
+endif()
 
 # We can't link again to the shared juce target without ODL violations (https://github.com/sudara/pamplejuce/issues/31, https://forum.juce.com/t/windows-linker-issue-on-develop/55524/2)
 # Therefore we steal the compile definitions and include directories from the main target and pass them to our test target
@@ -53,5 +61,11 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test PREFIX "" FILES ${TestFiles})
 
 # include Loads and runs CMake code from the file given. Loads and runs CMake code from the file given.
 include(GoogleTest)
-# gtest_discover_tests will register a CTest test for each gtest and run them all in parallel with the rest of the Test.
-gtest_discover_tests(Test)
+
+# Default CI / sanitizer jobs: Tier A (exclude ResamplingTierB extended matrix).
+add_test(NAME ScycloneTests COMMAND Test --gtest_filter=-*ResamplingTierB*)
+set_tests_properties(ScycloneTests PROPERTIES LABELS "default")
+
+# Extended block-size matrix — release tags and manual: ctest -L tier-b
+add_test(NAME ScycloneTestsTierB COMMAND Test --gtest_filter=*ResamplingTierB*)
+set_tests_properties(ScycloneTestsTierB PROPERTIES LABELS "tier-b")
