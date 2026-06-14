@@ -2,7 +2,10 @@
 // See docs/resampling_architecture.md
 
 #include <gtest/gtest.h>
-#include "ResamplingHelpers.h"
+#include "HostConfigCatalog.h"
+#include "PassthroughProcessor.h"
+#include "ResamplingContractAssertions.h"
+#include "ResamplingFixtures.h"
 
 using namespace resampling_test;
 
@@ -80,18 +83,17 @@ TEST_P(RoundTripCiTest, LongRun_SampleCountConservation) {
     skipIfInfeasible(cfg);
     auto chain = prepareRoundTripChain(cfg.hostSR, cfg.hostBlock);
     runSilencePreRoll(chain, kPreRollBlocks);
-    long hostIn = 0;
-    long hostOut = 0;
-    chain.hostBuffer.clear();
-    for (int n = 0; n < kLongRunBlocks; ++n) {
-        hostIn += chain.hostBuffer.getNumSamples();
-        juce::AudioBuffer<float>& upOut = chain.up.processBlock(chain.hostBuffer);
-        juce::AudioBuffer<float>& downOut = chain.down.processBlock(upOut);
-        hostOut += downOut.getNumSamples();
-    }
-    const double effectiveRatio = static_cast<double>(hostOut) / static_cast<double>(hostIn);
+    const auto counts = runLongBlockLoop(kLongRunBlocks, [&](int, LongRunCounts &c)
+    {
+        chain.hostBuffer.clear();
+        c.inputTotal += chain.hostBuffer.getNumSamples();
+        juce::AudioBuffer<float> &upOut = chain.up.processBlock(chain.hostBuffer);
+        juce::AudioBuffer<float> &downOut = chain.down.processBlock(upOut);
+        c.outputTotal += downOut.getNumSamples();
+    });
+    const double effectiveRatio = static_cast<double>(counts.outputTotal) / static_cast<double>(counts.inputTotal);
     const int tol = longRunTolerance(effectiveRatio);
-    EXPECT_LE(std::abs(hostOut - hostIn), tol)
+    EXPECT_LE(std::abs(counts.outputTotal - counts.inputTotal), tol)
         << "host in/out should match within tolerance; hostSR=" << cfg.hostSR;
 
     assertRoundTripFiniteOutput(chain);

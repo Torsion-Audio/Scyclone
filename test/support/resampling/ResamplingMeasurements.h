@@ -1,21 +1,33 @@
 #pragma once
 
-// Measurement helpers for resampling behavioral tests and calibration probes.
-// Include after ResamplingChainHelpers.h.
+/// @file ResamplingMeasurements.h
+/// @brief Pure measurement helpers for resampling behavioral tests and calibration probes.
+///
+/// Follows the measure/assert split: these functions run stimulus + processing and return
+/// scalar metrics or structs. They never call `EXPECT_*` — use
+/// ResamplingContractAssertions.h for gtest contracts.
+///
+/// Calibration probes call `measure*` directly and print suggested tolerances.
+///
+/// @namespace resampling_test (compatibility alias for scyclone::test::resampling)
 
-#include <limits>
 #include <vector>
-#include "ResamplingChainHelpers.h"
-#include "dsp/mixer/DryWetMixer.h"
+#include "ResamplingRunner.h"
+#include "SignalGenerators.h"
+#include "SignalMetrics.h"
+#include "TestInfrastructure.h"
 
 namespace resampling_test {
 
+/// Extra blocks beyond latency-aligned warmup before RMS steady window.
 constexpr int kSineWarmupMarginBlocks = 2;
 
+/// Block count to flush reported latency before swept-sine RMS capture.
 inline int sineWarmupBlocks(int latencySamples, int hostBlock) {
     return (latencySamples + hostBlock - 1) / hostBlock + kSineWarmupMarginBlocks;
 }
 
+/// Worst normalized RMS error over @p nBlocks aligned at @p latency (output vs input).
 inline float worstSweptSineRmsError(const std::vector<float>& inputSignal,
                                     const std::vector<float>& outputSignal,
                                     int hostBlock, int latency, int nBlocks = kSteadyBlocks) {
@@ -40,6 +52,7 @@ inline float worstSweptSineRmsError(const std::vector<float>& inputSignal,
     return worst;
 }
 
+/// Full round-trip swept-sine RMS error (pre-roll, warmup, steady capture).
 inline float measureRoundTripRmsError(RoundTripChain& chain, double hostSR, int hostBlock,
                                       IProcessor& middle) {
     runSilencePreRoll(chain, kPreRollBlocks);
@@ -72,6 +85,7 @@ inline float measureRoundTripRmsError(RoundTripChain& chain, double hostSR, int 
     return worstSweptSineRmsError(inputSignal, outputSignal, hostBlock, latency);
 }
 
+/// Production-chain RMS at an explicit @p latency (for calibration lag sweeps).
 inline float measureProductionRmsErrorAtLatency(ProductionChain& chain, double hostSR, int hostBlock,
                                                 int latency) {
     runProductionSilencePreRoll(chain, productionPreRollBlocks(latency, hostBlock));
@@ -100,11 +114,13 @@ inline float measureProductionRmsErrorAtLatency(ProductionChain& chain, double h
     return worstSweptSineRmsError(inputSignal, outputSignal, hostBlock, latency);
 }
 
+/// Production-chain RMS using `productionChainTotalLatency`.
 inline float measureProductionRmsError(ProductionChain& chain, double hostSR, int hostBlock) {
     return measureProductionRmsErrorAtLatency(
         chain, hostSR, hostBlock, productionChainTotalLatency(chain, hostSR));
 }
 
+/// FFT peak SNR (dB) for up-only windowed sine. Returns -1.0 on failure.
 inline double measureUpSnrDb(double hostSR, int hostBlock, int passBandPeaks = 1) {
     constexpr int kInputBlocks = 64;
     const int inputLen = hostBlock * kInputBlocks;
@@ -125,6 +141,7 @@ inline double measureUpSnrDb(double hostSR, int hostBlock, int passBandPeaks = 1
     return calculateSnrDb(output.data() + skip, static_cast<int>(output.size()) - skip, passBandPeaks);
 }
 
+/// FFT peak SNR (dB) for down-only windowed sine (production coupled sizing).
 inline double measureDownSnrDb(double hostSR, int hostBlock, int passBandPeaks = 1) {
     const auto ratioCase = makeProductionRatioCase(hostSR, hostBlock);
     constexpr int kInputBlocks = 64;
@@ -146,86 +163,11 @@ inline double measureDownSnrDb(double hostSR, int hostBlock, int passBandPeaks =
     return calculateSnrDb(output.data() + skip, static_cast<int>(output.size()) - skip, passBandPeaks);
 }
 
-struct DryWetDiracMeasurement {
-    int peakPos = -1;
-    int expectedPeak = 0;
-    float peakAmplitude = 0.0f;
-};
-
-inline DryWetDiracMeasurement measureDryWetDiracPeak(double hostSR, int hostBlock,
-                                                       int searchHalfWindow) {
-    DryWetDiracMeasurement result;
-    auto prod = prepareProductionChain(hostSR, hostBlock);
-    const int totalLatency = productionChainTotalLatency(prod, hostSR);
-    const int diracPos = hostBlock / 2;
-    result.expectedPeak = diracPos + totalLatency;
-
-    runProductionSilencePreRoll(prod, productionPreRollBlocks(totalLatency, hostBlock));
-
-    const int collectSamples = totalLatency + hostBlock + diracPos;
-    std::vector<float> wetCollected;
-    std::vector<float> dryCollected;
-    wetCollected.reserve(static_cast<size_t>(collectSamples));
-    dryCollected.reserve(static_cast<size_t>(collectSamples));
-
-    prod.resamplers.hostBuffer.setSample(0, diracPos, 1.0f);
-
-    juce::AudioBuffer<float> onnxBuf;
-    while (static_cast<int>(wetCollected.size()) < collectSamples) {
-        for (int i = 0; i < prod.resamplers.hostBuffer.getNumSamples(); ++i) {
-            dryCollected.push_back(prod.resamplers.hostBuffer.getSample(0, i));
-        }
-
-        juce::AudioBuffer<float>& upOut = prod.resamplers.up.processBlock(prod.resamplers.hostBuffer);
-        onnxBuf.makeCopyOf(upOut);
-        prod.onnx.processBlock(onnxBuf);
-        juce::AudioBuffer<float>& wetOut = prod.resamplers.down.processBlock(onnxBuf);
-        for (int i = 0; i < wetOut.getNumSamples(); ++i) {
-            wetCollected.push_back(wetOut.getSample(0, i));
-        }
-
-        prod.resamplers.hostBuffer.clear();
-    }
-
-    const int mixLen = std::min(static_cast<int>(wetCollected.size()),
-                                static_cast<int>(dryCollected.size()));
-    juce::AudioBuffer<float> dryBuf(1, mixLen);
-    juce::AudioBuffer<float> mixBuf(1, mixLen);
-    for (int i = 0; i < mixLen; ++i) {
-        dryBuf.setSample(0, i, dryCollected[static_cast<size_t>(i)]);
-        mixBuf.setSample(0, i, wetCollected[static_cast<size_t>(i)]);
-    }
-
-    DryWetMixer mixer;
-    mixer.prepare(juce::dsp::ProcessSpec{ hostSR, static_cast<uint32_t>(mixLen), 1 });
-    mixer.setWetLatency(totalLatency);
-    mixer.setDryWetProportion(0.5f);
-    mixer.setDrySamples(dryBuf);
-    mixer.setWetSamples(mixBuf);
-
-    const int searchStart = std::max(0, result.expectedPeak - searchHalfWindow);
-    const int searchEnd = std::min(mixLen, result.expectedPeak + searchHalfWindow + 1);
-
-    std::vector<float> mixed(mixBuf.getReadPointer(0), mixBuf.getReadPointer(0) + mixLen);
-    result.peakPos = findImpulsePeak(mixed, searchStart, searchEnd);
-    if (result.peakPos >= 0 && result.peakPos < mixLen) {
-        result.peakAmplitude = mixed[static_cast<size_t>(result.peakPos)];
-    }
-    return result;
-}
-
-inline int measureDryWetDiracJitter(double hostSR, int hostBlock, int searchHalfWindow) {
-    const auto measurement = measureDryWetDiracPeak(hostSR, hostBlock, searchHalfWindow);
-    if (measurement.peakPos < 0) {
-        return std::numeric_limits<int>::max();
-    }
-    return std::abs(measurement.peakPos - measurement.expectedPeak);
-}
-
 constexpr int kImpulsePeakWindowHalfWidth = 5;
 constexpr int kImpulseWideSearchHalfWidth = 128;
 constexpr int kImpulsePeakToleranceSamples = 5;
 
+/// Captured impulse samples plus narrow/wide peak search metrics.
 struct ImpulseResponse {
     std::vector<float> samples;
     int expectedPeak = 0;
@@ -237,6 +179,7 @@ struct ImpulseResponse {
     float maxOutsideMainWindow = 0.f;
 };
 
+/// Populates narrow/wide peak fields on @p response from @p response.samples.
 inline void fillImpulsePeakMetrics(ImpulseResponse& response) {
     const int expected = response.expectedPeak;
     const int hostBlock = response.hostBlock;
@@ -265,6 +208,7 @@ inline void fillImpulsePeakMetrics(ImpulseResponse& response) {
     }
 }
 
+/// Impulse at @p impulseSample through middle chain with explicit pre-roll.
 inline ImpulseResponse measureMiddleChainImpulse(RoundTripChain& chain, IProcessor& middle,
                                                  double hostSR, int hostBlock,
                                                  int impulseSample, int preRollBlocks) {
@@ -281,6 +225,7 @@ inline ImpulseResponse measureMiddleChainImpulse(RoundTripChain& chain, IProcess
     return response;
 }
 
+/// Impulse with production-derived pre-roll block count.
 inline ImpulseResponse measureMiddleChainImpulse(RoundTripChain& chain, IProcessor& middle,
                                                  double hostSR, int hostBlock,
                                                  int impulseSample = 0) {
@@ -290,6 +235,7 @@ inline ImpulseResponse measureMiddleChainImpulse(RoundTripChain& chain, IProcess
         productionPreRollBlocks(expectedPeak, hostBlock));
 }
 
+/// Round-trip impulse (passthrough middle, default pre-roll).
 inline ImpulseResponse measureRoundTripImpulse(RoundTripChain& chain, double hostSR, int hostBlock,
                                                int impulseSample = 0) {
     PassthroughProcessor passthrough;
@@ -297,6 +243,7 @@ inline ImpulseResponse measureRoundTripImpulse(RoundTripChain& chain, double hos
         chain, passthrough, hostSR, hostBlock, impulseSample, kPreRollBlocks);
 }
 
+/// Production-chain impulse (SimulatedOnnx middle).
 inline ImpulseResponse measureProductionImpulse(ProductionChain& chain, double hostSR, int hostBlock,
                                                 int impulseSample = 0) {
     return measureMiddleChainImpulse(chain.resamplers, chain.onnx, hostSR, hostBlock, impulseSample);

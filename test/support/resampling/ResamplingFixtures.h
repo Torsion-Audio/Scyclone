@@ -1,53 +1,71 @@
 #pragma once
 
+/// @file ResamplingFixtures.h
+/// @brief gtest fixture classes and parameterized case builders for resampling tests.
+///
+/// Fixtures inherit `JuceAudioTest` + `WithParamInterface`. Case builders expand
+/// host-config matrices into `INSTANTIATE_TEST_SUITE_P` value lists.
+///
+/// @namespace resampling_test
+
 #include <string>
 #include <vector>
 #include "HostConfigCatalog.h"
+#include "ResamplingTopology.h"
 #include "TestInfrastructure.h"
 
 namespace resampling_test
 {
 
+    /// Chain topology under test in parameterized chain contracts.
     enum class ChainKind
     {
         RoundTrip,
         Production
     };
 
+    /// Up-only vs down-only structural test axis.
     enum class ProcessorDirection
     {
         Up,
         Down
     };
 
+    /// Host config × chain kind for `ChainContractTest`.
     struct ChainContractCase
     {
         HostConfig cfg;
         ChainKind chain;
     };
 
+    /// Host config × processor direction for `ProcessorStructuralTest`.
     struct ProcessorStructuralCase
     {
         HostConfig cfg;
         ProcessorDirection direction;
     };
 
+    /// Parameterized dry/wet dirac alignment over host configs.
     class DryWetHostConfigTest : public JuceAudioTest, public ::testing::WithParamInterface<HostConfig>
     {
     };
 
+    /// Round-trip and production chain contracts.
     class ChainContractTest : public JuceAudioTest, public ::testing::WithParamInterface<ChainContractCase>
     {
     };
 
+    /// Default CI round-trip tests (long-run, silence-out).
     class RoundTripCiTest : public JuceAudioTest, public ::testing::WithParamInterface<HostConfig>
     {
     };
 
+    /// Extended host matrix (release / manual CI label).
     class ExtendedHostMatrixTest : public JuceAudioTest, public ::testing::WithParamInterface<HostConfig>
     {
     };
 
+    /// Per-processor structural invariants (up + down).
     class ProcessorStructuralTest : public JuceAudioTest,
                                     public ::testing::WithParamInterface<ProcessorStructuralCase>
     {
@@ -103,6 +121,7 @@ namespace resampling_test
         return ::testing::ValuesIn(processorStructuralCasesFor(configs));
     }
 
+    /// Prepares processor + buffer for structural tests; sets expected I/O frame counts.
     inline void setupProcessorStructuralCase(const ProcessorStructuralCase &testCase,
                                              ResamplingProcessor &proc,
                                              juce::AudioBuffer<float> &buf,

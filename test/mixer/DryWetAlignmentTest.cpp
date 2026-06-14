@@ -2,7 +2,10 @@
 // Why: PluginProcessor sets wet latency from reported total; dry and wet must peak together.
 
 #include <gtest/gtest.h>
-#include "ResamplingHelpers.h"
+#include "DryWetAssertions.h"
+#include "HostConfigCatalog.h"
+#include "ResamplingFixtures.h"
+#include "TestInfrastructure.h"
 
 using namespace resampling_test;
 
