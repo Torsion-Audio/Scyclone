@@ -1,0 +1,177 @@
+# Scyclone test suite
+
+Behavioral contracts for resampling, dry/wet alignment, and plugin smoke tests.
+
+See [docs/resampling_architecture.md](../docs/resampling_architecture.md) for the production graph.
+
+## Layout
+
+```
+test/
+  support/
+    TestInfrastructure.h          HostConfig, feasibility helpers, JuceAudioTest
+    HostConfigCatalog.h           Sample-rate/block axes, composable presets, gtest adapters
+    processors/
+      PassthroughProcessor.h      Zero-latency injectable middle stage
+      DelayLineProcessor.h        Configurable FIFO delay @ processing rate
+    resampling/
+      ResamplingHelpers.h         Umbrella include (preferred entry point)
+      ResamplingFixtures.h        ChainContractTest, ProcessorStructuralTest, case builders
+      ResamplingSignalUtils.h     genWindowedSines, calculateSnrDb, findImpulsePeak
+      ResamplingChainHelpers.h    Chain builders, collectMiddleChainOutput, pre-roll
+      ResamplingMeasurements.h    measure* only (ImpulseResponse, RMS, dirac)
+      ResamplingContractAssertions.h  assert* only (pure gtest contracts)
+      SimulatedOnnxProcessor.h    ONNX-shaped DelayLineProcessor preset
+  resampling/
+    IsolationTest.cpp             Uncoupled up/down sizing (not production mode)
+    StructuralTest.cpp            Per-processor frame invariants, prepare/release
+    SignalTest.cpp                FFT peak SNR on windowed sines
+    ChainContractTest.cpp         Round-trip + production chain contracts (ChainKind param)
+  mixer/
+    DryWetAlignmentTest.cpp       Dry/wet dirac peak alignment
+    GrainDryWetContractTest.cpp   Grain dry-buffer aliasing contract
+  plugin/
+    PluginIntegrationTest.cpp     Full graph prepare/processBlock smoke
+  calibration/
+    ResamplingProbeTest.cpp       DISABLED tolerance / SNR / latency probes
+  benchmark/
+    benchmark.cpp                 Separate Benchmark target (not in ctest)
+```
+
+## Test layers
+
+Inspired by [libsamplerate tests](../modules/libsamplerate/tests/):
+
+| Layer | Files | What we check |
+|-------|-------|---------------|
+| **Structural** | `resampling/StructuralTest.cpp` | Per-block frame invariants (up + down), warmup partial-block tail zeroed, long-run frame counts, prepare/release stability |
+| **Signal quality** | `resampling/SignalTest.cpp` | FFT peak SNR (dB) on windowed sines — up-only and down-only |
+| **Contracts** | `resampling/ChainContractTest.cpp` | Block size, RMS, impulse — round-trip (all rates) + production (48 kHz impulse/RMS only) |
+| **Alignment** | `mixer/DryWetAlignmentTest.cpp` | Dry/wet dirac peak at `diracPos + totalLatency` |
+| **Plugin** | `plugin/PluginIntegrationTest.cpp` | Full graph prepare/processBlock smoke |
+
+## Core contracts
+
+| Contract | What we check | Why |
+|----------|---------------|-----|
+| **Block size** | Host block in == host block out | Fixed block graph contract |
+| **Signal fidelity** | FFT SNR on windowed sines (up/down); swept-sine RMS round-trip + production (48 kHz only) | Resampler quality + latency alignment |
+| **Dry/wet dirac** | Wet peak in mix at `diracPos + totalLatency` | User-audible time alignment |
+| **Impulse side lobes** | No secondary peak above 15% of main peak outside main window (round-trip + 48 kHz production) | Duplicate/truncated block content |
+| **Warmup partial tail** | Samples `[framesGen..outSize)` zero when SRC underfills | Stale buffer must not reach ONNX path |
+
+## Host config presets
+
+| Preset | Configs | Used by |
+|--------|---------|---------|
+| `defaultCiHostConfigs()` | 44.1/48 kHz × 128/512 | Chain contracts, structural, round-trip long-run |
+| `alignmentEdgeHostConfigs()` | 32, 64, 2048, 8192 (44.1), 2048 (48) | Composed into dry/wet matrix |
+| `dryWetHostConfigs()` | default CI + alignment edge blocks | Dry/wet dirac alignment (block-center sensitive) |
+| `extendedHostMatrixConfigs()` | 14 curated host/block pairs | `ExtendedHostMatrix` suite only |
+
+Axes and combinators (`cartesianHostConfigs`, `mergeHostConfigs`, `dedupeHostConfigs`) live in `HostConfigCatalog.h`.
+
+## Includes
+
+Prefer a single umbrella include in test `.cpp` files:
+
+```cpp
+#include "ResamplingHelpers.h"   // resampling, chain, calibration tests
+#include "TestInfrastructure.h"  // plugin smoke, grain-only fixtures
+```
+
+Tolerance constants live in `ResamplingContractAssertions.h` (RMS/dirac) and `ResamplingSignalUtils.h` (SNR floors). Measurements live in `ResamplingMeasurements.h` (`measureRoundTripImpulse`, `measureProductionImpulse`, etc.); tests and probes should call `measure*` then `assert*` for debuggable failures.
+
+### Injectable pipeline layers
+
+| Layer | Middle mock | What it validates |
+|-------|-------------|-------------------|
+| Unit | — | `ResamplingProcessor` structural (partial tail, steady IO, SNR) |
+| Chain | `PassthroughProcessor` | SRC block contract, round-trip impulse |
+| Chain | `SimulatedOnnxProcessor` | Full latency formula @ 48 kHz |
+| Mixer | `SimulatedOnnxProcessor` + `DryWetMixer` | User-facing mix alignment (default CI rates) |
+
+Resampler regressions should fail at **Passthrough** middle, not require ONNX-shaped latency.
+
+## Calibration policy
+
+**Cross-rate production chain:** swept-sine RMS and impulse peak are **`GTEST_SKIP`** in default CI (host rate ≠ 48 kHz). Round-trip impulse and dry/wet dirac still run at all default CI rates.
+
+**Open product issue:** bulk `productionChainTotalLatency` ≠ measured group delay at cross-rate (~90 samples @ 44.1 kHz / 128). See [docs/resampling_architecture.md](../docs/resampling_architecture.md). Do not widen CI tolerance to hide this — use `DISABLED_LatencyAudit` / `DISABLED_ProductionSineLagSweep` probes.
+
+See [calibration/README.md](calibration/README.md) for when to run DISABLED probes.
+
+```powershell
+# RMS / dirac tolerances
+.\build\Test.exe --gtest_filter=*PrintToleranceMeasurements* --gtest_also_run_disabled_tests
+
+# SNR floors (update defaultCiSnrCases() — measured − 3 dB)
+.\build\Test.exe --gtest_filter=*PrintSnrMeasurements* --gtest_also_run_disabled_tests
+```
+
+**Re-run and update tolerances** if the resampler library, `SimulatedOnnxProcessor` latency config, or `InferenceThread` model sizes change.
+
+## CI policy
+
+| Label | When | Purpose |
+|-------|------|---------|
+| `default` | Every PR / develop push | Excludes `ExtendedHostMatrix` suite |
+| `extended-matrix` | Release tags (`v*`) and manual | Extended host/block matrix only |
+
+```powershell
+cmake --preset default
+cmake --build --preset test
+
+# Default (CI)
+ctest --test-dir build -L default --output-on-failure
+
+# Extended matrix (release / local)
+ctest --test-dir build -L extended-matrix --output-on-failure
+```
+
+If `ctest -L` is unavailable, use `ctest --label-regex "default"`.
+
+## CMake presets
+
+Shared presets live in [`CMakePresets.json`](../CMakePresets.json). Machine-specific overrides (e.g. macOS arch) belong in a gitignored `CMakeUserPresets.json`.
+
+| Configure preset | Build dir | Purpose |
+|------------------|-----------|---------|
+| `default` | `build/` | Debug — tests, `ctest`, clangd |
+| `release` | `build-release/` | Release — VST3 / Standalone (required on Windows) |
+| `asan-ubsan` | `build-asan-ubsan/` | Linux/macOS ASan + UBSan (`Test` only) |
+| `asan` | `build-asan/` | Windows MSVC ASan (`Test` only) |
+| `tsan` | `build-tsan/` | Linux/macOS ThreadSanitizer (`Test` only) |
+
+```powershell
+cmake --preset default
+cmake --build --preset test
+
+cmake --preset release
+cmake --build --preset release
+
+# Linux/macOS sanitizer (after configure)
+cmake --preset asan-ubsan
+cmake --build --preset asan-ubsan
+ctest --test-dir build-asan-ubsan -L default --output-on-failure
+
+# Windows sanitizer
+cmake --preset asan
+cmake --build --preset asan
+ctest --test-dir build-asan -L default --output-on-failure
+```
+
+MSan and LeakSanitizer are not preset-wired (extra toolchain setup). See maintainer doc below.
+
+## Sanitizer CI
+
+AddressSanitizer, UndefinedBehaviorSanitizer, and ThreadSanitizer run on every push/PR to `develop` via [`.github/workflows/sanitizers.yml`](../.github/workflows/sanitizers.yml). Maintainer details: [docs/maintainer/TESTING_SANITIZERS.md](../docs/maintainer/TESTING_SANITIZERS.md).
+
+## IDE / IntelliSense
+
+After clone, run `cmake --preset default` and `cmake --build --preset test`. Squiggles on test includes before configure are normal. With clangd, [`.clangd`](../.clangd) picks up `build/compile_commands.json` automatically. If you use the Microsoft C/C++ extension instead, set `C_Cpp.default.compileCommands` locally to `build/compile_commands.json` (optional, IntelliSense-only — ctest is the source of truth).
+
+## Targets
+
+- **Test** — gtest behavioral contracts (this document)
+- **Benchmark** — construction benchmarks; not run by `ctest`
