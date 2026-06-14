@@ -1,8 +1,8 @@
 # Externally provided libraries
 # Using zip files instead is faster
 
-# get all test cpp and header files (benchmark lives in test/benchmark/ — separate from gtest)
-file(GLOB_RECURSE TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/test/*.h")
+# Test translation units only (headers are included, not compiled). Benchmark is separate.
+file(GLOB_RECURSE TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp")
 list(FILTER TestFiles EXCLUDE REGEX ".*/benchmark/.*")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test PREFIX "" FILES ${TestFiles})
 

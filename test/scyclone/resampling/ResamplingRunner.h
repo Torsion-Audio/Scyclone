@@ -5,6 +5,7 @@
 ///
 /// Act-phase helpers built on `detail::runChainBlocks`. Public aliases preserve
 /// the original API (`runSilencePreRoll`, `collectMiddleChainOutput`, etc.).
+/// Steady-state block loops and aligned capture live in ResamplingChainDriver.h.
 /// Single-processor helpers delegate to `torsion::test::BlockStreaming.h`.
 ///
 /// @namespace scyclone::test::resampling
@@ -25,8 +26,9 @@ namespace scyclone::test::resampling
     namespace detail
     {
 
-        inline void processMiddleChainBlock(RoundTripChain &chain, IProcessor &middle,
-                                            std::vector<float> *output = nullptr)
+        /// One host block through up → middle (buffer copy) → down. Returns down output sample count.
+        inline int processMiddleChainBlock(RoundTripChain &chain, IProcessor &middle,
+                                           std::vector<float> *output = nullptr)
         {
             juce::AudioBuffer<float> middleBuf;
             juce::AudioBuffer<float> &upOut = chain.up.processBlock(chain.hostBuffer);
@@ -37,15 +39,17 @@ namespace scyclone::test::resampling
             {
                 torsion::test::appendBufferSamples(downOut, *output);
             }
+            return downOut.getNumSamples();
         }
 
-        inline bool processProductionBlock(ProductionChain &chain, juce::AudioBuffer<float> &onnxBuf,
-                                           std::vector<float> *output = nullptr)
+        /// One host block through production chain. Returns 0 when up produces no samples.
+        inline int processProductionBlock(ProductionChain &chain, juce::AudioBuffer<float> &onnxBuf,
+                                          std::vector<float> *output = nullptr)
         {
             juce::AudioBuffer<float> &upOut = chain.resamplers.up.processBlock(chain.resamplers.hostBuffer);
             if (upOut.getNumChannels() < 1 || upOut.getNumSamples() < 1)
             {
-                return false;
+                return 0;
             }
             onnxBuf.setSize(1, upOut.getNumSamples(), false, false, true);
             onnxBuf.copyFrom(0, 0, upOut, 0, 0, upOut.getNumSamples());
@@ -55,19 +59,19 @@ namespace scyclone::test::resampling
             {
                 torsion::test::appendBufferSamples(downOut, *output);
             }
-            return true;
+            return downOut.getNumSamples();
         }
 
         enum class ChainRunKind
         {
-            RoundTrip,
-            MiddleChain,
+            /// Round-trip or middle-injected path (up → IProcessor → down).
+            WithMiddleProcessor,
             Production
         };
 
         struct ChainRunContext
         {
-            ChainRunKind kind = ChainRunKind::RoundTrip;
+            ChainRunKind kind = ChainRunKind::WithMiddleProcessor;
             RoundTripChain *roundTrip = nullptr;
             ProductionChain *production = nullptr;
             IProcessor *middle = nullptr;
@@ -92,14 +96,11 @@ namespace scyclone::test::resampling
 
                 switch (ctx.kind)
                 {
-                case ChainRunKind::RoundTrip:
-                    processMiddleChainBlock(*ctx.roundTrip, *ctx.middle, ctx.output);
-                    break;
-                case ChainRunKind::MiddleChain:
+                case ChainRunKind::WithMiddleProcessor:
                     processMiddleChainBlock(*ctx.roundTrip, *ctx.middle, ctx.output);
                     break;
                 case ChainRunKind::Production:
-                    if (!processProductionBlock(*ctx.production, *ctx.onnxBuf, ctx.output))
+                    if (processProductionBlock(*ctx.production, *ctx.onnxBuf, ctx.output) == 0)
                     {
                         return;
                     }
@@ -127,7 +128,7 @@ namespace scyclone::test::resampling
         chain.hostBuffer.clear();
         PassthroughProcessor passthrough;
         detail::ChainRunContext ctx;
-        ctx.kind = detail::ChainRunKind::RoundTrip;
+        ctx.kind = detail::ChainRunKind::WithMiddleProcessor;
         ctx.roundTrip = &chain;
         ctx.middle = &passthrough;
         detail::runChainBlocks(ctx, nBlocks);
@@ -148,7 +149,7 @@ namespace scyclone::test::resampling
     {
         chain.hostBuffer.clear();
         detail::ChainRunContext ctx;
-        ctx.kind = detail::ChainRunKind::MiddleChain;
+        ctx.kind = detail::ChainRunKind::WithMiddleProcessor;
         ctx.roundTrip = &chain;
         ctx.middle = &middle;
         detail::runChainBlocks(ctx, nBlocks);
@@ -169,7 +170,7 @@ namespace scyclone::test::resampling
                                        IProcessor &middle, int nBlocks, int blockIndexStart)
     {
         detail::ChainRunContext ctx;
-        ctx.kind = detail::ChainRunKind::MiddleChain;
+        ctx.kind = detail::ChainRunKind::WithMiddleProcessor;
         ctx.roundTrip = &chain;
         ctx.middle = &middle;
         ctx.hostSR = hostSR;
@@ -214,7 +215,7 @@ namespace scyclone::test::resampling
         std::vector<float> collected;
         collected.reserve(static_cast<size_t>(totalSamples));
         detail::ChainRunContext ctx;
-        ctx.kind = detail::ChainRunKind::MiddleChain;
+        ctx.kind = detail::ChainRunKind::WithMiddleProcessor;
         ctx.roundTrip = &chain;
         ctx.middle = &middle;
         ctx.output = &collected;
