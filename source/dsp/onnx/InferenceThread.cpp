@@ -74,24 +74,26 @@ void InferenceThread::run() {
     const std::array<const char *, 1> inputNames = {(char*) inputName.get()};
     const std::array<const char *, 1> outputNames = {(char*) outputName.get()};
 
-    // run inference
-    try {
-        session.Run(runOptions, inputNames.data(), inputTensor.get(), 1, outputNames.data(), outputTensor.get(), 1);
-    } catch (Ort::Exception &e) {
-        std::cout << e.what() << std::endl;
+    // run inference if model is not muted
+    if (!muted) {
+        try {
+            session.Run(runOptions, inputNames.data(), inputTensor.get(), 1, outputNames.data(), outputTensor.get(), 1);
+        } catch (Ort::Exception &e) {
+            std::cout << e.what() << std::endl;
+        }
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+        // DBG(juce::String(duration.count()) + "ms");
+
+        for (int i = 0; i < processedBuffer.getNumSamples(); ++i) {
+            processedBuffer.setSample(0, i, onnxOutputData[i]);
+        }
     }
-
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-
-    // std::cout << duration.count() << "ms" << std::endl;
-
-    for (int i = 0; i < processedBuffer.getNumSamples(); ++i) {
-        processedBuffer.setSample(0, i, onnxOutputData[i]);
-    }
-
+   else {
+    onnxOutputData.clear();
+   }
     onNewProcessedBuffer(processedBuffer);
-//    ort_alloc.Free(inputName.get());
 }
 
 void InferenceThread::setExternalModel(juce::File modelPath) {

@@ -27,8 +27,7 @@ public:
 private:
     void processOutput(juce::AudioBuffer<float>& buffer, int numSamples);
     void calculateLatency(int maxSamplesPerBuffer);
-    void setMuted(bool newState) { muted = newState; }
-    
+
 private:
     juce::AudioProcessorValueTreeState& parameters;
 
@@ -40,7 +39,6 @@ private:
     std::unique_ptr<juce::FileChooser> fc;
     WarningWindow warningWindow;
     int number;
-    bool muted;
 };
 
 #endif //VAESYNTH_ONNXPROCESSOR_H

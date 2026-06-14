@@ -32,6 +32,7 @@ public:
     bool init = true;
     int init_samples = 0;
     void setInternalModel();
+    void setMuted(bool newState) { muted = newState; }
 
 private:
     void run() override;
@@ -62,5 +63,7 @@ private:
     RingBuffer receiveRingBuffer;
 
     bool loadingModel = false;
+    bool muted = false;
+
 };
 #endif //VAESYNTH_INFERENCETHREAD_H

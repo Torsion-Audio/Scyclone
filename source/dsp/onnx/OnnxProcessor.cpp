@@ -35,9 +35,9 @@ void OnnxProcessor::parameterChanged(const juce::String &parameterID, float newV
             inferenceThread.setInternalModel();
         }
     } else if (parameterID == PluginParameters::ON_OFF_NETWORK1_ID.getParamID() && number == 1) {
-        setMuted(!(bool) newValue);
+        inferenceThread.setMuted(!(bool) newValue);
     } else if (parameterID == PluginParameters::ON_OFF_NETWORK2_ID.getParamID() && number == 2) {
-        setMuted(!(bool) newValue);
+        inferenceThread.setMuted(!(bool) newValue);
     }
 }
 
@@ -60,27 +60,25 @@ void OnnxProcessor::processBlock(juce::AudioBuffer<float> &buffer) {
 }
 
 void OnnxProcessor::processOutput(juce::AudioBuffer<float> &buffer, const int numSamples) {
-    if (!muted) {
-        auto availableSamples = receiveRingBuffer.getAvailableSamples(0);
-        if (!inferenceThread.init){
-            if (availableSamples >= numSamples) {
-                if (inferenceCounter > 0) {
-                    if (availableSamples >= 2 * numSamples) {
-                        for (int i = 0; i < numSamples; ++i) {
-                            receiveRingBuffer.popSample(0);
-                        }
-                        inferenceCounter--;
+    auto availableSamples = receiveRingBuffer.getAvailableSamples(0);
+    if (!inferenceThread.init){
+        if (availableSamples >= numSamples) {
+            if (inferenceCounter > 0) {
+                if (availableSamples >= 2 * numSamples) {
+                    for (int i = 0; i < numSamples; ++i) {
+                        receiveRingBuffer.popSample(0);
                     }
+                    inferenceCounter--;
                 }
-                for (int sample = 0; sample < numSamples; ++sample) {
-                    buffer.setSample(0, sample, receiveRingBuffer.popSample(0));
-                }
-            } else {
-                inferenceCounter++;
-                std::cout << "missing samples" << std::endl;
-                for (int sample = 0; sample < numSamples; ++sample) {
-                    buffer.setSample(0, sample, 0.0f);
-                }
+            }
+            for (int sample = 0; sample < numSamples; ++sample) {
+                buffer.setSample(0, sample, receiveRingBuffer.popSample(0));
+            }
+        } else {
+            inferenceCounter++;
+            std::cout << "missing samples" << std::endl;
+            for (int sample = 0; sample < numSamples; ++sample) {
+                buffer.setSample(0, sample, 0.0f);
             }
         }
     }
