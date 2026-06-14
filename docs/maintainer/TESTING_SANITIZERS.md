@@ -27,7 +27,7 @@ All jobs: `ctest -L default` (see [test/README.md](../../test/README.md) for lab
 
 **Windows MSVC ASan** — `ASAN` forces the same ONNX stub (LNK2038/LNK1319 without it); DSP/resampling tests run, `PluginIntegrationTest` skips.
 
-**macOS LEAK job** — pins Homebrew **`llvm@18`** (unpinned `llvm` 22 breaks JUCE 7.0.5); `-fsanitize=leak`, warn-only.
+**macOS LEAK job** — pins Homebrew **`llvm@18`** (unpinned `llvm` 22 breaks JUCE 7.0.5); `-fsanitize=leak`, warn-only. `LEAK` forces ONNX stub (prebuilt ORT does not link with Homebrew Clang); DSP/resampling tests run, `PluginIntegrationTest` skips.
 
 **SNR floors** — Linux/macOS ASan jobs run `PrintSnrMeasurements` (`continue-on-error`) to calibrate per-OS floors in [`ResamplingSignalUtils.h`](../../test/scyclone/resampling/ResamplingSignalUtils.h). Procedure: [test/scyclone/calibration/README.md](../../test/scyclone/calibration/README.md).
 

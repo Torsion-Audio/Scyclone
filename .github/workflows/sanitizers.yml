@@ -282,6 +282,7 @@ jobs:
         run: ctest --test-dir build -L default --output-on-failure
 
   # Standalone LeakSan (Homebrew Clang 18): secondary macOS leak signal (Apple Clang ASan has no detect_leaks).
+  # LEAK forces ONNX stub — prebuilt ORT fails to link with Homebrew Clang (undefined GetOpSchema symbols).
   # Job is non-blocking; LSAN_OPTIONS=exitcode=0 reports leaks without failing the test run.
   sanitize-leak-macos:
     runs-on: macos-14
