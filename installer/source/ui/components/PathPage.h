@@ -21,8 +21,8 @@ public:
         resultPath.first = format;
         resultPath.second = DefaultPaths::getDestinationPath(format).getFullPathName();
 
-        pathLabel.onEditorShow = [this] {
-            openFileChooser("vst3", juce::File{"C:/Program Files/Common Files/VST3"});
+        pathLabel.onEditorShow = [this, format] {
+            openFileChooser(DefaultPaths::getDestinationPath(format));
         };
         pathLabel.setEditable(true, false);
         pathLabel.setLookAndFeel(&installerLookAndFeel);
@@ -47,8 +47,8 @@ public:
 
 private:
 
-    void openFileChooser(String applicationFormat, File defaultPath) {
-        fc = std::make_unique<juce::FileChooser> (juce::String{"Choose a path to save Scyclone."}+applicationFormat, defaultPath,
+    void openFileChooser(File defaultPath) {
+        fc = std::make_unique<juce::FileChooser> ("Choose a path to install Scyclone", defaultPath,
                                                   "*", true);
 
         fc->launchAsync (juce::FileBrowserComponent::openMode
@@ -71,7 +71,6 @@ private:
 
     std::unique_ptr<juce::FileChooser> fc;
 
-    std::pair<float, int> test;
     std::pair<FormatOptions::Options, juce::String> resultPath;
 
     InstallerLookAndFeel installerLookAndFeel;
