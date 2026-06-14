@@ -8,7 +8,16 @@
 
 using namespace torsion::test;
 
-class PluginIntegrationTest : public JuceAudioTest {};
+class PluginIntegrationTest : public JuceAudioTest {
+protected:
+    void SetUp() override
+    {
+        JuceAudioTest::SetUp();
+#ifdef SCYCLONE_ONNX_STUB
+        GTEST_SKIP() << "PluginIntegrationTest requires ONNX Runtime (disabled under MSan stub build)";
+#endif
+    }
+};
 
 // Signal: prepareToPlay at 44.1k/512; latency positive and idempotent across release/re-prepare.
 TEST_F(PluginIntegrationTest, ReportedLatency_IsPositiveAndIdempotent) {

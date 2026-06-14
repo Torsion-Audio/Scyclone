@@ -4,7 +4,9 @@
 /// @brief Resampling-specific SNR case presets for parameterized signal tests.
 ///
 /// General signal generators and metrics live in `test/torsion/audio/`.
-/// SNR floors are derived from CalibrationProbe DISABLED tests (measured − 3 dB).
+/// FFT peak SNR floors are calibrated per OS via DISABLED `PrintSnrMeasurements`
+/// (measured − 3 dB). The same resampler config can report materially different SNR
+/// on Windows vs macOS/Linux (toolchain / JUCE FFT / latency-skip alignment);
 ///
 /// @namespace scyclone::test::resampling
 
@@ -56,15 +58,34 @@ namespace scyclone::test::resampling
         int passBandPeaks;
     };
 
-    /// Authoritative CI SNR floors (update after CalibrationProbe re-run).
+    /// Authoritative CI SNR floors (update after CalibrationProbe re-run on each OS).
     inline std::vector<SnrCase> defaultCiSnrCases()
     {
+#if JUCE_WINDOWS
+        // MSVC x64 — PrintSnrMeasurements on Windows (worst 48k/512 ≈ 106.3 dB).
         return {
             {44100.0, 128, 79.0, 100.0, 1},
             {44100.0, 512, 79.0, 92.0, 1},
             {48000.0, 128, 95.0, 95.0, 1},
             {48000.0, 512, 103.0, 103.0, 1},
         };
+#elif JUCE_MAC
+        // Apple Clang arm64 CI — same configs measure lower than Windows (48k/512 ≈ 83.4 dB).
+        return {
+            {44100.0, 128, 79.0, 100.0, 1},
+            {44100.0, 512, 79.0, 87.0, 1},
+            {48000.0, 128, 95.0, 95.0, 1},
+            {48000.0, 512, 80.0, 80.0, 1},
+        };
+#else
+        // Linux — conservative macOS-aligned floors until ubuntu PrintSnrMeasurements run.
+        return {
+            {44100.0, 128, 79.0, 100.0, 1},
+            {44100.0, 512, 79.0, 87.0, 1},
+            {48000.0, 128, 95.0, 95.0, 1},
+            {48000.0, 512, 80.0, 80.0, 1},
+        };
+#endif
     }
 
 } // namespace scyclone::test::resampling

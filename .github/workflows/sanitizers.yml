@@ -25,10 +25,12 @@ jobs:
         with:
           submodules: true
 
-      - name: Install dependencies
+      - name: Install build tools
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build
+
+      - uses: ./.github/actions/juce-linux-deps
 
       - name: Configure (ASAN_UBSAN)
         run: |
@@ -70,9 +72,13 @@ jobs:
 
       - name: Run tests
         env:
-          ASAN_OPTIONS: abort_on_error=1
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: ctest --test-dir build -L default --output-on-failure
+
+      - name: SNR calibration probe (macOS diagnostic)
+        continue-on-error: true
+        run: ./build/Test --gtest_filter=*PrintSnrMeasurements* --gtest_also_run_disabled_tests
 
   sanitize-asan-msvc-windows:
     runs-on: windows-latest
@@ -135,10 +141,12 @@ jobs:
         with:
           submodules: true
 
-      - name: Install dependencies (Clang + LLVM)
+      - name: Install build tools (Clang + LLVM)
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build clang llvm
+
+      - uses: ./.github/actions/juce-linux-deps
 
       - name: Configure (THREAD - Clang)
         env:
@@ -194,10 +202,12 @@ jobs:
         with:
           submodules: true
 
-      - name: Install dependencies (Clang + Ninja for MSan libc++ build)
+      - name: Install build tools (Clang + Ninja for MSan libc++ build)
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake clang llvm ninja-build python3 curl
+
+      - uses: ./.github/actions/juce-linux-deps
 
       - name: Cache MSan-instrumented libc++
         id: msan_libcxx
@@ -267,6 +277,8 @@ jobs:
           LD_LIBRARY_PATH: ${{ github.workspace }}/msan-libcxx-prefix/lib:${{ env.LD_LIBRARY_PATH }}
         run: ctest --test-dir build -L default --output-on-failure
 
+  # Standalone LeakSan (Homebrew Clang): secondary macOS signal vs Apple Clang ASan+detect_leaks.
+  # Job is non-blocking; LSAN_OPTIONS=exitcode=0 reports leaks without failing the test run.
   sanitize-leak-macos:
     runs-on: macos-14
     timeout-minutes: 120
@@ -313,5 +325,7 @@ jobs:
       - name: Build Test
         run: cmake --build build --target Test --parallel
 
-      - name: Run tests
+      - name: Run tests (leaks warn-only)
+        env:
+          LSAN_OPTIONS: exitcode=0:print_summary=1
         run: ctest --test-dir build -L default --output-on-failure
