@@ -8,7 +8,7 @@ name: Scyclone
 #
 # version tag (v*):
 #   - ci-validation → build-distribution → publish-release
-#   - universal macOS binary
+#   - universal macOS binary (arm64+x86_64), also uploaded as -osx-x64 for Intel Mac installer
 #   - assets attached to GitHub Release
 #
 # workflow_dispatch:
@@ -51,17 +51,15 @@ concurrency:
 
 env:
   PROJECT_NAME: Scyclone
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
   BUILD_DIR: build
 
-# Jobs run in parallel per matrix row; steps within a job run in series.
 jobs:
   ci-validation:
     name: ci-validation (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
+      fail-fast: false
       matrix:
         include:
           # macos-14 (not macos-latest): JUCE 7.0.5 does not build juceaide against the
@@ -69,16 +67,25 @@ jobs:
           - name: macOS
             os: macos-14
             ccache: ccache
-          # sccache is installed by hendrikmuhs/ccache-action when variant: sccache (no choco step).
           - name: Windows
             os: windows-latest
             ccache: sccache
+          - name: Linux
+            os: ubuntu-24.04
+            ccache: ccache
 
     steps:
-      # osxutils provides codesign and notarization CLI tools on macOS runners.
       - name: install macOS deps
         if: matrix.name == 'macOS'
         run: brew install osxutils ninja
+
+      - name: install Linux deps
+        if: matrix.name == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libfreetype6-dev libx11-dev libxext-dev \
+            libxinerama-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev \
+            libasound2-dev libcurl4-openssl-dev
 
       - name: get repo and submodules
         uses: actions/checkout@v6
@@ -135,6 +142,8 @@ jobs:
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
             echo "CMAKE_BUILD_PARALLEL_LEVEL=${NUMBER_OF_PROCESSORS}" >> "$GITHUB_ENV"
+          elif [ "${{ runner.os }}" = "Linux" ]; then
+            echo "CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)" >> "$GITHUB_ENV"
           else
             echo "CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> "$GITHUB_ENV"
           fi
@@ -220,15 +229,28 @@ jobs:
           - name: macOS
             os: macos-14
             ccache: ccache
+            artifact_os: osx-arm64
           - name: Windows
             os: windows-latest
             ccache: sccache
+            artifact_os: win-x64
+          - name: Linux
+            os: ubuntu-24.04
+            ccache: ccache
+            artifact_os: linux-x64
 
     steps:
-      # osxutils provides codesign and notarization CLI tools on macOS runners.
       - name: install macOS deps
         if: matrix.name == 'macOS'
         run: brew install osxutils ninja
+
+      - name: install Linux deps
+        if: matrix.name == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libfreetype6-dev libx11-dev libxext-dev \
+            libxinerama-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev \
+            libasound2-dev libcurl4-openssl-dev
 
       - name: get repo and submodules
         uses: actions/checkout@v6
@@ -295,17 +317,23 @@ jobs:
           echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}.exe" >> $GITHUB_ENV
           echo "INSTALLER_PATH=${{ env.BUILD_DIR }}/installer/${{ env.PROJECT_NAME }}Installer_artefacts/Release/Scyclone Installer.exe" >> $GITHUB_ENV
 
+      - name: setup environment variables (Linux)
+        if: matrix.name == 'Linux'
+        run: |
+          echo "ARTEFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
+          echo "VST3_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
+          echo "STANDALONE_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/Standalone/${{ env.PROJECT_NAME }}" >> $GITHUB_ENV
+          echo "INSTALLER_PATH=${{ env.BUILD_DIR }}/installer/${{ env.PROJECT_NAME }}Installer_artefacts/Release/ScycloneInstaller" >> $GITHUB_ENV
+
+      # Artifact names follow the convention the installer's RepoInspector looks for:
+      # Scyclone-<version>-<os>.zip  where <os> ∈ {osx-arm64, osx-x64, win-x64, linux-x64}
       - name: set artifact name
         shell: bash
         run: |
           if [ "${{ startsWith(github.ref, 'refs/tags/v') }}" = "true" ]; then
-            echo "PRODUCT_ZIP=${{ env.PROJECT_NAME }}-${{ matrix.name }}-${{ github.ref_name }}.zip" >> "$GITHUB_ENV"
+            echo "PRODUCT_ZIP=${{ env.PROJECT_NAME }}-${{ github.ref_name }}-${{ matrix.artifact_os }}.zip" >> "$GITHUB_ENV"
           else
-            MACOS_SUFFIX=""
-            if [ "${{ matrix.name }}" = "macOS" ]; then
-              MACOS_SUFFIX="-${{ github.event.inputs.distribution_type }}"
-            fi
-            echo "PRODUCT_ZIP=${{ env.PROJECT_NAME }}-${{ matrix.name }}${MACOS_SUFFIX}-manual.zip" >> "$GITHUB_ENV"
+            echo "PRODUCT_ZIP=${{ env.PROJECT_NAME }}-${{ matrix.artifact_os }}-manual.zip" >> "$GITHUB_ENV"
           fi
 
       - name: restore FetchContent cache
@@ -346,6 +374,8 @@ jobs:
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
             echo "CMAKE_BUILD_PARALLEL_LEVEL=${NUMBER_OF_PROCESSORS}" >> "$GITHUB_ENV"
+          elif [ "${{ runner.os }}" = "Linux" ]; then
+            echo "CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)" >> "$GITHUB_ENV"
           else
             echo "CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> "$GITHUB_ENV"
           fi
@@ -439,6 +469,17 @@ jobs:
           cd ..
           zip -vr ${{ env.PRODUCT_ZIP }} "$PRODUCT_DIR/" -x "*.DS_Store"
 
+      # The macOS build is universal (arm64+x86_64). Upload a second copy under the
+      # -osx-x64 name so that Intel Mac users' installer can find it too.
+      - name: create macOS x64 artifact copy
+        if: matrix.name == 'macOS'
+        working-directory: ${{ github.workspace }}/packaging
+        run: |
+          X64_ZIP="${{ env.PRODUCT_ZIP }}"
+          X64_ZIP="${X64_ZIP/osx-arm64/osx-x64}"
+          cp "${{ env.PRODUCT_ZIP }}" "$X64_ZIP"
+          echo "PRODUCT_ZIP_X64=$X64_ZIP" >> "$GITHUB_ENV"
+
       - name: zip artefacts (Windows)
         if: matrix.name == 'Windows'
         shell: bash
@@ -452,11 +493,30 @@ jobs:
           cd packaging
           pwsh -command "Compress-Archive -Path '${PRODUCT_BASE}' -DestinationPath '${{ env.PRODUCT_ZIP }}'"
 
+      - name: zip artefacts (Linux)
+        if: matrix.name == 'Linux'
+        run: |
+          PRODUCT_BASE="${{ env.PRODUCT_ZIP }}"
+          PRODUCT_BASE="${PRODUCT_BASE%.zip}"
+          mkdir -p "packaging/${PRODUCT_BASE}"
+          cp -r "${{ env.VST3_PATH }}" "packaging/${PRODUCT_BASE}/"
+          cp "${{ env.STANDALONE_PATH }}" "packaging/${PRODUCT_BASE}/"
+          cp "${{ env.INSTALLER_PATH }}" "packaging/${PRODUCT_BASE}/"
+          cd packaging
+          zip -r "${{ env.PRODUCT_ZIP }}" "${PRODUCT_BASE}/"
+
       - name: upload distribution artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PRODUCT_ZIP }}
           path: packaging/${{ env.PRODUCT_ZIP }}
+
+      - name: upload macOS x64 artifact
+        if: matrix.name == 'macOS'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.PRODUCT_ZIP_X64 }}
+          path: packaging/${{ env.PRODUCT_ZIP_X64 }}
 
   publish-release:
     name: publish-release
@@ -475,12 +535,16 @@ jobs:
         shell: bash
         run: |
           if [ "${{ startsWith(github.ref, 'refs/tags/v') }}" = "true" ]; then
-            echo "MACOS_ARTIFACT=${{ env.PROJECT_NAME }}-macOS-${{ github.ref_name }}.zip" >> "$GITHUB_ENV"
-            echo "WINDOWS_ARTIFACT=${{ env.PROJECT_NAME }}-Windows-${{ github.ref_name }}.zip" >> "$GITHUB_ENV"
+            echo "MACOS_ARM64_ARTIFACT=${{ env.PROJECT_NAME }}-${{ github.ref_name }}-osx-arm64.zip" >> "$GITHUB_ENV"
+            echo "MACOS_X64_ARTIFACT=${{ env.PROJECT_NAME }}-${{ github.ref_name }}-osx-x64.zip" >> "$GITHUB_ENV"
+            echo "WINDOWS_ARTIFACT=${{ env.PROJECT_NAME }}-${{ github.ref_name }}-win-x64.zip" >> "$GITHUB_ENV"
+            echo "LINUX_ARTIFACT=${{ env.PROJECT_NAME }}-${{ github.ref_name }}-linux-x64.zip" >> "$GITHUB_ENV"
             echo "RELEASE_VERSION=${{ github.ref_name }}" >> "$GITHUB_ENV"
           else
-            echo "MACOS_ARTIFACT=${{ env.PROJECT_NAME }}-macOS-${{ github.event.inputs.distribution_type }}-manual.zip" >> "$GITHUB_ENV"
-            echo "WINDOWS_ARTIFACT=${{ env.PROJECT_NAME }}-Windows-manual.zip" >> "$GITHUB_ENV"
+            echo "MACOS_ARM64_ARTIFACT=${{ env.PROJECT_NAME }}-osx-arm64-manual.zip" >> "$GITHUB_ENV"
+            echo "MACOS_X64_ARTIFACT=${{ env.PROJECT_NAME }}-osx-x64-manual.zip" >> "$GITHUB_ENV"
+            echo "WINDOWS_ARTIFACT=${{ env.PROJECT_NAME }}-win-x64-manual.zip" >> "$GITHUB_ENV"
+            echo "LINUX_ARTIFACT=${{ env.PROJECT_NAME }}-linux-x64-manual.zip" >> "$GITHUB_ENV"
             echo "RELEASE_VERSION=v${{ github.event.inputs.release_version }}" >> "$GITHUB_ENV"
           fi
 
@@ -494,16 +558,28 @@ jobs:
             exit 1
           fi
 
-      - name: download macOS artifact
+      - name: download macOS arm64 artifact
         uses: actions/download-artifact@v6
         with:
-          name: ${{ env.MACOS_ARTIFACT }}
+          name: ${{ env.MACOS_ARM64_ARTIFACT }}
+          path: release-assets
+
+      - name: download macOS x64 artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.MACOS_X64_ARTIFACT }}
           path: release-assets
 
       - name: download Windows artifact
         uses: actions/download-artifact@v6
         with:
           name: ${{ env.WINDOWS_ARTIFACT }}
+          path: release-assets
+
+      - name: download Linux artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.LINUX_ARTIFACT }}
           path: release-assets
 
       - name: publish GitHub Release (tag push)
@@ -534,5 +610,5 @@ jobs:
           ✓ Release assets uploaded
 
           **Version:** ${{ env.RELEASE_VERSION }}
-          **Assets:** ${{ env.MACOS_ARTIFACT }}, ${{ env.WINDOWS_ARTIFACT }}
+          **Assets:** ${{ env.MACOS_ARM64_ARTIFACT }}, ${{ env.MACOS_X64_ARTIFACT }}, ${{ env.WINDOWS_ARTIFACT }}, ${{ env.LINUX_ARTIFACT }}
           EOF
