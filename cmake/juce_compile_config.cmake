@@ -36,6 +36,13 @@ target_link_libraries(${TARGET_NAME}
 
         PUBLIC
         juce::juce_recommended_config_flags
-        juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
+
+if(SCYCLONE_SANITIZERS STREQUAL "NONE")
+    target_link_libraries(${TARGET_NAME} PUBLIC juce::juce_recommended_lto_flags)
+endif()
+
+if(TARGET scyclone_sanitizer_flags)
+    target_link_libraries(${TARGET_NAME} PRIVATE scyclone_sanitizer_flags)
+endif()

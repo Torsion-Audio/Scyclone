@@ -22,6 +22,10 @@ target_compile_options(rnbo_gran_delay PRIVATE
 
 target_link_libraries(${TARGET_NAME} PRIVATE rnbo_gran_delay)
 
+if(TARGET scyclone_sanitizer_flags)
+    target_link_libraries(rnbo_gran_delay PRIVATE scyclone_sanitizer_flags)
+endif()
+
 target_include_directories(${TARGET_NAME} SYSTEM PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/rnbo
 		${CMAKE_CURRENT_SOURCE_DIR}/rnbo/common
