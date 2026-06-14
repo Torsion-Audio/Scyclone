@@ -501,7 +501,9 @@ jobs:
           mkdir -p "packaging/${PRODUCT_BASE}"
           cp -r "${{ env.VST3_PATH }}" "packaging/${PRODUCT_BASE}/"
           cp "${{ env.STANDALONE_PATH }}" "packaging/${PRODUCT_BASE}/"
-          cp "${{ env.INSTALLER_PATH }}" "packaging/${PRODUCT_BASE}/"
+          INSTALLER=$(find "${{ env.BUILD_DIR }}/installer" -maxdepth 4 -type f -executable | head -1)
+          echo "Installer binary found at: $INSTALLER"
+          cp "$INSTALLER" "packaging/${PRODUCT_BASE}/ScycloneInstaller"
           cd packaging
           zip -r "${{ env.PRODUCT_ZIP }}" "${PRODUCT_BASE}/"
 
