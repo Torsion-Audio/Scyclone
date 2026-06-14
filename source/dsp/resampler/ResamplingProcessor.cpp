@@ -46,9 +46,9 @@ double ResamplingProcessor::calculateSampleRateRatio(double outputRate, double i
     return outputRate / inputRate;
 }
 
-double ResamplingProcessor::calculateBufferSizeRatio(int outputBufferSize, int inputBufferSize)
+double ResamplingProcessor::calculateBufferSizeRatio(int outBufferSize, int inBufferSize)
 {
-    return static_cast<double>(outputBufferSize) / static_cast<double>(inputBufferSize);
+    return static_cast<double>(outBufferSize) / static_cast<double>(inBufferSize);
 }
 
 void ResamplingProcessor::measureLatency()
@@ -90,6 +90,7 @@ void ResamplingProcessor::measureLatency()
 
 void ResamplingProcessor::printMetrics()
 {
+#if JUCE_DEBUG
     double timePerBlockInSec = static_cast<double>(inputBufferSize) / static_cast<double>(inputSampleRate);
     double correctedSampleRate = static_cast<double>(outputBufferSize) / timePerBlockInSec;
 
@@ -97,6 +98,7 @@ void ResamplingProcessor::printMetrics()
     DBG("Samplerate Ratio Set: " << sampleRateRatio);
     DBG("Corrected Sample Rate after reconversion: " << correctedSampleRate << " Hz");
     DBG("------");
+#endif
 }
 
 juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<float>& inputBufferMono) {
@@ -118,6 +120,7 @@ juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<fl
     lastInputFramesUsed = srcData.input_frames_used;
     if (error != 0) {
         DBG("Error during sample rate conversion: " << error);
+        jassertfalse;
     }
     // output_frames_gen can be < output_frames due to SINC transport delay or internal buffering (libsamplerate FAQ).
     if (srcData.output_frames_gen < srcData.output_frames) {
@@ -125,9 +128,6 @@ juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<fl
         outputBuffer.clear(0,
                                static_cast<int>(srcData.output_frames_gen),
                                static_cast<int>(srcData.output_frames - srcData.output_frames_gen));
-        DBG("Remaining frames to process: "
-            << (srcData.output_frames - srcData.output_frames_gen)
-            << " for " << juce::String(processorName));
     }
     return outputBuffer;
 }
