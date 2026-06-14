@@ -39,7 +39,8 @@ private:
     static juce::File getAUPluginPath(OS::SystemType systemType) {
         if (systemType == OS::MacOS_x64 || systemType == OS::MacOS_arm64) {
             return juce::File("~/Library/Audio/Plug-Ins/Components/");
-        } else {
+        } 
+        else {
             return juce::File("");
         }
     }
@@ -47,12 +48,19 @@ private:
     static juce::File getVST3PluginPath(OperatingSystem::SystemType systemType) {
         if (systemType == OS::MacOS_x64 || systemType == OS::MacOS_arm64) {
             return juce::File("~/Library/Audio/Plug-Ins/VST3/");
-        } else {
+        } 
+        else if (systemType == OS::Linux_x64) {
+            return juce::File("/usr/lib/vst3");
+        }
+        else {
             return juce::File("C:\\Program Files\\Common Files\\VST3");
         }
     }
 
-    static juce::File getStandalonePath(OperatingSystem::SystemType) {
+    static juce::File getStandalonePath(OperatingSystem::SystemType systemType) {
+        if (systemType == OS::Linux_x64) {
+            return juce::File("/usr/local/bin/Torsion Audio");
+        }
         auto globalApplicationDir = juce::File::getSpecialLocation(juce::File::SpecialLocationType::globalApplicationsDirectory);
         return globalApplicationDir.getChildFile("Torsion Audio");
     }
