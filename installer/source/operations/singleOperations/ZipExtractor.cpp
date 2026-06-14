@@ -7,7 +7,7 @@
 void ZipExtractor::setSourceFile(const juce::File& pathToFile)
 {
     zipFile = std::make_unique<juce::File>(pathToFile);
-    std::cout << "ZipExtractor::setSourceFile: " << pathToFile.getFullPathName() << std::endl;
+    DBG("ZipExtractor::setSourceFile: " + pathToFile.getFullPathName());
 }
 
 void ZipExtractor::extractTo(const juce::File &destinationDirectory, bool shouldOverwriteExistingFiles) {

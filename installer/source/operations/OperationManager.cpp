@@ -72,11 +72,7 @@ void OperationManager::repoInspectorFinished(bool status) {
     auto [downloadVersion, downloadUrl] = repoInspector.getLatestVersion();
 
     if (status && !downloadUrl.isEmpty()) {
-        #if JUCE_MAC
-            juce::String downloadFileName = juce::String{"Scyclone-"} + downloadVersion + juce::String{".dmg"};
-        #else
-            juce::String downloadFileName = juce::String{"Scyclone-"} + downloadVersion + juce::String{".zip"};
-        #endif
+        juce::String downloadFileName = juce::String{"Scyclone-"} + downloadVersion + juce::String{".zip"};
         juce::File targetFile = juce::File::getSpecialLocation(juce::File::SpecialLocationType::tempDirectory).getChildFile(downloadFileName);
         auto folderName = targetFile.getFileNameWithoutExtension();
         juce::File targetDirectory = targetFile.getParentDirectory().getChildFile(folderName);
@@ -91,10 +87,10 @@ void OperationManager::repoInspectorFinished(bool status) {
 void OperationManager::errorOccurred(ErrorCode errorCode) {
     switch (errorCode) {
         case GitHubNotAccessible:
-            std::cout << "GitHub not accessible" << std::endl;
+            DBG("GitHub not accessible");
             break;
         case InvalidDownloadLink:
-            std::cout << "Invalid download link" << std::endl;
+            DBG("Invalid download link");
             break;
     }
 }

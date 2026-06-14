@@ -57,7 +57,10 @@ private:
         }
     }
 
-    static juce::File getStandalonePath(OperatingSystem::SystemType) {
+    static juce::File getStandalonePath(OperatingSystem::SystemType systemType) {
+        if (systemType == OS::Linux_x64) {
+            return juce::File("/usr/local/bin/Torsion Audio");
+        }
         auto globalApplicationDir = juce::File::getSpecialLocation(juce::File::SpecialLocationType::globalApplicationsDirectory);
         return globalApplicationDir.getChildFile("Torsion Audio");
     }

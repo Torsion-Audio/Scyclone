@@ -3,6 +3,7 @@
 //
 
 #include "PluginInstaller.h"
+#include <filesystem>
 
 PluginInstaller::PluginInstaller() {
 }
@@ -37,23 +38,36 @@ void PluginInstaller::reset() {
 }
 
 void PluginInstaller::copyFiles() {
-    for (const auto& entry : source.findChildFiles(juce::File::findFiles, true))
+    for (const auto& entry : source.findChildFiles(juce::File::findFilesAndDirectories, false))
     {
-        std::cout << entry.getFileName() << std::endl;
-        # if JUCE_MAC 
-            if (entry.getFileExtension() == ".app" && standaloneTarget != nullptr) {
+        DBG(entry.getFileName());
+#if JUCE_MAC
+        if (entry.getFileExtension() == ".app" && standaloneTarget != nullptr) {
             auto targetFile = standaloneTarget->getChildFile(entry.getFileName());
             entry.copyFileTo(targetFile);
-            }
-        # else
-            if (entry.getFileExtension() == ".exe" && standaloneTarget != nullptr) {
-                auto targetFile = standaloneTarget->getChildFile(entry.getFileName());
-                entry.copyFileTo(targetFile);
-            }
-        # endif
+        }
+#elif JUCE_WINDOWS
+        if (entry.getFileExtension() == ".exe" && standaloneTarget != nullptr) {
+            auto targetFile = standaloneTarget->getChildFile(entry.getFileName());
+            entry.copyFileTo(targetFile);
+        }
+#elif JUCE_LINUX
+        if (entry.getFileExtension().isEmpty() && entry.existsAsFile() && standaloneTarget != nullptr) {
+            auto targetFile = standaloneTarget->getChildFile(entry.getFileName());
+            entry.copyFileTo(targetFile);
+        }
+#endif
         if (entry.getFileExtension() == ".vst3" && vst3Target != nullptr) {
             auto targetFile = vst3Target->getChildFile(entry.getFileName());
+#if JUCE_LINUX
+            std::filesystem::copy(
+                entry.getFullPathName().toStdString(),
+                targetFile.getFullPathName().toStdString(),
+                std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing
+            );
+#else
             entry.copyFileTo(targetFile);
+#endif
         } else if (entry.getFileExtension() == ".component" && auTarget != nullptr) {
             auto targetFile = auTarget->getChildFile(entry.getFileName());
             entry.copyFileTo(targetFile);
