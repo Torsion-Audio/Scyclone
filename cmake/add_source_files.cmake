@@ -4,7 +4,7 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/source/*.h
 )
 
-# MSan: link InferenceThreadStub.cpp instead of InferenceThread.cpp (no prebuilt ORT).
+# Sanitizer stub: link InferenceThreadStub.cpp instead of InferenceThread.cpp (no prebuilt ORT).
 if(SCYCLONE_SANITIZER_STUB_ONNX)
     list(FILTER SOURCES EXCLUDE REGEX ".*/InferenceThread\\.cpp$")
 else()

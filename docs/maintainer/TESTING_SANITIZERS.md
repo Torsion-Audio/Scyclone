@@ -21,9 +21,13 @@ All jobs: `ctest -L default` (see [test/README.md](../../test/README.md) for lab
 
 **Linux ASan vs macOS ASan leaks** — workflow sets `ASAN_OPTIONS=detect_leaks=1` on Linux only. Apple Clang aborts with `detect_leaks is not supported on this platform`; macOS leak signal is `sanitize-leak-macos` (Homebrew Clang, `-fsanitize=leak`, warn-only via `LSAN_OPTIONS=exitcode=0`).
 
-**MSan + ONNX** — prebuilt ORT is not instrumented. `MEMORY` forces ONNX stub ([`cmake/setup_onnx_runtime.cmake`](../../cmake/setup_onnx_runtime.cmake), [`InferenceThreadStub.cpp`](../../source/dsp/onnx/InferenceThreadStub.cpp)); `PluginIntegrationTest` skips under `SCYCLONE_ONNX_STUB`.
+**MSan + ONNX stub** — prebuilt ORT is not MSan-instrumented. `MEMORY` forces stub ([`InferenceThreadStub.cpp`](../../source/dsp/onnx/InferenceThreadStub.cpp)); `PluginIntegrationTest` skips under `SCYCLONE_ONNX_STUB`. FetchContent **gtest** links `scyclone_sanitizer_flags` for MSan (see [`setup_tests_and_benchmarks.cmake`](../../cmake/setup_tests_and_benchmarks.cmake)).
 
-**Windows MSVC ASan** — link fails with LNK2038 vs prebuilt ORT; job kept for visibility until instrumented ORT exists (see workflow comment on `sanitize-asan-msvc-windows`).
+**Linux ASAN_UBSAN + PluginIntegrationTest** — prebuilt ORT + Linux UBSan hits invalid-vptr in ORT during model load; `PluginIntegrationTest` skips (`SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST`). macOS ASan still runs it.
+
+**Windows MSVC ASan** — `ASAN` forces the same ONNX stub (LNK2038/LNK1319 without it); DSP/resampling tests run, `PluginIntegrationTest` skips.
+
+**macOS LEAK job** — pins Homebrew **`llvm@18`** (unpinned `llvm` 22 breaks JUCE 7.0.5); `-fsanitize=leak`, warn-only.
 
 **SNR floors** — Linux/macOS ASan jobs run `PrintSnrMeasurements` (`continue-on-error`) to calibrate per-OS floors in [`ResamplingSignalUtils.h`](../../test/scyclone/resampling/ResamplingSignalUtils.h). Procedure: [test/scyclone/calibration/README.md](../../test/scyclone/calibration/README.md).
 

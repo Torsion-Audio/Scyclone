@@ -1,5 +1,5 @@
-// MSan stub — linked instead of InferenceThread.cpp when SCYCLONE_SANITIZER_STUB_ONNX is ON.
-// Prebuilt ONNX Runtime is not MemorySanitizer-instrumented; see cmake/setup_onnx_runtime.cmake.
+// Sanitizer stub — linked instead of InferenceThread.cpp when SCYCLONE_SANITIZER_STUB_ONNX is ON.
+// Prebuilt ONNX is not MSan-instrumented and lacks MSVC ASan STL annotations; see cmake/setup_onnx_runtime.cmake.
 
 #include "InferenceThread.h"
 
