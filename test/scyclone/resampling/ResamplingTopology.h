@@ -100,7 +100,8 @@ namespace scyclone::test::resampling
         juce::dsp::ProcessSpec onnxSpec{kOnnxRate, static_cast<uint32_t>(chain.upOutSize), 1};
         if (forceDownToHost)
         {
-            chain.down.prepare(onnxSpec, hostSR, "down-test", hostBlock);
+            chain.down.prepare(onnxSpec, hostSR, "down-test");
+            chain.down.setOutputBufferSize(hostBlock);
         }
         else
         {
@@ -147,7 +148,9 @@ namespace scyclone::test::resampling
         juce::dsp::ProcessSpec onnxSpec{kOnnxRate, static_cast<uint32_t>(upBlock), 1};
         if (forceDownToHost)
         {
-            return down.prepare(onnxSpec, hostSR, "down-only", hostBlock);
+            down.prepare(onnxSpec, hostSR, "down-only");
+            down.setOutputBufferSize(hostBlock);
+            return hostBlock;
         }
         return down.prepare(onnxSpec, hostSR, "down-only");
     }
