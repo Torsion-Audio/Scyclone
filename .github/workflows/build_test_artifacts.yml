@@ -71,7 +71,7 @@ jobs:
             os: windows-latest
             ccache: sccache
           - name: Linux
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             ccache: ccache
 
     steps:
@@ -235,7 +235,7 @@ jobs:
             ccache: sccache
             artifact_os: win-x64
           - name: Linux
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             ccache: ccache
             artifact_os: linux-x64
 
