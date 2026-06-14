@@ -2,7 +2,7 @@
 // Documents the ceil +1 footgun; production avoids this via forcedOutputBlockSize.
 
 #include <gtest/gtest.h>
-#include "ResamplingHelpers.h"
+#include "TestInfrastructure.h"
 
 using namespace resampling_test;
 

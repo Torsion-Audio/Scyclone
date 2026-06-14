@@ -2,7 +2,9 @@
 // Validates per-block frame invariants on ResamplingProcessor after warmup.
 
 #include <gtest/gtest.h>
-#include "ResamplingHelpers.h"
+#include "HostConfigCatalog.h"
+#include "ResamplingContractAssertions.h"
+#include "ResamplingFixtures.h"
 
 using namespace resampling_test;
 
@@ -53,20 +55,18 @@ TEST_P(ProcessorStructuralTest, LongRun_FrameCountConservation)
 
     runProcessorSilencePreRoll(proc, buf, kPreRollBlocks);
 
-    long totalIn = 0;
-    long totalOut = 0;
-    buf.clear();
-    for (int n = 0; n < kLongRunBlocks; ++n)
+    const auto counts = runLongBlockLoop(kLongRunBlocks, [&](int, LongRunCounts &c)
     {
-        totalIn += buf.getNumSamples();
+        buf.clear();
+        c.inputTotal += buf.getNumSamples();
         (void)proc.processBlock(buf);
-        totalOut += proc.getLastOutputFramesGenerated();
-    }
+        c.outputTotal += proc.getLastOutputFramesGenerated();
+    });
 
-    const double effectiveRatio = static_cast<double>(totalOut) / static_cast<double>(totalIn);
+    const double effectiveRatio = static_cast<double>(counts.outputTotal) / static_cast<double>(counts.inputTotal);
     const int tol = longRunTolerance(effectiveRatio);
-    const long expectedTotalOut = static_cast<long>(std::llround(effectiveRatio * static_cast<double>(totalIn)));
-    EXPECT_LE(std::abs(totalOut - expectedTotalOut), tol)
+    const long expectedTotalOut = static_cast<long>(std::llround(effectiveRatio * static_cast<double>(counts.inputTotal)));
+    EXPECT_LE(std::abs(counts.outputTotal - expectedTotalOut), tol)
         << "hostSR=" << testCase.cfg.hostSR << " srcRatio=" << proc.getSrcRatio();
 }
 

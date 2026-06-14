@@ -7,7 +7,12 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <limits>
-#include "ResamplingHelpers.h"
+#include "DryWetAssertions.h"
+#include "DryWetMeasurements.h"
+#include "HostConfigCatalog.h"
+#include "PassthroughProcessor.h"
+#include "ResamplingMeasurements.h"
+#include "TestInfrastructure.h"
 
 using namespace resampling_test;
 
