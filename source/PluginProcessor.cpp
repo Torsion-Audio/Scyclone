@@ -231,8 +231,11 @@ int AudioPluginAudioProcessor::prepareUpsampler(const juce::dsp::ProcessSpec &in
 
 void AudioPluginAudioProcessor::prepareDownsampler(const juce::dsp::ProcessSpec &inputSpec, const juce::dsp::ProcessSpec &onnxSpec)
 {
-    downsamplerOne->prepare(onnxSpec, inputSpec.sampleRate, "Downsampler 1", inputSpec.maximumBlockSize);
-    downsamplerTwo->prepare(onnxSpec, inputSpec.sampleRate, "Downsampler 2", inputSpec.maximumBlockSize);
+    downsamplerOne->prepare(onnxSpec, inputSpec.sampleRate, "Downsampler 1");
+    downsamplerOne->setOutputBufferSize(static_cast<int>(inputSpec.maximumBlockSize));
+
+    downsamplerTwo->prepare(onnxSpec, inputSpec.sampleRate, "Downsampler 2");
+    downsamplerTwo->setOutputBufferSize(static_cast<int>(inputSpec.maximumBlockSize));
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -301,8 +304,6 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             onnxProcessor2.processBlock(network2BufferResampled);
             network1Buffer = downsamplerOne->processBlock(network1BufferResampled);
             network2Buffer = downsamplerTwo->processBlock(network2BufferResampled);
-            //network1Buffer.setSize(1, buffer.getNumSamples(), true);
-            //network2Buffer.setSize(1, buffer.getNumSamples(), true);
         }
 
         levelAnalyser1.processBlock(network1Buffer);
@@ -336,8 +337,6 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         dryWetMixer.setWetSamples(buffer);
     }
     cpuLoad = static_cast<float>(measurer.getLoadAsPercentage());
-
-    // std::cout << "CPU: " << (int)(cpuLoad) << " %\n";
 }
 
 juce::AudioVisualiserComponent &AudioPluginAudioProcessor::getAudioVisualiser1()
