@@ -31,7 +31,8 @@ test/
       ScycloneHostPresets.h             defaultCiHostConfigs, extended matrix, dry/wet presets
       ResamplingTopology.h              Chain structs, prepare*, ONNX constants, feasibility
       ResamplingRunner.h                Unified chain block runners, collect* helpers
-      ResamplingFixtures.h              ChainContractTest, ProcessorStructuralTest, case builders
+      ResamplingChainDriver.h            Steady-state chain drivers (block loops — single SoT)
+      ResamplingFixtures.h              Chain contract + structural fixtures, case builders
       ResamplingSignalUtils.h           SnrCase, defaultCiSnrCases()
       ResamplingMeasurements.h          Chain-specific measure* (RMS, SNR, impulse)
       ResamplingContractAssertions.h    Resampler assert* (block size, RMS, processor I/O)
@@ -39,10 +40,9 @@ test/
       IsolationTest.cpp                 Uncoupled up/down sizing (not production mode)
       StructuralTest.cpp                Per-processor frame invariants, prepare/release
       SignalTest.cpp                    FFT peak SNR on windowed sines
-      ChainContractTest.cpp             Round-trip + production chain contracts
+      ChainContractTest.cpp             Round-trip + production chain contracts (split suites)
     mixer/
-      DryWetMeasurements.h              measureDryWetDiracPeak, measureDryWetDiracJitter
-      DryWetAssertions.h                assertDryWetDiracAligned
+      DryWetContract.h                  Fixture, measure*, assertDryWetDiracAligned
       DryWetAlignmentTest.cpp           Dry/wet dirac peak alignment
       GrainDryWetContractTest.cpp       Grain dry-buffer aliasing contract
     plugin/
@@ -79,7 +79,7 @@ Inspired by [libsamplerate tests](../modules/libsamplerate/tests/):
 |-------|-------|---------------|
 | **Structural** | `scyclone/resampling/StructuralTest.cpp` | Per-block frame invariants (up + down), warmup partial-block tail zeroed, long-run frame counts, prepare/release stability |
 | **Signal quality** | `scyclone/resampling/SignalTest.cpp` | FFT peak SNR (dB) on windowed sines — up-only and down-only |
-| **Contracts** | `scyclone/resampling/ChainContractTest.cpp` | Block size, RMS, impulse — round-trip (all rates) + production (48 kHz impulse/RMS only) |
+| **Contracts** | `scyclone/resampling/ChainContractTest.cpp` | Block size, RMS, impulse — `RoundTripChainContractTest`, `ProductionChainContractTest`, `Production48kSignalContractTest` |
 | **Alignment** | `scyclone/mixer/DryWetAlignmentTest.cpp` | Dry/wet dirac peak at `diracPos + totalLatency` |
 | **Plugin** | `scyclone/plugin/PluginIntegrationTest.cpp` | Full graph prepare/processBlock smoke |
 
@@ -98,6 +98,7 @@ Inspired by [libsamplerate tests](../modules/libsamplerate/tests/):
 | Preset | Configs | Used by |
 |--------|---------|---------|
 | `defaultCiHostConfigs()` | 44.1/48 kHz × 128/512 | Chain contracts, structural, round-trip long-run |
+| `productionSignalContractConfigs()` | 48 kHz subset of default CI | Production swept-sine + impulse only |
 | `alignmentEdgeHostConfigs()` | 32, 64, 2048, 8192 (44.1), 2048 (48) | Composed into dry/wet matrix |
 | `dryWetHostConfigs()` | default CI + alignment edge blocks | Dry/wet dirac alignment (block-center sensitive) |
 | `extendedHostMatrixConfigs()` | 14 curated host/block pairs | `ExtendedHostMatrix` suite only |
@@ -118,25 +119,23 @@ Prefer **targeted includes** — avoid pulling the full resampling stack when a 
 #include "ResamplingSignalUtils.h"
 
 // Dry/wet alignment only (no FFT SNR)
-#include "DryWetAssertions.h"
-#include "HostConfigCatalog.h"
-#include "ResamplingFixtures.h"
+#include "DryWetContract.h"
 #include "ScycloneHostPresets.h"
+#include "ResamplingTopology.h"
 
 // Plugin smoke
 #include "JuceFixture.h"
 #include "TestTiming.h"
 
 // Calibration probes
-#include "DryWetAssertions.h"
-#include "DryWetMeasurements.h"
+#include "DryWetContract.h"
 #include "ImpulseMetrics.h"
 #include "PassthroughProcessor.h"
 #include "ResamplingMeasurements.h"
 #include "ScycloneHostPresets.h"
 ```
 
-Tolerance constants: RMS in `ResamplingContractAssertions.h`, dirac in `DryWetAssertions.h`, impulse peak in `ImpulseAssertions.h`, SNR floors in `ResamplingSignalUtils.h`. Torsion provides signal/impulse analysis; Scyclone headers run chains and call `measure*` then `assert*`.
+Tolerance constants: RMS in `ResamplingContractAssertions.h`, dirac in `DryWetContract.h`, impulse peak in `ImpulseAssertions.h`, SNR floors in `ResamplingSignalUtils.h`. Chain block loops live in `ResamplingChainDriver.h` + `ResamplingRunner.h`; assert/measure headers delegate to them.
 
 ### Injectable pipeline layers
 
@@ -156,8 +155,8 @@ Resampler regressions should fail at **Passthrough** middle, not require ONNX-sh
 | `test/support/resampling/ResamplingChainHelpers.h` | `scyclone/resampling/ResamplingTopology.h` + `ResamplingRunner.h` |
 | Signal math in `ResamplingSignalUtils.h` / `ResamplingMeasurements.h` | `torsion/audio/SignalGenerators.h`, `SignalMetrics.h`, `SignalFidelity.h`, `ImpulseMetrics.h` |
 | Host-config combinators + CI presets in `HostConfigCatalog.h` | `torsion/gtest/HostConfigCatalog.h` + `scyclone/resampling/ScycloneHostPresets.h` |
-| `measureDryWetDiracPeak` in resampling headers | `scyclone/mixer/DryWetMeasurements.h` |
-| `assertDryWetDiracAligned` in resampling headers | `scyclone/mixer/DryWetAssertions.h` |
+| `measureDryWetDiracPeak` in resampling headers | `scyclone/mixer/DryWetContract.h` |
+| `assertDryWetDiracAligned` in resampling headers | `scyclone/mixer/DryWetContract.h` |
 | `namespace resampling_test` alias shim | `torsion::test` + `scyclone::test::*` (shim removed) |
 | `TestInfrastructure.h` umbrella include | Targeted includes from `torsion/` and `scyclone/` headers |
 
@@ -165,7 +164,7 @@ Prefer `JuceFixture.h` for new non-resampling tests. Test cases live under `scyc
 
 ## Calibration policy
 
-**Cross-rate production chain:** swept-sine RMS and impulse peak are **`GTEST_SKIP`** in default CI (host rate ≠ 48 kHz). Round-trip impulse and dry/wet dirac still run at all default CI rates.
+**Cross-rate production chain:** production swept-sine and impulse use `productionSignalContractConfigs()` (48 kHz only) — not runtime `GTEST_SKIP`. Round-trip impulse and dry/wet dirac still run at all default CI rates.
 
 **Open product issue:** bulk `productionChainTotalLatency` ≠ measured group delay at cross-rate (~90 samples @ 44.1 kHz / 128). See [docs/resampling_architecture.md](../docs/resampling_architecture.md). Do not widen CI tolerance to hide this — use `DISABLED_LatencyAudit` / `DISABLED_ProductionSineLagSweep` probes.
 

@@ -22,25 +22,11 @@ namespace scyclone::test::resampling
     using torsion::test::HostConfig;
     using torsion::test::HostConfigParamTest;
 
-    /// Chain topology under test in parameterized chain contracts.
-    enum class ChainKind
-    {
-        RoundTrip,
-        Production
-    };
-
     /// Up-only vs down-only structural test axis.
     enum class ProcessorDirection
     {
         Up,
         Down
-    };
-
-    /// Host config × chain kind for `ChainContractTest`.
-    struct ChainContractCase
-    {
-        HostConfig cfg;
-        ChainKind chain;
     };
 
     /// Host config × processor direction for `ProcessorStructuralTest`.
@@ -50,14 +36,18 @@ namespace scyclone::test::resampling
         ProcessorDirection direction;
     };
 
-    /// Parameterized dry/wet dirac alignment over host configs.
-    class DryWetHostConfigTest : public HostConfigParamTest
+    /// Round-trip chain contracts (block size, swept-sine RMS, impulse latency).
+    class RoundTripChainContractTest : public HostConfigParamTest
     {
     };
 
-    /// Round-trip and production chain contracts.
-    class ChainContractTest : public torsion::test::JuceAudioTest,
-                              public ::testing::WithParamInterface<ChainContractCase>
+    /// Block-size contract only (all default CI host configs).
+    class ProductionChainContractTest : public HostConfigParamTest
+    {
+    };
+
+    /// Swept-sine RMS + impulse latency (48 kHz only — cross-rate group delay ≠ bulk latency).
+    class Production48kSignalContractTest : public HostConfigParamTest
     {
     };
 
@@ -77,37 +67,10 @@ namespace scyclone::test::resampling
     {
     };
 
-    inline std::string chainKindTag(ChainKind kind)
-    {
-        return (kind == ChainKind::RoundTrip) ? "RoundTrip" : "Production";
-    }
-
-    inline std::string chainContractCaseName(const ::testing::TestParamInfo<ChainContractCase> &info)
-    {
-        return chainKindTag(info.param.chain) + "_" + std::to_string(static_cast<int>(info.param.cfg.hostSR)) + "_" + std::to_string(info.param.cfg.hostBlock);
-    }
-
     inline std::string processorStructuralCaseName(const ::testing::TestParamInfo<ProcessorStructuralCase> &info)
     {
         const char *dir = (info.param.direction == ProcessorDirection::Up) ? "Up" : "Down";
         return std::string(dir) + "_" + std::to_string(static_cast<int>(info.param.cfg.hostSR)) + "_" + std::to_string(info.param.cfg.hostBlock);
-    }
-
-    inline std::vector<ChainContractCase> chainContractCasesFor(const std::vector<HostConfig> &configs)
-    {
-        std::vector<ChainContractCase> cases;
-        cases.reserve(configs.size() * 2);
-        for (const auto &cfg : configs)
-        {
-            cases.push_back({cfg, ChainKind::RoundTrip});
-            cases.push_back({cfg, ChainKind::Production});
-        }
-        return cases;
-    }
-
-    inline auto chainContractValuesFor(const std::vector<HostConfig> &configs)
-    {
-        return ::testing::ValuesIn(chainContractCasesFor(configs));
     }
 
     inline std::vector<ProcessorStructuralCase> processorStructuralCasesFor(const std::vector<HostConfig> &configs)

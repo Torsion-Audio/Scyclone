@@ -1,19 +1,21 @@
 #pragma once
 
-/// @file DryWetMeasurements.h
-/// @brief Dry/wet dirac alignment measurements (mixer domain).
+/// @file DryWetContract.h
+/// @brief Dry/wet dirac alignment fixture, measurements, and gtest contracts.
 ///
-/// Runs the production resampling chain internally, then mixes dry/wet buffers
-/// through `DryWetMixer`. Returns peak position for assert-phase checks.
-/// Does not call gtest macros.
+/// Follows the measure/assert split: `measureDryWetDirac*` run production chain +
+/// DryWetMixer and return peak position/amplitude; `assertDryWetDiracAligned` applies
+/// gtest expectations. Host capture uses ResamplingChainDriver.h.
 ///
 /// @namespace scyclone::test::mixer
 
 #include <climits>
 #include <vector>
+#include <gtest/gtest.h>
 #include <JuceHeader.h>
 
-#include "ResamplingRunner.h"
+#include "HostConfigFixtures.h"
+#include "ResamplingChainDriver.h"
 #include "SignalMetrics.h"
 #include "TestTiming.h"
 #include "dsp/mixer/DryWetMixer.h"
@@ -21,16 +23,24 @@
 namespace scyclone::test::mixer
 {
 
+    class DryWetHostConfigTest : public torsion::test::HostConfigParamTest
+    {
+    };
+
+    /// CI dirac peak search half-width (samples).
+    constexpr int kDiracAlignmentTolerance = 2;
+    /// Wider search for calibration jitter probes.
+    constexpr int kCalibrationDiracSearchHalfWindow = 20;
+
     /// Result of dirac stimulus through production chain + DryWetMixer.
     struct DryWetDiracMeasurement
     {
-        int peakPos = -1;       ///< Index of mixed peak, or -1 if not found.
-        int expectedPeak = 0;   ///< diracPos + productionChainTotalLatency.
+        int peakPos = -1;
+        int expectedPeak = 0;
         float peakAmplitude = 0.0f;
     };
 
     /// Dirac at block center (dry) + full chain (wet) → search mixed peak.
-    /// @param searchHalfWindow Half-width of peak search around expectedPeak.
     inline DryWetDiracMeasurement measureDryWetDiracPeak(double hostSR, int hostBlock,
                                                          int searchHalfWindow)
     {
@@ -45,32 +55,11 @@ namespace scyclone::test::mixer
         runProductionSilencePreRoll(prod, torsion::test::latencyPreRollBlocks(totalLatency, hostBlock));
 
         const int collectSamples = totalLatency + hostBlock + diracPos;
-        std::vector<float> wetCollected;
-        std::vector<float> dryCollected;
-        wetCollected.reserve(static_cast<size_t>(collectSamples));
-        dryCollected.reserve(static_cast<size_t>(collectSamples));
-
         prod.resamplers.hostBuffer.setSample(0, diracPos, 1.0f);
 
-        juce::AudioBuffer<float> onnxBuf;
-        while (static_cast<int>(wetCollected.size()) < collectSamples)
-        {
-            for (int i = 0; i < prod.resamplers.hostBuffer.getNumSamples(); ++i)
-            {
-                dryCollected.push_back(prod.resamplers.hostBuffer.getSample(0, i));
-            }
-
-            juce::AudioBuffer<float> &upOut = prod.resamplers.up.processBlock(prod.resamplers.hostBuffer);
-            onnxBuf.makeCopyOf(upOut);
-            prod.onnx.processBlock(onnxBuf);
-            juce::AudioBuffer<float> &wetOut = prod.resamplers.down.processBlock(onnxBuf);
-            for (int i = 0; i < wetOut.getNumSamples(); ++i)
-            {
-                wetCollected.push_back(wetOut.getSample(0, i));
-            }
-
-            prod.resamplers.hostBuffer.clear();
-        }
+        const auto captured = collectProductionHostAndOutput(prod, collectSamples);
+        const auto &dryCollected = captured.host;
+        const auto &wetCollected = captured.chainOutput;
 
         const int mixLen = std::min(static_cast<int>(wetCollected.size()),
                                     static_cast<int>(dryCollected.size()));
@@ -109,6 +98,25 @@ namespace scyclone::test::mixer
             return INT_MAX;
         }
         return std::abs(measurement.peakPos - measurement.expectedPeak);
+    }
+
+    inline void assertDryWetDiracAligned(double hostSR, uint32_t blockSize)
+    {
+        const auto measurement = measureDryWetDiracPeak(
+            hostSR, static_cast<int>(blockSize), kDiracAlignmentTolerance);
+
+        const int searchStart = measurement.expectedPeak - kDiracAlignmentTolerance;
+        const int searchEnd = measurement.expectedPeak + kDiracAlignmentTolerance + 1;
+
+        EXPECT_GE(measurement.peakPos, searchStart)
+            << "wet-aligned peak not found; expectedPeak=" << measurement.expectedPeak;
+        EXPECT_LE(measurement.peakPos, searchEnd - 1)
+            << "wet-aligned peak not found; expectedPeak=" << measurement.expectedPeak;
+        if (measurement.peakPos >= 0)
+        {
+            EXPECT_GE(measurement.peakAmplitude, 0.01f)
+                << "mixed signal should have a detectable peak; expectedPeak=" << measurement.expectedPeak;
+        }
     }
 
 } // namespace scyclone::test::mixer

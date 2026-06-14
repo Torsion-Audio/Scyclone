@@ -61,6 +61,14 @@ namespace scyclone::test::resampling
         return torsion::test::dedupeHostConfigs(torsion::test::mergeHostConfigs(core, edge));
     }
 
+    /** Production swept-sine + impulse: 48 kHz only (cross-rate group delay ≠ bulk latency). */
+    inline std::vector<torsion::test::HostConfig> productionSignalContractConfigs()
+    {
+        return torsion::test::filterHostConfigs(
+            defaultCiHostConfigs(),
+            [](const torsion::test::HostConfig &cfg) { return cfg.hostSR == kOnnxRate; });
+    }
+
     /** Curated extended matrix (release / manual CI). */
     inline std::vector<torsion::test::HostConfig> extendedHostMatrixConfigs()
     {

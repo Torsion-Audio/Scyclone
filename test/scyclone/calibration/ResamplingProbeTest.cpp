@@ -7,8 +7,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <limits>
-#include "DryWetAssertions.h"
-#include "DryWetMeasurements.h"
+#include "DryWetContract.h"
 #include "HostConfig.h"
 #include "ImpulseMetrics.h"
 #include "JuceFixture.h"

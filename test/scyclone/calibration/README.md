@@ -11,7 +11,7 @@ Run when:
 Configure first with `cmake --preset default` and `cmake --build --preset test` (see [test/README.md](../README.md)).
 
 ```powershell
-# RMS / dirac tolerance table (update ResamplingContractAssertions.h / ResamplingMeasurements.h)
+# RMS / dirac tolerance table (update ResamplingContractAssertions.h / DryWetContract.h)
 .\build\Test.exe --gtest_filter=*PrintToleranceMeasurements* --gtest_also_run_disabled_tests
 
 # SNR floors (update defaultCiSnrCases() in ResamplingSignalUtils.h — measured − 3 dB)
@@ -24,4 +24,4 @@ Configure first with `cmake --preset default` and `cmake --build --preset test` 
 .\build\Test.exe --gtest_filter=*ProductionSineLagSweep* --gtest_also_run_disabled_tests
 ```
 
-Policy: do **not** skip or relax production swept-sine / impulse CI tests based on probe output alone — use explicit `GTEST_SKIP` with documented open issues (see architecture doc). Probes track drift until product latency reporting is fixed.
+Policy: do **not** relax production swept-sine / impulse CI tests based on probe output alone. Production signal suites use `productionSignalContractConfigs()` (48 kHz only); see architecture doc for cross-rate group-delay issue. Probes track drift until product latency reporting is fixed.
