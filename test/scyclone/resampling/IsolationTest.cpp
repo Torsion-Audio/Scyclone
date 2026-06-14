@@ -1,5 +1,5 @@
 // Uncoupled libsamplerate sizing (not production mode).
-// Documents the ceil +1 footgun; production avoids this via forcedOutputBlockSize.
+// Documents the ceil +1 footgun; production avoids this via setOutputBufferSize().
 
 #include <gtest/gtest.h>
 #include "ResamplingTopology.h"
