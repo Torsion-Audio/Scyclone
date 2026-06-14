@@ -61,3 +61,7 @@ juce_add_binary_data(BinaryData SOURCES
 )
 
 set_target_properties(BinaryData PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+if(TARGET scyclone_sanitizer_flags)
+    target_link_libraries(BinaryData PRIVATE scyclone_sanitizer_flags)
+endif()
