@@ -53,11 +53,12 @@ endif()
 # Since we linked the shared juce targets in PRIVATE mode, they are not linked to the test target again
 target_compile_definitions(Test PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},COMPILE_DEFINITIONS>)
 target_include_directories(Test PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/support
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/support/audio
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/support/mixer
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/support/processors
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/support/resampling
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/torsion
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/torsion/audio
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/torsion/processors
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/torsion/gtest
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/scyclone/resampling
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/scyclone/mixer
         $<TARGET_PROPERTY:${PROJECT_NAME},INCLUDE_DIRECTORIES>)
 
 # Make an Xcode Scheme for the test executable so we can run Test in the IDE

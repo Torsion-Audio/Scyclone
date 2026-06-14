@@ -8,55 +8,68 @@ See [docs/resampling_architecture.md](../docs/resampling_architecture.md) for th
 
 ```
 test/
-  support/
-    TestInfrastructure.h          Compatibility shim (resampling_test aliases)
-    HostConfigCatalog.h           Sample-rate/block axes, composable presets, gtest adapters
-    audio/                        Domain-neutral audio test utilities (scyclone::test)
-      JuceFixture.h               JuceAudioTest
-      BlockStreaming.h            Pre-roll, stream-in-blocks, collectProcessorOutput
-      LongRun.h                   longRunTolerance, runLongBlockLoop
-      SignalGenerators.h          Swept sine, Hanning windowed tones
-      SignalMetrics.h             rms, impulse peak, maxOutsideWindow
-      SignalMetrics.cpp           FFT peak SNR (calculateSnrDb)
-    processors/                   Injectable IProcessor mocks (scyclone::test)
-      PassthroughProcessor.h      Zero-latency middle stage
-      DelayLineProcessor.h        Configurable FIFO delay @ processing rate
-    mixer/                        Dry/wet contracts (scyclone::test::mixer)
-      DryWetMeasurements.h        measureDryWetDiracPeak, measureDryWetDiracJitter
-      DryWetAssertions.h          assertDryWetDiracAligned
-    resampling/                   Resampler domain (scyclone::test::resampling)
-      ResamplingTopology.h        Chain structs, prepare*, ONNX constants, feasibility
-      ResamplingRunner.h          Unified chain block runners, collect* helpers
-      ResamplingChainHelpers.h    Shim → Topology + Runner
-      ResamplingFixtures.h        ChainContractTest, ProcessorStructuralTest, case builders
-      ResamplingSignalUtils.h     SnrCase, defaultCiSnrCases()
-      ResamplingMeasurements.h    measure* only (ImpulseResponse, RMS, SNR)
-      ResamplingContractAssertions.h  assert* only (pure gtest contracts)
-      SimulatedOnnxProcessor.h    ONNX-shaped DelayLineProcessor preset
-  resampling/
-    IsolationTest.cpp             Uncoupled up/down sizing (not production mode)
-    StructuralTest.cpp            Per-processor frame invariants, prepare/release
-    SignalTest.cpp                FFT peak SNR on windowed sines
-    ChainContractTest.cpp         Round-trip + production chain contracts (ChainKind param)
-  mixer/
-    DryWetAlignmentTest.cpp       Dry/wet dirac peak alignment
-    GrainDryWetContractTest.cpp   Grain dry-buffer aliasing contract
-  plugin/
-    PluginIntegrationTest.cpp     Full graph prepare/processBlock smoke
-  calibration/
-    ResamplingProbeTest.cpp       DISABLED tolerance / SNR / latency probes
+  torsion/                              # torsion::test — reusable across Torsion plugins
+    audio/
+      JuceFixture.h                     JuceAudioTest
+      BlockStreaming.h                  Pre-roll, stream-in-blocks, collectProcessorOutput
+      LongRun.h                         longRunTolerance, runLongBlockLoop
+      TestTiming.h                      kPreRollBlocks, kSteadyBlocks, latencyPreRollBlocks
+      SignalGenerators.h                Swept sine, Hanning windowed tones
+      SignalMetrics.h / .cpp            rms, impulse peak, FFT SNR
+      SignalFidelity.h                  sineWarmupBlocks, worstSweptSineRmsError
+      ImpulseMetrics.h                  ImpulseResponse, fillImpulsePeakMetrics
+    processors/
+      PassthroughProcessor.h            Zero-latency middle stage
+      DelayLineProcessor.h              Configurable FIFO delay @ processing rate
+    gtest/
+      HostConfig.h                      HostConfig struct
+      HostConfigCatalog.h               cartesian, merge, dedupe, filter, param naming
+      HostConfigFixtures.h              HostConfigParamTest base
+      ImpulseAssertions.h               assertImpulse* (peak tolerance, side lobes)
+  scyclone/                             # scyclone::test::* — Scyclone-specific
+    resampling/
+      ScycloneHostPresets.h             defaultCiHostConfigs, extended matrix, dry/wet presets
+      ResamplingTopology.h              Chain structs, prepare*, ONNX constants, feasibility
+      ResamplingRunner.h                Unified chain block runners, collect* helpers
+      ResamplingFixtures.h              ChainContractTest, ProcessorStructuralTest, case builders
+      ResamplingSignalUtils.h           SnrCase, defaultCiSnrCases()
+      ResamplingMeasurements.h          Chain-specific measure* (RMS, SNR, impulse)
+      ResamplingContractAssertions.h    Resampler assert* (block size, RMS, processor I/O)
+      SimulatedOnnxProcessor.h          ONNX-shaped DelayLineProcessor preset
+      IsolationTest.cpp                 Uncoupled up/down sizing (not production mode)
+      StructuralTest.cpp                Per-processor frame invariants, prepare/release
+      SignalTest.cpp                    FFT peak SNR on windowed sines
+      ChainContractTest.cpp             Round-trip + production chain contracts
+    mixer/
+      DryWetMeasurements.h              measureDryWetDiracPeak, measureDryWetDiracJitter
+      DryWetAssertions.h                assertDryWetDiracAligned
+      DryWetAlignmentTest.cpp           Dry/wet dirac peak alignment
+      GrainDryWetContractTest.cpp       Grain dry-buffer aliasing contract
+    plugin/
+      PluginIntegrationTest.cpp         Full graph prepare/processBlock smoke
+    calibration/
+      ResamplingProbeTest.cpp           DISABLED tolerance / SNR / latency probes
+      README.md
   benchmark/
-    benchmark.cpp                 Separate Benchmark target (not in ctest)
+    benchmark.cpp                       Separate Benchmark target (not in ctest)
 ```
 
 ## Namespaces
 
 | Namespace | Contents |
 |-----------|----------|
-| `scyclone::test` | JuceAudioTest, signal generators/metrics, block streaming, processor mocks |
-| `scyclone::test::resampling` | ONNX-path topology, chain runners, resampler measurements/assertions |
+| `torsion::test` | JuceAudioTest, signal generators/metrics, block streaming, processor mocks, host-config matrices, impulse metrics/assertions |
+| `scyclone::test::resampling` | ONNX-path topology, chain runners, Scyclone CI presets, resampler measurements/assertions |
 | `scyclone::test::mixer` | Dry/wet dirac alignment measure/assert |
-| `resampling_test` | **Compatibility alias** — `using` re-exports the above; existing `.cpp` files keep `using namespace resampling_test` |
+
+## Torsion vs Scyclone boundary
+
+| Concern | Torsion | Scyclone |
+|---------|---------|----------|
+| Host SR/block struct, cartesian matrices | yes | CI presets only |
+| Swept-sine RMS, impulse peak analysis | yes | chain runners that produce samples |
+| ONNX rate, `ResamplingProcessor` chains | — | yes |
+| SNR floors tuned for this resampler | — | yes |
 
 ## Test layers
 
@@ -64,11 +77,11 @@ Inspired by [libsamplerate tests](../modules/libsamplerate/tests/):
 
 | Layer | Files | What we check |
 |-------|-------|---------------|
-| **Structural** | `resampling/StructuralTest.cpp` | Per-block frame invariants (up + down), warmup partial-block tail zeroed, long-run frame counts, prepare/release stability |
-| **Signal quality** | `resampling/SignalTest.cpp` | FFT peak SNR (dB) on windowed sines — up-only and down-only |
-| **Contracts** | `resampling/ChainContractTest.cpp` | Block size, RMS, impulse — round-trip (all rates) + production (48 kHz impulse/RMS only) |
-| **Alignment** | `mixer/DryWetAlignmentTest.cpp` | Dry/wet dirac peak at `diracPos + totalLatency` |
-| **Plugin** | `plugin/PluginIntegrationTest.cpp` | Full graph prepare/processBlock smoke |
+| **Structural** | `scyclone/resampling/StructuralTest.cpp` | Per-block frame invariants (up + down), warmup partial-block tail zeroed, long-run frame counts, prepare/release stability |
+| **Signal quality** | `scyclone/resampling/SignalTest.cpp` | FFT peak SNR (dB) on windowed sines — up-only and down-only |
+| **Contracts** | `scyclone/resampling/ChainContractTest.cpp` | Block size, RMS, impulse — round-trip (all rates) + production (48 kHz impulse/RMS only) |
+| **Alignment** | `scyclone/mixer/DryWetAlignmentTest.cpp` | Dry/wet dirac peak at `diracPos + totalLatency` |
+| **Plugin** | `scyclone/plugin/PluginIntegrationTest.cpp` | Full graph prepare/processBlock smoke |
 
 ## Core contracts
 
@@ -89,7 +102,7 @@ Inspired by [libsamplerate tests](../modules/libsamplerate/tests/):
 | `dryWetHostConfigs()` | default CI + alignment edge blocks | Dry/wet dirac alignment (block-center sensitive) |
 | `extendedHostMatrixConfigs()` | 14 curated host/block pairs | `ExtendedHostMatrix` suite only |
 
-Axes and combinators (`cartesianHostConfigs`, `mergeHostConfigs`, `dedupeHostConfigs`) live in `HostConfigCatalog.h`.
+Combinators (`cartesianHostConfigs`, `mergeHostConfigs`, `dedupeHostConfigs`, `filterHostConfigs`) live in `torsion/gtest/HostConfigCatalog.h`. Scyclone CI presets live in `scyclone/resampling/ScycloneHostPresets.h`.
 
 ## Includes
 
@@ -101,28 +114,29 @@ Prefer **targeted includes** — avoid pulling the full resampling stack when a 
 #include "ResamplingContractAssertions.h"
 
 // Resampling signal quality (SNR)
-#include "ResamplingFixtures.h"
 #include "ResamplingMeasurements.h"
+#include "ResamplingSignalUtils.h"
 
 // Dry/wet alignment only (no FFT SNR)
 #include "DryWetAssertions.h"
 #include "HostConfigCatalog.h"
 #include "ResamplingFixtures.h"
-#include "TestInfrastructure.h"
+#include "ScycloneHostPresets.h"
 
-// Plugin / grain smoke
-#include "TestInfrastructure.h"
+// Plugin smoke
+#include "JuceFixture.h"
+#include "TestTiming.h"
 
 // Calibration probes
 #include "DryWetAssertions.h"
 #include "DryWetMeasurements.h"
-#include "HostConfigCatalog.h"
+#include "ImpulseMetrics.h"
 #include "PassthroughProcessor.h"
 #include "ResamplingMeasurements.h"
-#include "TestInfrastructure.h"
+#include "ScycloneHostPresets.h"
 ```
 
-Tolerance constants: RMS/impulse in `ResamplingContractAssertions.h`, dirac in `DryWetAssertions.h`, SNR floors in `ResamplingSignalUtils.h`. Measurements live in `ResamplingMeasurements.h` and `DryWetMeasurements.h`; tests call `measure*` then `assert*` for debuggable failures.
+Tolerance constants: RMS in `ResamplingContractAssertions.h`, dirac in `DryWetAssertions.h`, impulse peak in `ImpulseAssertions.h`, SNR floors in `ResamplingSignalUtils.h`. Torsion provides signal/impulse analysis; Scyclone headers run chains and call `measure*` then `assert*`.
 
 ### Injectable pipeline layers
 
@@ -139,13 +153,15 @@ Resampler regressions should fail at **Passthrough** middle, not require ONNX-sh
 
 | Old | New |
 |-----|-----|
-| `ResamplingChainHelpers.h` (monolith) | `ResamplingTopology.h` + `ResamplingRunner.h` |
-| Signal math in `ResamplingSignalUtils.h` | `audio/SignalGenerators.h`, `audio/SignalMetrics.h` |
-| `measureDryWetDiracPeak` in resampling headers | `mixer/DryWetMeasurements.h` |
-| `assertDryWetDiracAligned` in resampling headers | `mixer/DryWetAssertions.h` |
-| `namespace resampling_test` for everything | Layered `scyclone::test::*` + `resampling_test` alias shim |
+| `test/support/resampling/ResamplingChainHelpers.h` | `scyclone/resampling/ResamplingTopology.h` + `ResamplingRunner.h` |
+| Signal math in `ResamplingSignalUtils.h` / `ResamplingMeasurements.h` | `torsion/audio/SignalGenerators.h`, `SignalMetrics.h`, `SignalFidelity.h`, `ImpulseMetrics.h` |
+| Host-config combinators + CI presets in `HostConfigCatalog.h` | `torsion/gtest/HostConfigCatalog.h` + `scyclone/resampling/ScycloneHostPresets.h` |
+| `measureDryWetDiracPeak` in resampling headers | `scyclone/mixer/DryWetMeasurements.h` |
+| `assertDryWetDiracAligned` in resampling headers | `scyclone/mixer/DryWetAssertions.h` |
+| `namespace resampling_test` alias shim | `torsion::test` + `scyclone::test::*` (shim removed) |
+| `TestInfrastructure.h` umbrella include | Targeted includes from `torsion/` and `scyclone/` headers |
 
-`TestInfrastructure.h` is now a thin compatibility header. Prefer `JuceFixture.h` for new non-resampling tests.
+Prefer `JuceFixture.h` for new non-resampling tests. Test cases live under `scyclone/{resampling,mixer,plugin,calibration}/`.
 
 ## Calibration policy
 
@@ -153,7 +169,7 @@ Resampler regressions should fail at **Passthrough** middle, not require ONNX-sh
 
 **Open product issue:** bulk `productionChainTotalLatency` ≠ measured group delay at cross-rate (~90 samples @ 44.1 kHz / 128). See [docs/resampling_architecture.md](../docs/resampling_architecture.md). Do not widen CI tolerance to hide this — use `DISABLED_LatencyAudit` / `DISABLED_ProductionSineLagSweep` probes.
 
-See [calibration/README.md](calibration/README.md) for when to run DISABLED probes.
+See [scyclone/calibration/README.md](scyclone/calibration/README.md) for when to run DISABLED probes.
 
 ```powershell
 # RMS / dirac tolerances
@@ -225,7 +241,7 @@ AddressSanitizer, UndefinedBehaviorSanitizer, and ThreadSanitizer run on every p
 
 After clone, run `cmake --preset default` and `cmake --build --preset test`. Squiggles on test includes before configure are normal. With clangd, [`.clangd`](../.clangd) picks up `build/compile_commands.json` automatically. If you use the Microsoft C/C++ extension instead, set `C_Cpp.default.compileCommands` locally to `build/compile_commands.json` (optional, IntelliSense-only — ctest is the source of truth).
 
-CMake include roots for the `Test` target: `test/support`, `test/support/audio`, `test/support/mixer`, `test/support/processors`, `test/support/resampling`.
+CMake include roots for the `Test` target: `test/torsion`, `test/torsion/audio`, `test/torsion/processors`, `test/torsion/gtest`, `test/scyclone/resampling`, `test/scyclone/mixer`, plus plugin source includes from the main target.
 
 ## Targets
 
