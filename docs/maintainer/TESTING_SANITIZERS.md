@@ -27,7 +27,7 @@ All jobs: `ctest -L default` (see [test/README.md](../../test/README.md) for lab
 
 **Windows MSVC ASan** — `ASAN` forces the same ONNX stub (LNK2038/LNK1319 without it); DSP/resampling tests run, `PluginIntegrationTest` skips.
 
-**macOS LEAK job** — pins Homebrew **`llvm@18`** (unpinned `llvm` 22 breaks JUCE 7.0.5); `-fsanitize=leak`, warn-only. `LEAK` forces ONNX stub (prebuilt ORT does not link with Homebrew Clang); DSP/resampling tests run, `PluginIntegrationTest` skips. FetchContent **gtest** must get the same LEAK flags as `Test` (see [`setup_tests_and_benchmarks.cmake`](../../cmake/setup_tests_and_benchmarks.cmake)) - mixed instrumentation aborts LSAN at tear-down.
+**macOS LEAK job** — pins Homebrew **`llvm@18`** (unpinned `llvm` 22 breaks JUCE 7.0.5); `-fsanitize=leak`, warn-only. `LEAK` forces ONNX stub (prebuilt ORT does not link with Homebrew Clang); DSP/resampling tests run, `PluginIntegrationTest` skips. Every static lib in the `Test` link must get the same LEAK flags as `Test` — **gtest** ([`setup_tests_and_benchmarks.cmake`](../../cmake/setup_tests_and_benchmarks.cmake)), **BinaryData** ([`assets/CMakeLists.txt`](../../assets/CMakeLists.txt)), etc. Mixed instrumentation aborts LSAN at tear-down.
 
 **SNR floors** — Linux/macOS ASan jobs run `PrintSnrMeasurements` (`continue-on-error`) to calibrate per-OS floors in [`ResamplingSignalUtils.h`](../../test/scyclone/resampling/ResamplingSignalUtils.h). Procedure: [test/scyclone/calibration/README.md](../../test/scyclone/calibration/README.md).
 
@@ -38,5 +38,5 @@ All jobs: `ctest -L default` (see [test/README.md](../../test/README.md) for lab
 | Linux configure / `juceaide` | [`.github/actions/juce-linux-deps`](../../.github/actions/juce-linux-deps/action.yml) ran |
 | macOS ASan aborts before tests | `detect_leaks` must not be set on macOS (see workflow) |
 | No sanitizer in stack traces | `Test` links `scyclone_sanitizer_flags`; `-fsanitize=` in `compile_commands.json` |
-| LEAK macOS: tests pass then `Subprocess aborted` | gtest must be LEAK-instrumented (mixed link crashes LSAN at exit) |
+| LEAK macOS: tests pass then `Subprocess aborted` | Every `.a` in the `Test` link must be LEAK-instrumented (gtest, BinaryData, …); mixed link crashes LSAN at exit |
 | Windows tests fail after link | MSVC ASan DLL on `PATH` (CI: `VCToolsInstallDir` — see workflow Setup MSVC step) |
