@@ -30,7 +30,7 @@ target_sources(ScycloneInstaller
 target_compile_definitions(ScycloneInstaller
         PRIVATE
         JUCE_WEB_BROWSER=0
-        JUCE_USE_CURL=0
+        JUCE_USE_CURL=$<BOOL:${UNIX}>
         JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:ScycloneInstaller,JUCE_PRODUCT_NAME>"
         JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:ScycloneInstaller,JUCE_VERSION>"
 )
@@ -43,6 +43,11 @@ juce_add_binary_data(InstallBinaryData SOURCES
 
 if(MSVC)
     SET_TARGET_PROPERTIES(ScycloneInstaller PROPERTIES LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\" /SUBSYSTEM:WINDOWS")
+endif()
+
+if(UNIX)
+    find_package(CURL REQUIRED)
+    target_link_libraries(ScycloneInstaller PRIVATE CURL::libcurl)
 endif()
 
 target_link_libraries(ScycloneInstaller

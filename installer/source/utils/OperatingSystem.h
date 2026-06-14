@@ -10,18 +10,21 @@ struct OperatingSystem {
         Windows_x64,
         MacOS_x64,
         MacOS_arm64,
+        Linux_x64,
         Unknown
     };
 
     static SystemType getOperatingSystem() {
 #if JUCE_MAC
-        #if JUCE_64BIT
-            return MacOS_x64;
-        #else
+        #if JUCE_ARM
             return MacOS_arm64;
+        #else
+            return MacOS_x64;
         #endif
 #elif JUCE_WINDOWS
         return Windows_x64;
+#elif JUCE_LINUX || LINUX || __linux__
+        return Linux_x64;
 #else
         return Unknown;
 #endif
