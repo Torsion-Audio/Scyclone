@@ -1,0 +1,20 @@
+name: JUCE Linux dependencies
+description: System packages required to build juceaide and JUCE GUI modules on Ubuntu CI runners
+
+runs:
+  using: composite
+  steps:
+    - name: Install JUCE Linux dependencies
+      shell: bash
+      run: |
+        # libwebkit omitted — Scyclone sets JUCE_WEB_BROWSER=0 (see cmake/juce_compile_config.cmake).
+        sudo apt-get install -y \
+          libasound2-dev \
+          libfreetype6-dev \
+          libx11-dev \
+          libxcomposite-dev \
+          libxcursor-dev \
+          libxinerama-dev \
+          libxrandr-dev \
+          libglu1-mesa-dev \
+          libcurl4-openssl-dev

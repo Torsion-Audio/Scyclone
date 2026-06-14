@@ -4,6 +4,13 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/source/*.h
 )
 
+# Sanitizer stub: link InferenceThreadStub.cpp instead of InferenceThread.cpp (no prebuilt ORT).
+if(SCYCLONE_SANITIZER_STUB_ONNX)
+    list(FILTER SOURCES EXCLUDE REGEX ".*/InferenceThread\\.cpp$")
+else()
+    list(FILTER SOURCES EXCLUDE REGEX ".*/InferenceThreadStub\\.cpp$")
+endif()
+
 # list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/source/ui/CustomComponents/OpenGLBackground/OpenGLUtil/OpenGLUtil.h)
 
 # Add all sources to target

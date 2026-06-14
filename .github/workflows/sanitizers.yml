@@ -1,0 +1,336 @@
+# Sanitizer CI: builds Test target only (not plugin formats).
+# Presets via -DSCYCLONE_SANITIZERS=... (see cmake/ScycloneSanitizers.cmake).
+name: Sanitizers
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: sanitizers-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SCYCLONE_MSAN_LIBCXX_LLVM_TAG: llvmorg-14.0.6
+
+jobs:
+  sanitize-asan-ubsan-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build
+
+      - uses: ./.github/actions/juce-linux-deps
+
+      - name: Configure (ASAN_UBSAN)
+        run: |
+          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSCYCLONE_SANITIZERS=ASAN_UBSAN
+
+      - name: Build Test
+        run: cmake --build build --target Test --parallel
+
+      - name: Run tests
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --test-dir build -L default --output-on-failure
+
+      - name: SNR calibration probe (Linux diagnostic)
+        continue-on-error: true
+        run: ./build/Test --gtest_filter=*PrintSnrMeasurements* --gtest_also_run_disabled_tests
+
+  # Apple Clang does not support detect_leaks in ASAN_OPTIONS; leak coverage is sanitize-leak-macos.
+  sanitize-asan-ubsan-macos:
+    runs-on: macos-14
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Pin Xcode for JUCE 7 compatibility
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+
+      - name: Configure (ASAN_UBSAN)
+        run: |
+          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DSCYCLONE_SANITIZERS=ASAN_UBSAN
+
+      - name: Build Test
+        run: cmake --build build --target Test --parallel
+
+      - name: Run tests
+        env:
+          ASAN_OPTIONS: abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --test-dir build -L default --output-on-failure
+
+      - name: SNR calibration probe (macOS diagnostic)
+        continue-on-error: true
+        run: ./build/Test --gtest_filter=*PrintSnrMeasurements* --gtest_also_run_disabled_tests
+
+  sanitize-asan-msvc-windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    # Prebuilt ORT lacks MSVC ASan STL annotations (LNK2038); SCYCLONE_SANITIZER_STUB_ONNX skips ORT link.
+    # PluginIntegrationTest skips under stub; resampling/mixer tests still run. continue-on-error until stable.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install Ninja
+        run: choco install ninja --yes
+
+      - name: Setup MSVC
+        id: setup_msvc
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (Test-Path $vswhere)) { throw "vswhere.exe not found" }
+          $vsPath = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath
+          if (-not $vsPath) { throw "Visual Studio with C++ tools not found" }
+          $vcvars = Join-Path $vsPath 'VC\Auxiliary\Build\vcvars64.bat'
+          if (-not (Test-Path $vcvars)) { throw "vcvars64.bat not found at $vcvars" }
+          $vctoolsInstallDir = $null
+          cmd /c "`"$vcvars`" && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+              Add-Content -Path $env:GITHUB_ENV -Value "$($matches[1])=$($matches[2])"
+              if ($matches[1] -eq 'VCToolsInstallDir') { $vctoolsInstallDir = $matches[2] }
+            }
+          }
+          if (-not $vctoolsInstallDir) { throw "VCToolsInstallDir not set by vcvars64.bat" }
+          $asanBinPath = Join-Path $vctoolsInstallDir "bin\Hostx64\x64"
+          if (-not (Test-Path $asanBinPath)) { throw "MSVC ASan bin path not found: $asanBinPath" }
+          echo "asan_bin_path=$asanBinPath" >> $env:GITHUB_OUTPUT
+
+      - name: Configure (ASAN)
+        shell: bash
+        run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSCYCLONE_SANITIZERS=ASAN
+
+      - name: Build Test
+        shell: bash
+        run: cmake --build build --target Test --parallel
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          $env:PATH = "${{ steps.setup_msvc.outputs.asan_bin_path }};$env:PATH"
+          ctest --test-dir build -C RelWithDebInfo -L default --output-on-failure
+
+  sanitize-tsan-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install build tools (Clang + LLVM)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build clang llvm
+
+      - uses: ./.github/actions/juce-linux-deps
+
+      - name: Configure (THREAD - Clang)
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSCYCLONE_SANITIZERS=THREAD
+
+      - name: Build Test
+        run: cmake --build build --target Test --parallel
+
+      - name: Run tests
+        env:
+          TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+        run: ctest --test-dir build -L default --output-on-failure
+
+  sanitize-tsan-macos:
+    runs-on: macos-14
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Pin Xcode for JUCE 7 compatibility
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+
+      - name: Configure (THREAD - Apple Clang)
+        run: |
+          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DSCYCLONE_SANITIZERS=THREAD
+
+      - name: Build Test
+        run: cmake --build build --target Test --parallel
+
+      - name: Run tests
+        env:
+          TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+        run: ctest --test-dir build -L default --output-on-failure
+
+  sanitize-msan-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install build tools (Clang + Ninja for MSan libc++ build)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake clang llvm ninja-build python3 curl
+
+      - uses: ./.github/actions/juce-linux-deps
+
+      - name: Cache MSan-instrumented libc++
+        id: msan_libcxx
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/msan-libcxx-prefix
+          key: msan-libcxx-${{ runner.os }}-${{ env.SCYCLONE_MSAN_LIBCXX_LLVM_TAG }}-v2-${{ hashFiles('.github/workflows/sanitizers.yml', 'cmake/ScycloneSanitizers.cmake') }}
+
+      - name: Build MSan-instrumented libc++/libc++abi (LLVM)
+        if: steps.msan_libcxx.outputs.cache-hit != 'true'
+        timeout-minutes: 45
+        run: |
+          set -euxo pipefail
+          TAG="${SCYCLONE_MSAN_LIBCXX_LLVM_TAG}"
+          VER="${TAG#llvmorg-}"
+          curl -fsSL -o /tmp/llvm-project.tar.xz \
+            "https://github.com/llvm/llvm-project/releases/download/${TAG}/llvm-project-${VER}.src.tar.xz"
+          tar xf /tmp/llvm-project.tar.xz -C /tmp
+          SRC="/tmp/llvm-project-${VER}.src"
+          PREFIX="${GITHUB_WORKSPACE}/msan-libcxx-prefix"
+          cmake -S "${SRC}/llvm" -B /tmp/libcxx-msan-b -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DLLVM_ENABLE_PROJECTS='libcxx;libcxxabi' \
+            -DLLVM_TARGETS_TO_BUILD=X86 \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_INCLUDE_DOCS=OFF \
+            -DLLVM_ENABLE_BINDINGS=OFF \
+            -DLLVM_ENABLE_Z3_SOLVER=OFF \
+            -DLLVM_USE_SANITIZER=Memory
+          cmake --build /tmp/libcxx-msan-b --target cxx cxxabi
+          rm -rf "${PREFIX}"
+          mkdir -p "${PREFIX}/include/c++" "${PREFIX}/lib"
+          if [ -d /tmp/libcxx-msan-b/include/c++/v1 ]; then
+            cp -a /tmp/libcxx-msan-b/include/c++/v1 "${PREFIX}/include/c++/"
+          else
+            echo "Missing generated libc++ headers under build/include/c++/v1"
+            find /tmp/libcxx-msan-b -maxdepth 4 -type d -name v1 2>/dev/null | head
+            exit 1
+          fi
+          while IFS= read -r -d '' f; do cp -P "$f" "${PREFIX}/lib/"; done < <(find /tmp/libcxx-msan-b/lib -maxdepth 3 \( -name 'libc++.so*' -o -name 'libc++abi.so*' \) -print0)
+          for f in /tmp/libcxx-msan-b/lib/libc++.a /tmp/libcxx-msan-b/lib/libc++abi.a; do
+            [ -f "$f" ] && cp -P "$f" "${PREFIX}/lib/" || true
+          done
+          compgen -G "${PREFIX}/lib/libc++.so*" >/dev/null || { echo "No libc++.so under ${PREFIX}/lib"; ls -la "${PREFIX}/lib"; exit 1; }
+
+      - name: Configure (MEMORY - Linux + Clang)
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSCYCLONE_SANITIZERS=MEMORY \
+            -DSCYCLONE_MSAN_LIBCXX_PREFIX="${GITHUB_WORKSPACE}/msan-libcxx-prefix"
+
+      - name: Build Test
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/msan-libcxx-prefix/lib:${{ env.LD_LIBRARY_PATH }}
+        run: cmake --build build --target Test --parallel
+
+      - name: Run tests
+        env:
+          MSAN_OPTIONS: halt_on_error=1
+          LD_LIBRARY_PATH: ${{ github.workspace }}/msan-libcxx-prefix/lib:${{ env.LD_LIBRARY_PATH }}
+        run: ctest --test-dir build -L default --output-on-failure
+
+  # Standalone LeakSan (Homebrew Clang 18): secondary macOS leak signal (Apple Clang ASan has no detect_leaks).
+  # LEAK forces ONNX stub — prebuilt ORT fails to link with Homebrew Clang (undefined GetOpSchema symbols).
+  # Job is non-blocking; LSAN_OPTIONS=exitcode=0 reports leaks without failing the test run.
+  sanitize-leak-macos:
+    runs-on: macos-14
+    timeout-minutes: 120
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Cache Homebrew downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: ${{ runner.os }}-homebrew-downloads-llvm-18-${{ hashFiles('.github/workflows/sanitizers.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-homebrew-downloads-
+
+      - name: Install Homebrew LLVM 18 (for LeakSanitizer)
+        run: |
+          brew install llvm@18
+          LLVM_PREFIX="$(brew --prefix llvm@18)"
+          if [ ! -x "$LLVM_PREFIX/bin/clang" ]; then
+            brew reinstall llvm@18
+            LLVM_PREFIX="$(brew --prefix llvm@18)"
+          fi
+          echo "CC=$LLVM_PREFIX/bin/clang" >> "$GITHUB_ENV"
+          echo "CXX=$LLVM_PREFIX/bin/clang++" >> "$GITHUB_ENV"
+          echo "PATH=$LLVM_PREFIX/bin:$PATH" >> "$GITHUB_ENV"
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Pin Xcode for JUCE 7 compatibility
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+
+      - name: Configure (LEAK - macOS with open-source Clang)
+        run: |
+          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DSCYCLONE_SANITIZERS=LEAK
+
+      - name: Build Test
+        run: cmake --build build --target Test --parallel
+
+      - name: Run tests (leaks warn-only)
+        env:
+          LSAN_OPTIONS: exitcode=0:print_summary=1
+        run: ctest --test-dir build -L default --output-on-failure

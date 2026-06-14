@@ -19,6 +19,7 @@ int ResamplingProcessor::prepare(const juce::dsp::ProcessSpec &inputSpec,
 
     sampleRateRatio = calculateSampleRateRatio(targetSampleRate, inputSampleRate);
     outputBufferSize = calculateOutputBufferSize(sampleRateRatio, inputBufferSize);
+    bufferSizeRatio = calculateBufferSizeRatio(outputBufferSize, inputBufferSize);
     outputSampleRate = targetSampleRate;
     outputBuffer.setSize(1, outputBufferSize);
     outputBuffer.clear();
@@ -43,6 +44,11 @@ int ResamplingProcessor::calculateOutputBufferSize(double ratio, int blockSize)
 double ResamplingProcessor::calculateSampleRateRatio(double outputRate, double inputRate)
 {
     return outputRate / inputRate;
+}
+
+double ResamplingProcessor::calculateBufferSizeRatio(int outBufferSize, int inBufferSize)
+{
+    return static_cast<double>(outBufferSize) / static_cast<double>(inBufferSize);
 }
 
 void ResamplingProcessor::measureLatency()
@@ -84,6 +90,7 @@ void ResamplingProcessor::measureLatency()
 
 void ResamplingProcessor::printMetrics()
 {
+#if JUCE_DEBUG
     double timePerBlockInSec = static_cast<double>(inputBufferSize) / static_cast<double>(inputSampleRate);
     double correctedSampleRate = static_cast<double>(outputBufferSize) / timePerBlockInSec;
 
@@ -91,6 +98,7 @@ void ResamplingProcessor::printMetrics()
     DBG("Samplerate Ratio Set: " << sampleRateRatio);
     DBG("Corrected Sample Rate after reconversion: " << correctedSampleRate << " Hz");
     DBG("------");
+#endif
 }
 
 juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<float>& inputBufferMono) {
@@ -104,12 +112,15 @@ juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<fl
 
     srcData.data_out = outputBuffer.getWritePointer(0);
     srcData.output_frames = outputBuffer.getNumSamples();
-    srcData.src_ratio = sampleRateRatio;
+    srcData.src_ratio = bufferSizeRatio;
     srcData.end_of_input = 0;
 
     int error = src_process(converter, &srcData);
+    lastOutputFramesGenerated = srcData.output_frames_gen;
+    lastInputFramesUsed = srcData.input_frames_used;
     if (error != 0) {
         DBG("Error during sample rate conversion: " << error);
+        jassertfalse;
     }
     // output_frames_gen can be < output_frames due to SINC transport delay or internal buffering (libsamplerate FAQ).
     if (srcData.output_frames_gen < srcData.output_frames) {
@@ -117,9 +128,6 @@ juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<fl
         outputBuffer.clear(0,
                                static_cast<int>(srcData.output_frames_gen),
                                static_cast<int>(srcData.output_frames - srcData.output_frames_gen));
-        DBG("Remaining frames to process: "
-            << (srcData.output_frames - srcData.output_frames_gen)
-            << " for " << juce::String(processorName));
     }
     return outputBuffer;
 }
@@ -129,6 +137,9 @@ void ResamplingProcessor::setOutputBufferSize(int size)
     outputBufferSize = size;
     outputBuffer.setSize(1, size);
     outputBuffer.clear();
+    if (inputBufferSize > 0) {
+        bufferSizeRatio = calculateBufferSizeRatio(outputBufferSize, inputBufferSize);
+    }
 }
 
 void ResamplingProcessor::releaseResources() {

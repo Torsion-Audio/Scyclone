@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 3.24)
 
+# Helps clangd / C++ IntelliSense resolve JUCE and target include paths.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # The top-level CMakeLists.txt file for a project must contain a literal, direct call to the `project()` command.
 # `project()` sets up some helpful variables that describe source/binary directories, and the current project version.
 project(Scyclone VERSION 0.1.0)
 set (TARGET_NAME ${PROJECT_NAME})
 
+include(cmake/ScycloneSanitizers.cmake)
 include(cmake/configure_platform.cmake)
 
 # Add JUCE module
@@ -17,6 +21,8 @@ include(cmake/generate_build_info.cmake)
 # ONNX Runtime and libsamplerate
 include(cmake/setup_onnx_runtime.cmake)
 include(cmake/setup_libsamplerate.cmake)
+
+enable_testing()
 
 # Tests and Benchmarks
 include(cmake/setup_tests_and_benchmarks.cmake)
@@ -42,8 +48,6 @@ include(cmake/add_source_files.cmake)
 # Conversion to binary-data will happen when your target is built.
 add_subdirectory(assets)
 
-# enable ctest
-enable_testing()
 # this is a test on application level starting the app and checking if it is running
 # add_test(NAME RegularUsage COMMAND "Scyclone_artefacts/Debug/Standalone/Scyclone.app/Contents/MacOS/Scyclone")
 # we can specify som REGEX to check the output of the application

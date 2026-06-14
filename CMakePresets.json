@@ -1,0 +1,132 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "ninja",
+      "hidden": true,
+      "generator": "Ninja"
+    },
+    {
+      "name": "default",
+      "displayName": "Debug (tests + IDE)",
+      "description": "Daily dev: Test target and compile_commands.json for clangd",
+      "inherits": "ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release (plugin)",
+      "description": "VST3 / Standalone plugin build (required on Windows)",
+      "inherits": "ninja",
+      "binaryDir": "${sourceDir}/build-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "sanitize-base",
+      "hidden": true,
+      "inherits": "ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "asan-ubsan",
+      "displayName": "ASan + UBSan (Test)",
+      "description": "Linux/macOS sanitizer build — Test target only",
+      "inherits": "sanitize-base",
+      "binaryDir": "${sourceDir}/build-asan-ubsan",
+      "cacheVariables": {
+        "SCYCLONE_SANITIZERS": "ASAN_UBSAN"
+      },
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "asan",
+      "displayName": "ASan MSVC (Test)",
+      "description": "Windows MSVC sanitizer build — Test target only (UBSan not supported)",
+      "inherits": "sanitize-base",
+      "binaryDir": "${sourceDir}/build-asan",
+      "cacheVariables": {
+        "SCYCLONE_SANITIZERS": "ASAN"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "tsan",
+      "displayName": "ThreadSanitizer (Test)",
+      "description": "Linux/macOS TSan build — configures with Clang (override CC/CXX in CMakeUserPresets.json if needed)",
+      "inherits": "sanitize-base",
+      "binaryDir": "${sourceDir}/build-tsan",
+      "cacheVariables": {
+        "SCYCLONE_SANITIZERS": "THREAD"
+      },
+      "environment": {
+        "CC": "clang",
+        "CXX": "clang++"
+      },
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "test",
+      "configurePreset": "default",
+      "targets": ["Test"]
+    },
+    {
+      "name": "asan-ubsan",
+      "configurePreset": "asan-ubsan",
+      "targets": ["Test"],
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "targets": ["Test"],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "tsan",
+      "configurePreset": "tsan",
+      "targets": ["Test"],
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ]
+}
