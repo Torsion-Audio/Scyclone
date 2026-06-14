@@ -7,7 +7,9 @@
 
 
 #include "JuceHeader.h"
+#ifndef SCYCLONE_ONNX_STUB
 #include "onnxruntime_cxx_api.h"
+#endif
 #include "RingBuffer.h"
 #include "chrono"
 
@@ -41,7 +43,9 @@ private:
     void loadExternalModel(juce::File modelPath);
     void loadInternalModel(RaveModel modelToLoad);
     bool stopInferenceThreadAndWait();
+#ifndef SCYCLONE_ONNX_STUB
     std::vector<int> getInputShape(Ort::Session *sess);
+#endif
 
 private:
     bool startUp = true;
@@ -49,10 +53,12 @@ private:
 
     RaveModel currentLevel;
 
+#ifndef SCYCLONE_ONNX_STUB
     Ort::Env env;
     Ort::RunOptions runOptions;
     Ort::Session session;
     Ort::SessionOptions sessionOptions;
+#endif
 
     std::vector<float> onnxInputData;
     std::vector<float> onnxOutputData;

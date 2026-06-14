@@ -7,6 +7,16 @@ set_property(CACHE SCYCLONE_SANITIZERS PROPERTY STRINGS NONE ASAN ASAN_UBSAN THR
 
 option(SCYCLONE_MSAN_TRACK_ORIGINS "Add -fsanitize-memory-track-origins=2 for MSan (higher overhead)" OFF)
 
+option(SCYCLONE_SANITIZER_STUB_ONNX
+    "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (required for MSan)"
+    OFF)
+
+# Prebuilt ONNX is not MSan-instrumented; every linked object must be built with -fsanitize=memory.
+if(SCYCLONE_SANITIZERS STREQUAL "MEMORY")
+  set(SCYCLONE_SANITIZER_STUB_ONNX ON CACHE BOOL
+      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (required for MSan)" FORCE)
+endif()
+
 # Linux MSan: distro libc++.so is not instrumented; link against a prefix built with -fsanitize=memory
 # (see sanitize-msan-linux job in .github/workflows/sanitizers.yml).
 set(SCYCLONE_MSAN_LIBCXX_PREFIX "" CACHE PATH

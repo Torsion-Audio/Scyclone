@@ -1,4 +1,9 @@
 # Add the onnxruntime library
+if(SCYCLONE_SANITIZER_STUB_ONNX)
+  message(STATUS "Sanitizer stub: ONNX Runtime link disabled (SCYCLONE_ONNX_STUB)")
+  target_compile_definitions(${TARGET_NAME} PRIVATE SCYCLONE_ONNX_STUB=1)
+else()
+
 add_library(onnxruntime STATIC IMPORTED)
 
 if (APPLE)
@@ -44,3 +49,5 @@ endif()
 
 # Link the onnxruntime library to the target
 target_link_libraries(${TARGET_NAME} PRIVATE onnxruntime)
+
+endif()

@@ -34,6 +34,12 @@ if(NOT benchmark_POPULATED)
     # Set custom variables, policies, etc.
     set(BENCHMARK_ENABLE_TESTING OFF)
 
+    # Homebrew Clang + LEAK preset: Benchmark try_run regex probes often fail at configure.
+    if(SCYCLONE_SANITIZERS STREQUAL "LEAK")
+        set(HAVE_STD_REGEX ON CACHE BOOL "" FORCE)
+        set(RUN_HAVE_STD_REGEX 1 CACHE STRING "" FORCE)
+    endif()
+
     # Bring the populated content into the build
     add_subdirectory(${benchmark_SOURCE_DIR} ${benchmark_BINARY_DIR})
 endif()
