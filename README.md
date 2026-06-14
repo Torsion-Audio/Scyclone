@@ -53,7 +53,6 @@ ctest --test-dir build -L default --output-on-failure
 # Plugin (Release) — required on Windows for VST3 / Standalone
 cmake --preset release
 cmake --build --preset release
-```
 
 See [test/README.md](test/README.md) for the full test layout, sanitizer presets, and calibration probes.
 
@@ -65,11 +64,16 @@ See [test/README.md](test/README.md) for the full test layout, sanitizer presets
 - On macOS, set `CMAKE_OSX_ARCHITECTURES` (`arm64` or `x86_64`) in a local, gitignored [`CMakeUserPresets.json`](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html#additional-vendors) if needed.
 - The AU plugin has not been tested with Logic yet. Logic support will come in futher updates.
 
+## Training
+Discover how to train your own RAVE-Models for Scyclone with our comprehensive step-by-step guide: 
+- [Scyclone-AI](https://github.com/Torsion-Audio/Scyclone-AI/)
+
 ## References
 
 - RAVE Paper - [RAVE: A variational autoencoder for fast and high-quality neural audio synthesis](https://arxiv.org/abs/2111.05011)
 - RAVE Scripts - [RAVE Github Repository](https://github.com/acids-ircam/RAVE)
 - RNBO Tutorial - [JUCE & RNBO C++ Export](https://kengo.dev/posts/jr-granular)
+- ONNX static library builder - [ort-builder](https://github.com/olilarkin/ort-builder)
 
 ## Licenses
 This project is subject to multiple licenses. The primary license for the entire project is the GNU General Public License version 3 (GPLv3), which is the most restrictive of all the licenses applied herein.
