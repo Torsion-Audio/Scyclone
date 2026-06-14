@@ -15,7 +15,10 @@
 #include <JuceHeader.h>
 
 #include "HostConfigFixtures.h"
+#include "ImpulseAssertions.h"
 #include "ResamplingChainDriver.h"
+#include "ResamplingMeasurements.h"
+#include "ResamplingTopology.h"
 #include "SignalMetrics.h"
 #include "TestTiming.h"
 #include "dsp/mixer/DryWetMixer.h"
@@ -27,10 +30,25 @@ namespace scyclone::test::mixer
     {
     };
 
+    class DryWet48kSignalConfigTest : public torsion::test::HostConfigParamTest
+    {
+    };
+
     /// CI dirac peak search half-width (samples).
     constexpr int kDiracAlignmentTolerance = 2;
     /// Wider search for calibration jitter probes.
     constexpr int kCalibrationDiracSearchHalfWindow = 20;
+
+    /// Wet path group delay must match bulk reported latency (48 kHz production configs).
+    inline void assertProductionWetPeakMatchesReportedLatency(double hostSR, uint32_t blockSize)
+    {
+        using namespace scyclone::test::resampling;
+
+        const int hostBlock = static_cast<int>(blockSize);
+        auto prod = prepareProductionChain(hostSR, hostBlock);
+        const auto response = measureProductionImpulse(prod, hostSR, hostBlock, hostBlock / 2);
+        torsion::test::assertImpulsePeakWithinTolerance(response);
+    }
 
     /// Result of dirac stimulus through production chain + DryWetMixer.
     struct DryWetDiracMeasurement
