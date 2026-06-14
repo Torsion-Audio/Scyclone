@@ -1,72 +1,37 @@
-# Sanitizer CI — maintainers only
+# Sanitizer CI — maintainers
 
-Sanitizer builds use **`RelWithDebInfo`**, **`-DSCYCLONE_SANITIZERS=<PRESET>`**, and the **`Test`** target only (not plugin formats). Presets and policy live in [`cmake/ScycloneSanitizers.cmake`](../../cmake/ScycloneSanitizers.cmake).
+Policy and wiring for sanitizer builds. **Source of truth:** [`cmake/ScycloneSanitizers.cmake`](../../cmake/ScycloneSanitizers.cmake) (presets, flags, FATAL_ERROR rules), [`.github/workflows/sanitizers.yml`](../../.github/workflows/sanitizers.yml) (jobs, env vars, probes).
 
-Workflow: [`.github/workflows/sanitizers.yml`](../../.github/workflows/sanitizers.yml) — push/PR to `develop`, plus manual dispatch.
+Local configure/build: [test/README.md](../../test/README.md) and [`CMakePresets.json`](../../CMakePresets.json). Only **`Test`** is built/run — not plugin formats.
 
-## Presets
+## CI jobs
 
-| Preset | Where | CI job |
-|--------|-------|--------|
-| `ASAN_UBSAN` | Linux, macOS | `sanitize-asan-ubsan-*` |
-| `ASAN` | Windows (MSVC) | `sanitize-asan-msvc-windows` |
-| `THREAD` | Linux, macOS | `sanitize-tsan-*` |
-| `MEMORY` | Linux + Clang | `sanitize-msan-linux` |
-| `LEAK` | macOS + Homebrew Clang | `sanitize-leak-macos` |
+| Job | Preset | Gate |
+|-----|--------|------|
+| `sanitize-asan-ubsan-linux` | `ASAN_UBSAN` | **required** |
+| `sanitize-asan-ubsan-macos` | `ASAN_UBSAN` | **required** |
+| `sanitize-tsan-linux` / `sanitize-tsan-macos` | `THREAD` | **required** |
+| `sanitize-asan-msvc-windows` | `ASAN` | `continue-on-error` |
+| `sanitize-msan-linux` | `MEMORY` | `continue-on-error` |
+| `sanitize-leak-macos` | `LEAK` | `continue-on-error` |
 
-Default: `NONE`.
+All jobs: `ctest -L default` (see [test/README.md](../../test/README.md) for labels).
 
-## CI gates
+## Decisions not obvious from CMake alone
 
-| Status | Jobs |
-|--------|------|
-| **Required** | ASAN_UBSAN (Linux/macOS), TSan (Linux/macOS) |
-| **`continue-on-error: true`** | MSVC ASan (Windows), MSan, LeakSan |
+**Linux ASan vs macOS ASan leaks** — workflow sets `ASAN_OPTIONS=detect_leaks=1` on Linux only. Apple Clang aborts with `detect_leaks is not supported on this platform`; macOS leak signal is `sanitize-leak-macos` (Homebrew Clang, `-fsanitize=leak`, warn-only via `LSAN_OPTIONS=exitcode=0`).
 
-All jobs run `ctest -L default` (excludes the `extended-matrix` suite).
+**MSan + ONNX** — prebuilt ORT is not instrumented. `MEMORY` forces ONNX stub ([`cmake/setup_onnx_runtime.cmake`](../../cmake/setup_onnx_runtime.cmake), [`InferenceThreadStub.cpp`](../../source/dsp/onnx/InferenceThreadStub.cpp)); `PluginIntegrationTest` skips under `SCYCLONE_ONNX_STUB`.
 
-## Local run
+**Windows MSVC ASan** — link fails with LNK2038 vs prebuilt ORT; job kept for visibility until instrumented ORT exists (see workflow comment on `sanitize-asan-msvc-windows`).
 
-Prefer CMake presets from [`CMakePresets.json`](../../CMakePresets.json) (see [test/README.md](../../test/README.md)):
+**SNR floors** — Linux/macOS ASan jobs run `PrintSnrMeasurements` (`continue-on-error`) to calibrate per-OS floors in [`ResamplingSignalUtils.h`](../../test/scyclone/resampling/ResamplingSignalUtils.h). Procedure: [test/scyclone/calibration/README.md](../../test/scyclone/calibration/README.md).
 
-```bash
-# Linux/macOS — ASan + UBSan
-cmake --preset asan-ubsan
-cmake --build --preset asan-ubsan
-export ASAN_OPTIONS=detect_leaks=1:abort_on_error=1
-export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
-ctest --test-dir build-asan-ubsan -L default --output-on-failure
+## When CI breaks
 
-# Linux/macOS — ThreadSanitizer (preset sets CC/CXX to clang; override in CMakeUserPresets.json if needed)
-cmake --preset tsan
-cmake --build --preset tsan
-ctest --test-dir build-tsan -L default --output-on-failure
-
-# Windows MSVC — ASan only (UBSan not supported)
-cmake --preset asan
-cmake --build --preset asan
-ctest --test-dir build-asan -L default --output-on-failure
-```
-
-Equivalent raw configure (no presets):
-
-```bash
-cmake -G Ninja -B build-asan-ubsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSCYCLONE_SANITIZERS=ASAN_UBSAN
-cmake --build build-asan-ubsan --target Test
-```
-
-TSan (raw configure): `-DSCYCLONE_SANITIZERS=THREAD` with `CC=clang CXX=clang++`.  
-Windows MSVC ASan: `-DSCYCLONE_SANITIZERS=ASAN` (not `ASAN_UBSAN`).
-
-## Known limits
-
-- **Prebuilt ONNX** is not instrumented. Fine for ASan/UBSan/TSan; MSan may false-positive in `PluginIntegrationTest`.
-- **Windows MSVC ASan** fails link with **LNK2038** (`annotate_string` mismatch vs `onnxruntime-win-x64.lib`). CI job is informational until an ASan-built ORT exists.
-- **JUCE LTO** is disabled when any sanitizer preset is active.
-- **libsamplerate** gets matching ASan/UBSan flags when preset is `ASAN` or `ASAN_UBSAN`.
-
-## If something breaks
-
-- No sanitizer output → check `compile_commands.json` for `-fsanitize=` / `/fsanitize=address`; confirm `Test` links `scyclone_sanitizer_flags`.
-- Bad stack traces → install `llvm-symbolizer`; set `ASAN_OPTIONS=symbolize=1`.
-- Windows `0xc0000135` after a successful link → MSVC ASan DLL must be on `PATH` (CI derives it from `VCToolsInstallDir` in the Setup MSVC step).
+| Symptom | Check |
+|---------|--------|
+| Linux configure / `juceaide` | [`.github/actions/juce-linux-deps`](../../.github/actions/juce-linux-deps/action.yml) ran |
+| macOS ASan aborts before tests | `detect_leaks` must not be set on macOS (see workflow) |
+| No sanitizer in stack traces | `Test` links `scyclone_sanitizer_flags`; `-fsanitize=` in `compile_commands.json` |
+| Windows tests fail after link | MSVC ASan DLL on `PATH` (CI: `VCToolsInstallDir` — see workflow Setup MSVC step) |

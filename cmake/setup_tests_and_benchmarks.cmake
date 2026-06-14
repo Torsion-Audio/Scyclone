@@ -17,39 +17,34 @@ endif()
 FetchContent_Declare(googletest
         URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip)
 
-FetchContent_Declare(benchmark
-        GIT_REPOSITORY https://github.com/google/benchmark.git
-        GIT_TAG v1.8.0)
+# Sanitizer CI runs gtest only; no Test source uses benchmark. Skip fetch/link when sanitizers are on.
+if(SCYCLONE_SANITIZERS STREQUAL "NONE")
+    FetchContent_Declare(benchmark
+            GIT_REPOSITORY https://github.com/google/benchmark.git
+            GIT_TAG v1.8.0)
+endif()
 
 # This command ensures that each of the named dependencies are made available to the project by the time it returns. If the dependency has already been populated the command does nothing. Otherwise, the command populates the dependency and then calls add_subdirectory() on the result.
 FetchContent_MakeAvailable(googletest)
 
-# For benchmark we want to set the BENCMARK_ENABLE_TESTING to OFF therefore we cannot use FetchContent_MakeAvailable()
-# Check if population has already been performed
-FetchContent_GetProperties(benchmark)
-if(NOT benchmark_POPULATED)
-    # Fetch the content using previously declared details
-    FetchContent_Populate(benchmark)
-
-    # Set custom variables, policies, etc.
-    set(BENCHMARK_ENABLE_TESTING OFF)
-
-    # Homebrew Clang + LEAK preset: Benchmark try_run regex probes often fail at configure.
-    if(SCYCLONE_SANITIZERS STREQUAL "LEAK")
-        set(HAVE_STD_REGEX ON CACHE BOOL "" FORCE)
-        set(RUN_HAVE_STD_REGEX 1 CACHE STRING "" FORCE)
+# For benchmark we want to set the BENCHMARK_ENABLE_TESTING to OFF therefore we cannot use FetchContent_MakeAvailable()
+if(SCYCLONE_SANITIZERS STREQUAL "NONE")
+    FetchContent_GetProperties(benchmark)
+    if(NOT benchmark_POPULATED)
+        FetchContent_Populate(benchmark)
+        set(BENCHMARK_ENABLE_TESTING OFF)
+        add_subdirectory(${benchmark_SOURCE_DIR} ${benchmark_BINARY_DIR})
     endif()
-
-    # Bring the populated content into the build
-    add_subdirectory(${benchmark_SOURCE_DIR} ${benchmark_BINARY_DIR})
 endif()
 
 # Setup the test executable
 add_executable(Test ${TestFiles})
 set_property(TARGET Test PROPERTY CXX_STANDARD 20)
 
-# Link the test executable against gtest_main and google benchmark
-target_link_libraries(Test PRIVATE gtest_main benchmark::benchmark "${TARGET_NAME}")
+target_link_libraries(Test PRIVATE gtest_main "${PROJECT_NAME}")
+if(SCYCLONE_SANITIZERS STREQUAL "NONE")
+    target_link_libraries(Test PRIVATE benchmark::benchmark)
+endif()
 if(TARGET scyclone_sanitizer_flags)
     target_link_libraries(Test PRIVATE scyclone_sanitizer_flags)
 endif()

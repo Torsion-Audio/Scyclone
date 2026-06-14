@@ -7,7 +7,7 @@ runs:
     - name: Install JUCE Linux dependencies
       shell: bash
       run: |
-        sudo apt-get update
+        # libwebkit omitted — Scyclone sets JUCE_WEB_BROWSER=0 (see cmake/juce_compile_config.cmake).
         sudo apt-get install -y \
           libasound2-dev \
           libfreetype6-dev \
@@ -17,5 +17,4 @@ runs:
           libxinerama-dev \
           libxrandr-dev \
           libglu1-mesa-dev \
-          libcurl4-openssl-dev \
-          libwebkit2gtk-4.0-dev
+          libcurl4-openssl-dev
