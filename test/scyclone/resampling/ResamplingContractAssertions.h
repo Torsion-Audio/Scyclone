@@ -4,9 +4,10 @@
 /// @brief gtest contract assertions for Scyclone resampling behavioral tests.
 ///
 /// Assert-phase helpers: call `measure*` from ResamplingMeasurements.h internally
-/// or assert directly on processor I/O. Tolerance constants are tuned via
-/// CalibrationProbe DISABLED tests. Impulse peak/side-lobe contracts live in
-/// `torsion::test::ImpulseAssertions.h`.
+/// or assert directly on processor I/O. Steady chain loops delegate to
+/// ResamplingChainDriver.h; pre-roll/warmup/impulse collectors use ResamplingRunner.h.
+/// Tolerance constants are tuned via CalibrationProbe DISABLED tests. Impulse peak/side-lobe
+/// contracts live in `torsion::test::ImpulseAssertions.h`.
 ///
 /// @namespace scyclone::test::resampling
 
@@ -15,6 +16,7 @@
 #include <random>
 
 #include "ImpulseAssertions.h"
+#include "ResamplingChainDriver.h"
 #include "ResamplingMeasurements.h"
 
 namespace scyclone::test::resampling
@@ -33,12 +35,10 @@ namespace scyclone::test::resampling
     /// Steady-state: host block in == host block out (round-trip, passthrough path).
     inline void assertBlockSizePreserved(RoundTripChain &chain, int hostBlock, int nBlocks = kSteadyBlocks)
     {
-        chain.hostBuffer.clear();
+        const auto sizes = steadyRoundTripBlockSizes(chain, nBlocks);
         for (int n = 0; n < nBlocks; ++n)
         {
-            juce::AudioBuffer<float> &upOut = chain.up.processBlock(chain.hostBuffer);
-            juce::AudioBuffer<float> &downOut = chain.down.processBlock(upOut);
-            EXPECT_EQ(downOut.getNumSamples(), hostBlock)
+            EXPECT_EQ(sizes[static_cast<size_t>(n)], hostBlock)
                 << "block=" << hostBlock << " steady block " << n;
         }
     }
@@ -47,20 +47,15 @@ namespace scyclone::test::resampling
     inline void assertProductionBlockSizePreserved(ProductionChain &chain, int hostBlock,
                                                    int nBlocks = kSteadyBlocks)
     {
-        chain.resamplers.hostBuffer.clear();
-        juce::AudioBuffer<float> onnxBuf;
+        const auto sizes = steadyProductionBlockSizes(chain, nBlocks);
         for (int n = 0; n < nBlocks; ++n)
         {
-            juce::AudioBuffer<float> &upOut = chain.resamplers.up.processBlock(chain.resamplers.hostBuffer);
-            onnxBuf.makeCopyOf(upOut);
-            chain.onnx.processBlock(onnxBuf);
-            juce::AudioBuffer<float> &downOut = chain.resamplers.down.processBlock(onnxBuf);
-            EXPECT_EQ(downOut.getNumSamples(), hostBlock)
+            EXPECT_EQ(sizes[static_cast<size_t>(n)], hostBlock)
                 << "block=" << hostBlock << " steady block " << n;
         }
     }
 
-    /// Per-processor steady state: full input consumed, full output generated.
+    /// Per-processor steady I/O: last frames used/generated match expected in/out sizes.
     inline void assertProcessorSteadyStateFullIo(ResamplingProcessor &proc, juce::AudioBuffer<float> &buf,
                                                  int expectedIn, int expectedOut, int nBlocks = kSteadyBlocks)
     {
@@ -76,46 +71,36 @@ namespace scyclone::test::resampling
         }
     }
 
-    /// Silence in → near-zero out after pre-roll (no DC leak).
+    /// Silence in → silence out after pre-roll (DC leak guard).
     inline void assertRoundTripSilenceOut(RoundTripChain &chain, int hostBlock,
                                           int nBlocks = kSteadyBlocks, float maxAbs = 1.0e-5f)
     {
-        chain.hostBuffer.clear();
-        for (int n = 0; n < nBlocks; ++n)
+        const auto blocks = steadyRoundTripSilenceOutputs(chain, nBlocks);
+        for (const auto &blockOut : blocks)
         {
-            juce::AudioBuffer<float> &upOut = chain.up.processBlock(chain.hostBuffer);
-            juce::AudioBuffer<float> &downOut = chain.down.processBlock(upOut);
-            for (int i = 0; i < downOut.getNumSamples(); ++i)
+            for (const float sample : blockOut)
             {
-                EXPECT_LT(std::abs(downOut.getSample(0, i)), maxAbs);
+                EXPECT_LT(std::abs(sample), maxAbs);
             }
         }
+        juce::ignoreUnused(hostBlock);
     }
 
-    /// Random finite input → finite output (NaN/Inf guard).
+    /// Random host input → finite down output (NaN/Inf guard).
     inline void assertRoundTripFiniteOutput(RoundTripChain &chain, int nBlocks = 8)
     {
         std::mt19937 rng(42);
-        std::uniform_real_distribution<float> dist(-0.5f, 0.5f);
-
-        for (int n = 0; n < nBlocks; ++n)
+        const auto blocks = steadyRoundTripRandomOutputs(chain, nBlocks, rng);
+        for (const auto &blockOut : blocks)
         {
-            for (int i = 0; i < chain.hostBuffer.getNumSamples(); ++i)
+            for (const float s : blockOut)
             {
-                chain.hostBuffer.setSample(0, i, dist(rng));
-            }
-            juce::AudioBuffer<float> &upOut = chain.up.processBlock(chain.hostBuffer);
-            juce::AudioBuffer<float> &downOut = chain.down.processBlock(upOut);
-            for (int i = 0; i < downOut.getNumSamples(); ++i)
-            {
-                const float s = downOut.getSample(0, i);
                 EXPECT_FALSE(std::isnan(s));
                 EXPECT_FALSE(std::isinf(s));
             }
         }
     }
 
-    /// Swept-sine RMS round-trip fidelity vs @p rmsTolerance.
     inline void assertRoundTripSignalFidelity(RoundTripChain &chain, double hostSR, int hostBlock,
                                               IProcessor &middle, float rmsTolerance)
     {
@@ -124,7 +109,6 @@ namespace scyclone::test::resampling
             << "hostSR=" << hostSR << " block=" << hostBlock;
     }
 
-    /// Production-chain swept-sine RMS fidelity vs @p rmsTolerance.
     inline void assertProductionRoundTripSignalFidelity(ProductionChain &chain, double hostSR, int hostBlock,
                                                         float rmsTolerance)
     {
@@ -133,7 +117,6 @@ namespace scyclone::test::resampling
             << "hostSR=" << hostSR << " block=" << hostBlock;
     }
 
-    /// First partial SRC block must zero samples [framesGen, outSize).
     inline void assertWarmupPartialBlockTailZeroed(ResamplingProcessor &proc, juce::AudioBuffer<float> &buf)
     {
         buf.clear();
@@ -157,14 +140,12 @@ namespace scyclone::test::resampling
         GTEST_SKIP() << "no partial output block within 64 blocks (outSize=" << outSize << ")";
     }
 
-    /// Round-trip impulse peak at reported total latency.
     inline void assertImpulsePeakNearLatency(RoundTripChain &chain, double hostSR, int hostBlock)
     {
         const ImpulseResponse response = measureRoundTripImpulse(chain, hostSR, hostBlock);
         assertImpulseResponse(response);
     }
 
-    /// Production-chain impulse peak at reported total latency.
     inline void assertProductionImpulsePeakNearLatency(ProductionChain &chain, double hostSR, int hostBlock)
     {
         const ImpulseResponse response = measureProductionImpulse(chain, hostSR, hostBlock);

@@ -5,7 +5,8 @@
 ///
 /// Follows the measure/assert split: these functions run stimulus + processing and return
 /// scalar metrics or structs. They never call `EXPECT_*` — use
-/// ResamplingContractAssertions.h for gtest contracts.
+/// ResamplingContractAssertions.h for gtest contracts. Steady input/output capture uses
+/// ResamplingChainDriver.h; pre-roll, warmup, and impulse collection use ResamplingRunner.h.
 ///
 /// Calibration probes call `measure*` directly and print suggested tolerances.
 ///
@@ -14,6 +15,7 @@
 #include <vector>
 
 #include "ImpulseMetrics.h"
+#include "ResamplingChainDriver.h"
 #include "ResamplingRunner.h"
 #include "SignalFidelity.h"
 #include "SignalGenerators.h"
@@ -31,7 +33,6 @@ namespace scyclone::test::resampling
     using torsion::test::sineWarmupBlocks;
     using torsion::test::worstSweptSineRmsError;
 
-    /// Full round-trip swept-sine RMS error (pre-roll, warmup, steady capture).
     inline float measureRoundTripRmsError(RoundTripChain &chain, double hostSR, int hostBlock,
                                           IProcessor &middle)
     {
@@ -42,34 +43,12 @@ namespace scyclone::test::resampling
         runRoundTripSineWarmup(chain, hostSR, hostBlock, middle, warmupBlocks, 0);
 
         const int requiredOutput = latency + kSteadyBlocks * hostBlock;
-        std::vector<float> inputSignal;
-        std::vector<float> outputSignal;
+        const auto signals = collectMiddleChainInputOutput(
+            chain, middle, hostSR, hostBlock, warmupBlocks, requiredOutput);
 
-        int blockIndex = warmupBlocks;
-        while (static_cast<int>(outputSignal.size()) < requiredOutput)
-        {
-            for (int i = 0; i < hostBlock; ++i)
-            {
-                chain.hostBuffer.setSample(0, i, torsion::test::generateSweptSine(hostSR, hostBlock, blockIndex, i));
-            }
-            for (int i = 0; i < hostBlock; ++i)
-            {
-                inputSignal.push_back(chain.hostBuffer.getSample(0, i));
-            }
-            juce::AudioBuffer<float> &upOut = chain.up.processBlock(chain.hostBuffer);
-            middle.processBlock(upOut);
-            juce::AudioBuffer<float> &downOut = chain.down.processBlock(upOut);
-            for (int i = 0; i < downOut.getNumSamples(); ++i)
-            {
-                outputSignal.push_back(downOut.getSample(0, i));
-            }
-            ++blockIndex;
-        }
-
-        return worstSweptSineRmsError(inputSignal, outputSignal, hostBlock, latency);
+        return worstSweptSineRmsError(signals.input, signals.output, hostBlock, latency);
     }
 
-    /// Production-chain RMS at an explicit @p latency (for calibration lag sweeps).
     inline float measureProductionRmsErrorAtLatency(ProductionChain &chain, double hostSR, int hostBlock,
                                                     int latency)
     {
@@ -79,37 +58,18 @@ namespace scyclone::test::resampling
         runProductionSineWarmup(chain, hostSR, hostBlock, warmupBlocks, 0);
 
         const int requiredOutput = latency + kSteadyBlocks * hostBlock;
-        std::vector<float> inputSignal;
-        std::vector<float> outputSignal;
-        juce::AudioBuffer<float> onnxBuf;
+        const auto signals = collectProductionInputOutput(
+            chain, hostSR, hostBlock, warmupBlocks, requiredOutput);
 
-        int blockIndex = warmupBlocks;
-        while (static_cast<int>(outputSignal.size()) < requiredOutput)
-        {
-            for (int i = 0; i < hostBlock; ++i)
-            {
-                chain.resamplers.hostBuffer.setSample(
-                    0, i, torsion::test::generateSweptSine(hostSR, hostBlock, blockIndex, i));
-            }
-            for (int i = 0; i < hostBlock; ++i)
-            {
-                inputSignal.push_back(chain.resamplers.hostBuffer.getSample(0, i));
-            }
-            processProductionBlock(chain, onnxBuf, outputSignal);
-            ++blockIndex;
-        }
-
-        return worstSweptSineRmsError(inputSignal, outputSignal, hostBlock, latency);
+        return worstSweptSineRmsError(signals.input, signals.output, hostBlock, latency);
     }
 
-    /// Production-chain RMS using `productionChainTotalLatency`.
     inline float measureProductionRmsError(ProductionChain &chain, double hostSR, int hostBlock)
     {
         return measureProductionRmsErrorAtLatency(
             chain, hostSR, hostBlock, productionChainTotalLatency(chain, hostSR));
     }
 
-    /// FFT peak SNR (dB) for up-only windowed sine. Returns -1.0 on failure.
     inline double measureUpSnrDb(double hostSR, int hostBlock, int passBandPeaks = 1)
     {
         constexpr int kInputBlocks = 64;
@@ -132,7 +92,6 @@ namespace scyclone::test::resampling
         return torsion::test::calculateSnrDb(output.data() + skip, static_cast<int>(output.size()) - skip, passBandPeaks);
     }
 
-    /// FFT peak SNR (dB) for down-only windowed sine (production coupled sizing).
     inline double measureDownSnrDb(double hostSR, int hostBlock, int passBandPeaks = 1)
     {
         const auto ratioCase = makeProductionRatioCase(hostSR, hostBlock);
@@ -156,7 +115,6 @@ namespace scyclone::test::resampling
         return torsion::test::calculateSnrDb(output.data() + skip, static_cast<int>(output.size()) - skip, passBandPeaks);
     }
 
-    /// Impulse at @p impulseSample through middle chain with explicit pre-roll.
     inline ImpulseResponse measureMiddleChainImpulse(RoundTripChain &chain, IProcessor &middle,
                                                      double hostSR, int hostBlock,
                                                      int impulseSample, int preRollBlocks)
@@ -174,7 +132,6 @@ namespace scyclone::test::resampling
         return response;
     }
 
-    /// Impulse with latency-derived pre-roll block count.
     inline ImpulseResponse measureMiddleChainImpulse(RoundTripChain &chain, IProcessor &middle,
                                                      double hostSR, int hostBlock,
                                                      int impulseSample = 0)
@@ -185,7 +142,6 @@ namespace scyclone::test::resampling
             latencyPreRollBlocks(expectedPeak, hostBlock));
     }
 
-    /// Round-trip impulse (passthrough middle, default pre-roll).
     inline ImpulseResponse measureRoundTripImpulse(RoundTripChain &chain, double hostSR, int hostBlock,
                                                    int impulseSample = 0)
     {
@@ -194,7 +150,6 @@ namespace scyclone::test::resampling
             chain, passthrough, hostSR, hostBlock, impulseSample, kPreRollBlocks);
     }
 
-    /// Production-chain impulse (SimulatedOnnx middle).
     inline ImpulseResponse measureProductionImpulse(ProductionChain &chain, double hostSR, int hostBlock,
                                                     int impulseSample = 0)
     {

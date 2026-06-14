@@ -13,9 +13,6 @@
 namespace scyclone::test::resampling
 {
 
-    constexpr double kDefaultUpSnrDb = 79.0;
-    constexpr double kDefaultDownSnrDb = 92.0;
-
     /// Parameter for `ResamplingSignalTest` host/block SNR matrix.
     struct SnrCase
     {
