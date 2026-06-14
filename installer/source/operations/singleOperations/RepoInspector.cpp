@@ -21,13 +21,14 @@ void RepoInspector::inspectURL(std::string repoURL) {
 }
 
 void RepoInspector::inspectRepo(var json) {
-    std::regex osRegex("-osx-x64|-osx-arm64|-win-x64");
+    std::regex osRegex("-osx-x64|-osx-arm64|-win-x64|-linux-x64");
     std::regex versionRegex("v\\.\\d\\.\\d\\.\\d");
 
     std::map<std::string, OperatingSystem::SystemType> osMap = {
             {"-osx-x64", OperatingSystem::MacOS_x64},
             {"-osx-arm64", OperatingSystem::MacOS_arm64},
-            {"-win-x64", OperatingSystem::Windows_x64}
+            {"-win-x64", OperatingSystem::Windows_x64},
+            {"-linux-x64", OperatingSystem::Linux_x64}
     };
 
     releases.clear();
