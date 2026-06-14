@@ -14,6 +14,8 @@ int ResamplingProcessor::prepare(const juce::dsp::ProcessSpec &inputSpec,
                                  double targetSampleRate,
                                  const std::string name,
                                  int providedOutputBufferSize) {
+    if (converter) { src_delete(converter); converter = nullptr; }
+
     id_string = name;
     inputSampleRate = inputSpec.sampleRate;
     inputBufferSize = static_cast<int>(inputSpec.maximumBlockSize);
