@@ -1,7 +1,5 @@
 # Sanitizer CI — maintainers only
 
-How to verify sanitizer presets locally and in CI.
-
 Sanitizer builds use **`RelWithDebInfo`**, **`-DSCYCLONE_SANITIZERS=<PRESET>`**, and the **`Test`** target only (not plugin formats). Presets and policy live in [`cmake/ScycloneSanitizers.cmake`](../../cmake/ScycloneSanitizers.cmake).
 
 Workflow: [`.github/workflows/sanitizers.yml`](../../.github/workflows/sanitizers.yml) — push/PR to `develop`, plus manual dispatch.
@@ -25,20 +23,39 @@ Default: `NONE`.
 | **Required** | ASAN_UBSAN (Linux/macOS), TSan (Linux/macOS) |
 | **`continue-on-error: true`** | MSVC ASan (Windows), MSan, LeakSan |
 
-All jobs run `ctest -L default` (excludes the `tier-b` matrix).
+All jobs run `ctest -L default` (excludes the `extended-matrix` suite).
 
-## Local run (Linux/macOS example)
+## Local run
+
+Prefer CMake presets from [`CMakePresets.json`](../../CMakePresets.json) (see [test/README.md](../../test/README.md)):
 
 ```bash
-cmake -G Ninja -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSCYCLONE_SANITIZERS=ASAN_UBSAN
-cmake --build build-asan --target Test
-cd build-asan
+# Linux/macOS — ASan + UBSan
+cmake --preset asan-ubsan
+cmake --build --preset asan-ubsan
 export ASAN_OPTIONS=detect_leaks=1:abort_on_error=1
 export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
-ctest -L default --output-on-failure
+ctest --test-dir build-asan-ubsan -L default --output-on-failure
+
+# Linux/macOS — ThreadSanitizer (preset sets CC/CXX to clang; override in CMakeUserPresets.json if needed)
+cmake --preset tsan
+cmake --build --preset tsan
+ctest --test-dir build-tsan -L default --output-on-failure
+
+# Windows MSVC — ASan only (UBSan not supported)
+cmake --preset asan
+cmake --build --preset asan
+ctest --test-dir build-asan -L default --output-on-failure
 ```
 
-TSan: `-DSCYCLONE_SANITIZERS=THREAD` with `CC=clang CXX=clang++`.  
+Equivalent raw configure (no presets):
+
+```bash
+cmake -G Ninja -B build-asan-ubsan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSCYCLONE_SANITIZERS=ASAN_UBSAN
+cmake --build build-asan-ubsan --target Test
+```
+
+TSan (raw configure): `-DSCYCLONE_SANITIZERS=THREAD` with `CC=clang CXX=clang++`.  
 Windows MSVC ASan: `-DSCYCLONE_SANITIZERS=ASAN` (not `ASAN_UBSAN`).
 
 ## Known limits
