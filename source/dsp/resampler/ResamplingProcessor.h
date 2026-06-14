@@ -39,7 +39,7 @@ private:
 
     double calculateSampleRateRatio(double outputRate, double inputRate);
     int calculateOutputBufferSize(double ratio, int blockSize);
-    double calculateBufferSizeRatio(int outputBufferSize, int inputBufferSize);
+    double calculateBufferSizeRatio(int outBufferSize, int inBufferSize);
     void measureLatency();
     void printMetrics();
 
