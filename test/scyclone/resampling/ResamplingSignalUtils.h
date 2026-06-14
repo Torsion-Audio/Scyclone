@@ -8,10 +8,43 @@
 ///
 /// @namespace scyclone::test::resampling
 
+#include <random>
 #include <vector>
+
+#include <JuceHeader.h>
 
 namespace scyclone::test::resampling
 {
+
+    /// Optional corruption applied to resampler output before FFT SNR measurement.
+    enum class SnrCorruptionKind
+    {
+        None,
+        HardClip,
+        AdditiveNoise
+    };
+
+    inline void applySnrCorruption(std::vector<float> &samples, SnrCorruptionKind kind)
+    {
+        if (kind == SnrCorruptionKind::None || samples.empty())
+        {
+            return;
+        }
+        if (kind == SnrCorruptionKind::HardClip)
+        {
+            for (float &sample : samples)
+            {
+                sample = juce::jlimit(-1.0f, 1.0f, sample * 50.0f);
+            }
+            return;
+        }
+        std::mt19937 rng(42);
+        std::uniform_real_distribution<float> dist(-0.05f, 0.05f);
+        for (float &sample : samples)
+        {
+            sample += dist(rng);
+        }
+    }
 
     /// Parameter for `ResamplingSignalTest` host/block SNR matrix.
     struct SnrCase
