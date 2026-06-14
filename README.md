@@ -1,4 +1,5 @@
 # <img style="float: left;" src="assets/pictures/logo.png" width="40" /> &nbsp; SCYCLONE
+[![Scyclone](https://github.com/Torsion-Audio/Scyclone/actions/workflows/build_test_artifacts.yml/badge.svg)](https://github.com/Torsion-Audio/Scyclone/actions/workflows/build_test_artifacts.yml) [![Sanitizers](https://github.com/Torsion-Audio/Scyclone/actions/workflows/sanitizers.yml/badge.svg)](https://github.com/Torsion-Audio/Scyclone/actions/workflows/sanitizers.yml)
 ![interface](assets/pictures/interface.png)
 
 **Scyclone** is an audio plugin that utilizes **neural timbre transfer** technology to offer a new approach to audio production. The plugin builds upon [RAVE](https://github.com/acids-ircam/RAVE) methodology, a realtime audio variational auto encoder, facilitating neural timbre transfer in both single and couple inference mode. <br /><br />
