@@ -5,31 +5,36 @@
 
 class ResamplingProcessor {
 public:
-    ResamplingProcessor();
+    ResamplingProcessor() = default;
     ~ResamplingProcessor() {
         releaseResources();
     }
 
-    int prepare(const juce::dsp::ProcessSpec &inputSpec, double outputSampleRate, std::string name);
+    int prepare(const juce::dsp::ProcessSpec &inputSpec, double targetSampleRate, const std::string name);
+    void setOutputBufferSize(int size);
     juce::AudioBuffer<float>& processBlock(juce::AudioBuffer<float>& inputBufferMono);
     /** Latency in input-rate samples. */
-    int getLatencyInSamples() const { return latencyInSamples; }
+    int getLatencyInSamples() const { return latencyInSamples; };
 
 private:
     int latencyInSamples = 0;
-    std::string id_string;
+    std::string processorName;
 
-    double inputSampleRate;
-    double outputSampleRate;
-    int inputBufferSize;
-    int outputBufferSize;
+    double inputSampleRate = 0.0;
+    double outputSampleRate = 0.0;
+    int inputBufferSize = 0;
+    int outputBufferSize = 0;
 
-    void setSamplerateRatio();
-    double srcRatio;  // set in setSamplerateRatio()
+    double sampleRateRatio = 1.0;
 
-    SRC_STATE* converter;
+    double calculateSampleRateRatio(double outputRate, double inputRate);
+    int calculateOutputBufferSize(double ratio, int blockSize);
+    void measureLatency();
+    void printMetrics();
 
-    juce::AudioBuffer<float> outputBufferMono;
+    SRC_STATE* converter = nullptr;
+
+    juce::AudioBuffer<float> outputBuffer;
     void releaseResources();
 };
 
