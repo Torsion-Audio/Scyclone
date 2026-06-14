@@ -9,17 +9,28 @@ See [docs/resampling_architecture.md](../docs/resampling_architecture.md) for th
 ```
 test/
   support/
-    TestInfrastructure.h          HostConfig, feasibility helpers, JuceAudioTest
+    TestInfrastructure.h          Compatibility shim (resampling_test aliases)
     HostConfigCatalog.h           Sample-rate/block axes, composable presets, gtest adapters
-    processors/
-      PassthroughProcessor.h      Zero-latency injectable middle stage
+    audio/                        Domain-neutral audio test utilities (scyclone::test)
+      JuceFixture.h               JuceAudioTest
+      BlockStreaming.h            Pre-roll, stream-in-blocks, collectProcessorOutput
+      LongRun.h                   longRunTolerance, runLongBlockLoop
+      SignalGenerators.h          Swept sine, Hanning windowed tones
+      SignalMetrics.h             rms, impulse peak, maxOutsideWindow
+      SignalMetrics.cpp           FFT peak SNR (calculateSnrDb)
+    processors/                   Injectable IProcessor mocks (scyclone::test)
+      PassthroughProcessor.h      Zero-latency middle stage
       DelayLineProcessor.h        Configurable FIFO delay @ processing rate
-    resampling/
-      ResamplingHelpers.h         Umbrella include (preferred entry point)
+    mixer/                        Dry/wet contracts (scyclone::test::mixer)
+      DryWetMeasurements.h        measureDryWetDiracPeak, measureDryWetDiracJitter
+      DryWetAssertions.h          assertDryWetDiracAligned
+    resampling/                   Resampler domain (scyclone::test::resampling)
+      ResamplingTopology.h        Chain structs, prepare*, ONNX constants, feasibility
+      ResamplingRunner.h          Unified chain block runners, collect* helpers
+      ResamplingChainHelpers.h    Shim → Topology + Runner
       ResamplingFixtures.h        ChainContractTest, ProcessorStructuralTest, case builders
-      ResamplingSignalUtils.h     genWindowedSines, calculateSnrDb, findImpulsePeak
-      ResamplingChainHelpers.h    Chain builders, collectMiddleChainOutput, pre-roll
-      ResamplingMeasurements.h    measure* only (ImpulseResponse, RMS, dirac)
+      ResamplingSignalUtils.h     SnrCase, defaultCiSnrCases()
+      ResamplingMeasurements.h    measure* only (ImpulseResponse, RMS, SNR)
       ResamplingContractAssertions.h  assert* only (pure gtest contracts)
       SimulatedOnnxProcessor.h    ONNX-shaped DelayLineProcessor preset
   resampling/
@@ -37,6 +48,15 @@ test/
   benchmark/
     benchmark.cpp                 Separate Benchmark target (not in ctest)
 ```
+
+## Namespaces
+
+| Namespace | Contents |
+|-----------|----------|
+| `scyclone::test` | JuceAudioTest, signal generators/metrics, block streaming, processor mocks |
+| `scyclone::test::resampling` | ONNX-path topology, chain runners, resampler measurements/assertions |
+| `scyclone::test::mixer` | Dry/wet dirac alignment measure/assert |
+| `resampling_test` | **Compatibility alias** — `using` re-exports the above; existing `.cpp` files keep `using namespace resampling_test` |
 
 ## Test layers
 
@@ -73,14 +93,36 @@ Axes and combinators (`cartesianHostConfigs`, `mergeHostConfigs`, `dedupeHostCon
 
 ## Includes
 
-Prefer a single umbrella include in test `.cpp` files:
+Prefer **targeted includes** — avoid pulling the full resampling stack when a test needs one contract.
 
 ```cpp
-#include "ResamplingHelpers.h"   // resampling, chain, calibration tests
-#include "TestInfrastructure.h"  // plugin smoke, grain-only fixtures
+// Resampling contract tests
+#include "ResamplingFixtures.h"
+#include "ResamplingContractAssertions.h"
+
+// Resampling signal quality (SNR)
+#include "ResamplingFixtures.h"
+#include "ResamplingMeasurements.h"
+
+// Dry/wet alignment only (no FFT SNR)
+#include "DryWetAssertions.h"
+#include "HostConfigCatalog.h"
+#include "ResamplingFixtures.h"
+#include "TestInfrastructure.h"
+
+// Plugin / grain smoke
+#include "TestInfrastructure.h"
+
+// Calibration probes
+#include "DryWetAssertions.h"
+#include "DryWetMeasurements.h"
+#include "HostConfigCatalog.h"
+#include "PassthroughProcessor.h"
+#include "ResamplingMeasurements.h"
+#include "TestInfrastructure.h"
 ```
 
-Tolerance constants live in `ResamplingContractAssertions.h` (RMS/dirac) and `ResamplingSignalUtils.h` (SNR floors). Measurements live in `ResamplingMeasurements.h` (`measureRoundTripImpulse`, `measureProductionImpulse`, etc.); tests and probes should call `measure*` then `assert*` for debuggable failures.
+Tolerance constants: RMS/impulse in `ResamplingContractAssertions.h`, dirac in `DryWetAssertions.h`, SNR floors in `ResamplingSignalUtils.h`. Measurements live in `ResamplingMeasurements.h` and `DryWetMeasurements.h`; tests call `measure*` then `assert*` for debuggable failures.
 
 ### Injectable pipeline layers
 
@@ -92,6 +134,18 @@ Tolerance constants live in `ResamplingContractAssertions.h` (RMS/dirac) and `Re
 | Mixer | `SimulatedOnnxProcessor` + `DryWetMixer` | User-facing mix alignment (default CI rates) |
 
 Resampler regressions should fail at **Passthrough** middle, not require ONNX-shaped latency.
+
+## Migration notes
+
+| Old | New |
+|-----|-----|
+| `ResamplingChainHelpers.h` (monolith) | `ResamplingTopology.h` + `ResamplingRunner.h` |
+| Signal math in `ResamplingSignalUtils.h` | `audio/SignalGenerators.h`, `audio/SignalMetrics.h` |
+| `measureDryWetDiracPeak` in resampling headers | `mixer/DryWetMeasurements.h` |
+| `assertDryWetDiracAligned` in resampling headers | `mixer/DryWetAssertions.h` |
+| `namespace resampling_test` for everything | Layered `scyclone::test::*` + `resampling_test` alias shim |
+
+`TestInfrastructure.h` is now a thin compatibility header. Prefer `JuceFixture.h` for new non-resampling tests.
 
 ## Calibration policy
 
@@ -170,6 +224,8 @@ AddressSanitizer, UndefinedBehaviorSanitizer, and ThreadSanitizer run on every p
 ## IDE / IntelliSense
 
 After clone, run `cmake --preset default` and `cmake --build --preset test`. Squiggles on test includes before configure are normal. With clangd, [`.clangd`](../.clangd) picks up `build/compile_commands.json` automatically. If you use the Microsoft C/C++ extension instead, set `C_Cpp.default.compileCommands` locally to `build/compile_commands.json` (optional, IntelliSense-only — ctest is the source of truth).
+
+CMake include roots for the `Test` target: `test/support`, `test/support/audio`, `test/support/mixer`, `test/support/processors`, `test/support/resampling`.
 
 ## Targets
 

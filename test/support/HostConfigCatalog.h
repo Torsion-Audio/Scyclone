@@ -1,7 +1,12 @@
 #pragma once
 
-// Host sample-rate / block-size axes, composable matrices, and CI presets.
-// See test/README.md.
+/// @file HostConfigCatalog.h
+/// @brief Host sample-rate / block-size axes, composable matrices, and CI presets.
+///
+/// Builds gtest parameter lists from rate/block axes. All presets filter through
+/// `isFeasibleHostConfig` (ONNX min-block constraint). See test/README.md.
+///
+/// @namespace resampling_test
 
 #include <algorithm>
 #include <array>
@@ -21,6 +26,7 @@ namespace resampling_test
     inline constexpr std::array kAlignmentEdgeBlocks44100 = {32, 64, 2048, 8192};
     inline constexpr std::array kAlignmentEdgeBlocks48000 = {2048};
 
+    /// Cartesian product of rates × blocks.
     inline std::vector<HostConfig> cartesianHostConfigs(std::span<const double> rates,
                                                         std::span<const int> blocks)
     {
@@ -78,6 +84,7 @@ namespace resampling_test
         return unique;
     }
 
+    /// Drops configs where up-path ONNX block < kMinOnnxBlock.
     inline std::vector<HostConfig> filterFeasibleHostConfigs(std::vector<HostConfig> configs)
     {
         configs.erase(std::remove_if(configs.begin(), configs.end(),
@@ -144,6 +151,7 @@ namespace resampling_test
         return ::testing::ValuesIn(configs);
     }
 
+    /// gtest param name: "{hostSR}_{hostBlock}".
     inline std::string hostConfigName(const ::testing::TestParamInfo<HostConfig> &info)
     {
         return std::to_string(static_cast<int>(info.param.hostSR)) + "_" +

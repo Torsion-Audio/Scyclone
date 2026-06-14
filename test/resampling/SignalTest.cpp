@@ -1,7 +1,9 @@
 // Resampler-only signal quality — FFT SNR gate (libsamplerate snr_bw_test pattern).
 
 #include <gtest/gtest.h>
-#include "ResamplingHelpers.h"
+#include "ResamplingMeasurements.h"
+#include "ResamplingSignalUtils.h"
+#include "TestInfrastructure.h"
 
 using namespace resampling_test;
 

@@ -54,6 +54,8 @@ endif()
 target_compile_definitions(Test PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},COMPILE_DEFINITIONS>)
 target_include_directories(Test PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/test/support
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/support/audio
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/support/mixer
         ${CMAKE_CURRENT_SOURCE_DIR}/test/support/processors
         ${CMAKE_CURRENT_SOURCE_DIR}/test/support/resampling
         $<TARGET_PROPERTY:${PROJECT_NAME},INCLUDE_DIRECTORIES>)

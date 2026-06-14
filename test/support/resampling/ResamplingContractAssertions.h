@@ -1,7 +1,13 @@
 #pragma once
 
-// Behavioral contract assertions for resampling tests.
-// Include after ResamplingMeasurements.h.
+/// @file ResamplingContractAssertions.h
+/// @brief gtest contract assertions for resampling behavioral tests.
+///
+/// Assert-phase helpers: call `measure*` from ResamplingMeasurements.h internally
+/// or assert directly on processor I/O. Tolerance constants are tuned via
+/// CalibrationProbe DISABLED tests.
+///
+/// @namespace resampling_test
 
 #include <cmath>
 #include <gtest/gtest.h>
@@ -10,13 +16,14 @@
 
 namespace resampling_test {
 
+/// CI round-trip swept-sine RMS ceiling (passthrough middle).
 constexpr float kRoundTripRmsTolerance = 0.15f;
-// Worst 48 kHz measured ~0.26 (CalibrationProbe); floor with margin — cross-rate excluded in CI.
+/// Production 48 kHz RMS ceiling (CalibrationProbe worst ~0.26 + margin).
 constexpr float kProductionRoundTripRmsTolerance = 0.3f;
-constexpr int kDiracAlignmentTolerance = 2;
-constexpr int kCalibrationDiracSearchHalfWindow = 20;
+/// Max secondary impulse lobe as fraction of main peak.
 constexpr float kImpulseSecondaryPeakRatio = 0.15f;
 
+/// Steady-state: host block in == host block out (round-trip, passthrough path).
 inline void assertBlockSizePreserved(RoundTripChain& chain, int hostBlock, int nBlocks = kSteadyBlocks) {
     chain.hostBuffer.clear();
     for (int n = 0; n < nBlocks; ++n) {
@@ -27,6 +34,7 @@ inline void assertBlockSizePreserved(RoundTripChain& chain, int hostBlock, int n
     }
 }
 
+/// Steady-state: host block in == host block out (production chain).
 inline void assertProductionBlockSizePreserved(ProductionChain& chain, int hostBlock,
                                                int nBlocks = kSteadyBlocks) {
     chain.resamplers.hostBuffer.clear();
@@ -41,6 +49,7 @@ inline void assertProductionBlockSizePreserved(ProductionChain& chain, int hostB
     }
 }
 
+/// Per-processor steady state: full input consumed, full output generated.
 inline void assertProcessorSteadyStateFullIo(ResamplingProcessor& proc, juce::AudioBuffer<float>& buf,
                                              int expectedIn, int expectedOut, int nBlocks = kSteadyBlocks) {
     for (int n = 0; n < nBlocks; ++n) {
@@ -54,6 +63,7 @@ inline void assertProcessorSteadyStateFullIo(ResamplingProcessor& proc, juce::Au
     }
 }
 
+/// Silence in → near-zero out after pre-roll (no DC leak).
 inline void assertRoundTripSilenceOut(RoundTripChain& chain, int hostBlock,
                                       int nBlocks = kSteadyBlocks, float maxAbs = 1.0e-5f) {
     chain.hostBuffer.clear();
@@ -66,6 +76,7 @@ inline void assertRoundTripSilenceOut(RoundTripChain& chain, int hostBlock,
     }
 }
 
+/// Random finite input → finite output (NaN/Inf guard).
 inline void assertRoundTripFiniteOutput(RoundTripChain& chain, int nBlocks = 8) {
     std::mt19937 rng(42);
     std::uniform_real_distribution<float> dist(-0.5f, 0.5f);
@@ -84,6 +95,7 @@ inline void assertRoundTripFiniteOutput(RoundTripChain& chain, int nBlocks = 8) 
     }
 }
 
+/// Swept-sine RMS round-trip fidelity vs @p rmsTolerance.
 inline void assertRoundTripSignalFidelity(RoundTripChain& chain, double hostSR, int hostBlock,
                                           IProcessor& middle, float rmsTolerance) {
     const float rmsError = measureRoundTripRmsError(chain, hostSR, hostBlock, middle);
@@ -91,6 +103,7 @@ inline void assertRoundTripSignalFidelity(RoundTripChain& chain, double hostSR, 
         << "hostSR=" << hostSR << " block=" << hostBlock;
 }
 
+/// Production-chain swept-sine RMS fidelity vs @p rmsTolerance.
 inline void assertProductionRoundTripSignalFidelity(ProductionChain& chain, double hostSR, int hostBlock,
                                                     float rmsTolerance) {
     const float rmsError = measureProductionRmsError(chain, hostSR, hostBlock);
@@ -98,6 +111,7 @@ inline void assertProductionRoundTripSignalFidelity(ProductionChain& chain, doub
         << "hostSR=" << hostSR << " block=" << hostBlock;
 }
 
+/// Impulse peak index within @p tolerance of `expectedPeak`.
 inline void assertImpulsePeakWithinTolerance(const ImpulseResponse& response,
                                              int tolerance = kImpulsePeakToleranceSamples) {
     ASSERT_GE(response.narrowPeakPos, 0)
@@ -112,6 +126,7 @@ inline void assertImpulsePeakWithinTolerance(const ImpulseResponse& response,
         << " widePeakPos=" << response.widePeakPos;
 }
 
+/// No duplicate impulse lobes above @p secondaryRatio × main peak.
 inline void assertImpulseSideLobesBelowThreshold(const ImpulseResponse& response,
                                                  float secondaryRatio = kImpulseSecondaryPeakRatio) {
     ASSERT_GE(response.narrowPeakPos, 0);
@@ -125,6 +140,7 @@ inline void assertImpulseSideLobesBelowThreshold(const ImpulseResponse& response
         << " narrowPeakVal=" << response.narrowPeakVal;
 }
 
+/// Combined peak position + side-lobe contract.
 inline void assertImpulseResponse(const ImpulseResponse& response,
                                   int peakTolerance = kImpulsePeakToleranceSamples,
                                   float secondaryRatio = kImpulseSecondaryPeakRatio) {
@@ -132,6 +148,7 @@ inline void assertImpulseResponse(const ImpulseResponse& response,
     assertImpulseSideLobesBelowThreshold(response, secondaryRatio);
 }
 
+/// First partial SRC block must zero samples [framesGen, outSize).
 inline void assertWarmupPartialBlockTailZeroed(ResamplingProcessor& proc, juce::AudioBuffer<float>& buf) {
     buf.clear();
     const int outSize = proc.getOutputBufferSize();
@@ -151,31 +168,16 @@ inline void assertWarmupPartialBlockTailZeroed(ResamplingProcessor& proc, juce::
     GTEST_SKIP() << "no partial output block within 64 blocks (outSize=" << outSize << ")";
 }
 
+/// Round-trip impulse peak at reported total latency.
 inline void assertImpulsePeakNearLatency(RoundTripChain& chain, double hostSR, int hostBlock) {
     const ImpulseResponse response = measureRoundTripImpulse(chain, hostSR, hostBlock);
     assertImpulseResponse(response);
 }
 
+/// Production-chain impulse peak at reported total latency.
 inline void assertProductionImpulsePeakNearLatency(ProductionChain& chain, double hostSR, int hostBlock) {
     const ImpulseResponse response = measureProductionImpulse(chain, hostSR, hostBlock);
     assertImpulseResponse(response);
-}
-
-inline void assertDryWetDiracAligned(double hostSR, uint32_t blockSize) {
-    const auto measurement = measureDryWetDiracPeak(
-        hostSR, static_cast<int>(blockSize), kDiracAlignmentTolerance);
-
-    const int searchStart = measurement.expectedPeak - kDiracAlignmentTolerance;
-    const int searchEnd = measurement.expectedPeak + kDiracAlignmentTolerance + 1;
-
-    EXPECT_GE(measurement.peakPos, searchStart)
-        << "wet-aligned peak not found; expectedPeak=" << measurement.expectedPeak;
-    EXPECT_LE(measurement.peakPos, searchEnd - 1)
-        << "wet-aligned peak not found; expectedPeak=" << measurement.expectedPeak;
-    if (measurement.peakPos >= 0) {
-        EXPECT_GE(measurement.peakAmplitude, 0.01f)
-            << "mixed signal should have a detectable peak; expectedPeak=" << measurement.expectedPeak;
-    }
 }
 
 } // namespace resampling_test
