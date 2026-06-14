@@ -11,28 +11,32 @@ if (APPLE)
     else()
         message(FATAL_ERROR "CMAKE_HOST_SYSTEM_PROCESSOR not defined.")
     endif()
-elseif (MSVC)
+elseif (WIN32)
     include(cmake/download_onnx_win_debug.cmake)
 
-    set_property(TARGET onnxruntime APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
-    set_target_properties(onnxruntime PROPERTIES
-            IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "CXX"
-            IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime/lib/onnxruntime-win-x64.lib"
-    )
-    set_target_properties(onnxruntime PROPERTIES
-            MAP_IMPORTED_CONFIG_DEBUG Release
-            MAP_IMPORTED_CONFIG_MINSIZEREL Release
-            MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
-    )
+    set(_onnx_release "${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime/lib/onnxruntime-win-x64.lib")
+    set(_onnx_debug "${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime-1.14.1-win-x86_64_Debug/onnxruntime-1.14.1-win-x86_64_Debug.lib")
 
-    set_property(TARGET onnxruntime APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
-    set_target_properties(onnxruntime PROPERTIES
-            IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "CXX"
-            IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime-1.14.1-win-x86_64_Debug/onnxruntime-1.14.1-win-x86_64_Debug.lib"
-    )
-    set_target_properties(onnxruntime PROPERTIES
-            MAP_IMPORTED_CONFIG_DEBUG Debug
-    )
+    if (CMAKE_CONFIGURATION_TYPES)
+        # Multi-config generators (Visual Studio, Xcode)
+        set_property(TARGET onnxruntime APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE DEBUG)
+        set_target_properties(onnxruntime PROPERTIES
+                IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "CXX"
+                IMPORTED_LINK_INTERFACE_LANGUAGES_DEBUG "CXX"
+                IMPORTED_LOCATION_RELEASE "${_onnx_release}"
+                IMPORTED_LOCATION_DEBUG "${_onnx_debug}"
+                MAP_IMPORTED_CONFIG_MINSIZEREL Release
+                MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
+        )
+    else()
+        # Single-config generators (Ninja, NMake): plain IMPORTED_LOCATION only
+        if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+            set(_onnx_selected "${_onnx_debug}")
+        else()
+            set(_onnx_selected "${_onnx_release}")
+        endif()
+        set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION "${_onnx_selected}")
+    endif()
 elseif(LINUX)
     set_property(TARGET onnxruntime PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime/lib/onnxruntime-linux_x86_64-static-combined.a)
 endif()
