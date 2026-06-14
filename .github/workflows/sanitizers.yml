@@ -88,9 +88,8 @@ jobs:
   sanitize-asan-msvc-windows:
     runs-on: windows-latest
     timeout-minutes: 120
-    # Prebuilt ONNX Runtime is not compiled with /fsanitize=address; link fails with LNK2038
-    # (annotate_string mismatch). Linux/macOS Clang ASan jobs are the primary Windows parity signal
-    # until an instrumented ORT build is available. Job kept for visibility and future enablement.
+    # Prebuilt ORT lacks MSVC ASan STL annotations (LNK2038); SCYCLONE_SANITIZER_STUB_ONNX skips ORT link.
+    # PluginIntegrationTest skips under stub; resampling/mixer tests still run. continue-on-error until stable.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v6
@@ -282,7 +281,7 @@ jobs:
           LD_LIBRARY_PATH: ${{ github.workspace }}/msan-libcxx-prefix/lib:${{ env.LD_LIBRARY_PATH }}
         run: ctest --test-dir build -L default --output-on-failure
 
-  # Standalone LeakSan (Homebrew Clang): secondary macOS leak signal (Apple Clang ASan has no detect_leaks).
+  # Standalone LeakSan (Homebrew Clang 18): secondary macOS leak signal (Apple Clang ASan has no detect_leaks).
   # Job is non-blocking; LSAN_OPTIONS=exitcode=0 reports leaks without failing the test run.
   sanitize-leak-macos:
     runs-on: macos-14
@@ -297,17 +296,17 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Library/Caches/Homebrew
-          key: ${{ runner.os }}-homebrew-downloads-llvm-${{ hashFiles('.github/workflows/sanitizers.yml') }}
+          key: ${{ runner.os }}-homebrew-downloads-llvm-18-${{ hashFiles('.github/workflows/sanitizers.yml') }}
           restore-keys: |
             ${{ runner.os }}-homebrew-downloads-
 
-      - name: Install Homebrew LLVM (for LeakSanitizer)
+      - name: Install Homebrew LLVM 18 (for LeakSanitizer)
         run: |
-          brew install llvm
-          LLVM_PREFIX="$(brew --prefix llvm)"
+          brew install llvm@18
+          LLVM_PREFIX="$(brew --prefix llvm@18)"
           if [ ! -x "$LLVM_PREFIX/bin/clang" ]; then
-            brew reinstall llvm
-            LLVM_PREFIX="$(brew --prefix llvm)"
+            brew reinstall llvm@18
+            LLVM_PREFIX="$(brew --prefix llvm@18)"
           fi
           echo "CC=$LLVM_PREFIX/bin/clang" >> "$GITHUB_ENV"
           echo "CXX=$LLVM_PREFIX/bin/clang++" >> "$GITHUB_ENV"

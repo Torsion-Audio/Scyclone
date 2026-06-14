@@ -24,17 +24,32 @@ if(SCYCLONE_SANITIZERS STREQUAL "NONE")
             GIT_TAG v1.8.0)
 endif()
 
+# Embedded googletest — never installed; avoids GTestTargets export errors when gtest uses project-only flags.
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+
 # This command ensures that each of the named dependencies are made available to the project by the time it returns. If the dependency has already been populated the command does nothing. Otherwise, the command populates the dependency and then calls add_subdirectory() on the result.
 FetchContent_MakeAvailable(googletest)
 
-# For benchmark we want to set the BENCHMARK_ENABLE_TESTING to OFF therefore we cannot use FetchContent_MakeAvailable()
+# MSan: every object in the link must be instrumented (including FetchContent gtest).
+# Propagate flags directly — do not link scyclone_sanitizer_flags (breaks GTest install export validation).
+if(SCYCLONE_SANITIZERS STREQUAL "MEMORY" AND TARGET scyclone_sanitizer_flags)
+    get_target_property(_scyclone_msan_compile_opts scyclone_sanitizer_flags INTERFACE_COMPILE_OPTIONS)
+    get_target_property(_scyclone_msan_link_opts scyclone_sanitizer_flags INTERFACE_LINK_OPTIONS)
+    foreach(_scyclone_gt IN ITEMS gtest gtest_main)
+        if(TARGET ${_scyclone_gt})
+            if(_scyclone_msan_compile_opts)
+                target_compile_options(${_scyclone_gt} PRIVATE ${_scyclone_msan_compile_opts})
+            endif()
+            if(_scyclone_msan_link_opts)
+                target_link_options(${_scyclone_gt} PRIVATE ${_scyclone_msan_link_opts})
+            endif()
+        endif()
+    endforeach()
+endif()
+
 if(SCYCLONE_SANITIZERS STREQUAL "NONE")
-    FetchContent_GetProperties(benchmark)
-    if(NOT benchmark_POPULATED)
-        FetchContent_Populate(benchmark)
-        set(BENCHMARK_ENABLE_TESTING OFF)
-        add_subdirectory(${benchmark_SOURCE_DIR} ${benchmark_BINARY_DIR})
-    endif()
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(benchmark)
 endif()
 
 # Setup the test executable
@@ -47,6 +62,9 @@ if(SCYCLONE_SANITIZERS STREQUAL "NONE")
 endif()
 if(TARGET scyclone_sanitizer_flags)
     target_link_libraries(Test PRIVATE scyclone_sanitizer_flags)
+endif()
+if(SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST)
+    target_compile_definitions(Test PRIVATE SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST=1)
 endif()
 
 # We can't link again to the shared juce target without ODL violations (https://github.com/sudara/pamplejuce/issues/31, https://forum.juce.com/t/windows-linker-issue-on-develop/55524/2)

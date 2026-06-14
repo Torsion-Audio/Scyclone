@@ -8,13 +8,26 @@ set_property(CACHE SCYCLONE_SANITIZERS PROPERTY STRINGS NONE ASAN ASAN_UBSAN THR
 option(SCYCLONE_MSAN_TRACK_ORIGINS "Add -fsanitize-memory-track-origins=2 for MSan (higher overhead)" OFF)
 
 option(SCYCLONE_SANITIZER_STUB_ONNX
-    "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (required for MSan)"
+    "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (MSan / MSVC ASan)"
     OFF)
 
-# Prebuilt ONNX is not MSan-instrumented; every linked object must be built with -fsanitize=memory.
-if(SCYCLONE_SANITIZERS STREQUAL "MEMORY")
+# Prebuilt ONNX is not MSan-instrumented; MSVC ASan needs matching STL annotations in every .o.
+if(SCYCLONE_SANITIZERS STREQUAL "MEMORY"
+    OR (SCYCLONE_SANITIZERS STREQUAL "ASAN" AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"))
   set(SCYCLONE_SANITIZER_STUB_ONNX ON CACHE BOOL
-      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (required for MSan)" FORCE)
+      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (MSan / MSVC ASan)" FORCE)
+else()
+  set(SCYCLONE_SANITIZER_STUB_ONNX OFF CACHE BOOL
+      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (MSan / MSVC ASan)" FORCE)
+endif()
+
+# Linux ASAN_UBSAN: prebuilt ORT triggers UBSan vptr false positives in PluginIntegrationTest (macOS passes).
+if(SCYCLONE_SANITIZERS STREQUAL "ASAN_UBSAN" AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST ON CACHE BOOL
+      "Skip PluginIntegrationTest (prebuilt ORT + Linux UBSan)" FORCE)
+else()
+  set(SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST OFF CACHE BOOL
+      "Skip PluginIntegrationTest (prebuilt ORT + Linux UBSan)" FORCE)
 endif()
 
 # Linux MSan: distro libc++.so is not instrumented; link against a prefix built with -fsanitize=memory

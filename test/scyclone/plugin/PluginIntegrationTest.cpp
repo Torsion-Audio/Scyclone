@@ -13,8 +13,10 @@ protected:
     void SetUp() override
     {
         JuceAudioTest::SetUp();
-#ifdef SCYCLONE_ONNX_STUB
-        GTEST_SKIP() << "PluginIntegrationTest requires ONNX Runtime (disabled under MSan stub build)";
+#if defined(SCYCLONE_ONNX_STUB)
+        GTEST_SKIP() << "PluginIntegrationTest requires ONNX Runtime (disabled under sanitizer stub build)";
+#elif defined(SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST)
+        GTEST_SKIP() << "PluginIntegrationTest skipped: prebuilt ORT triggers Linux UBSan false positives (see ScycloneSanitizers.cmake)";
 #endif
     }
 };

@@ -174,7 +174,7 @@ See [scyclone/calibration/README.md](scyclone/calibration/README.md) for when to
 # RMS / dirac tolerances
 .\build\Test.exe --gtest_filter=*PrintToleranceMeasurements* --gtest_also_run_disabled_tests
 
-# SNR floors (update defaultCiSnrCases() — measured − 3 dB)
+# SNR floors (update defaultCiSnrCases() per OS — measured − 3 dB from PrintSnrMeasurements)
 .\build\Test.exe --gtest_filter=*PrintSnrMeasurements* --gtest_also_run_disabled_tests
 ```
 
@@ -186,6 +186,8 @@ See [scyclone/calibration/README.md](scyclone/calibration/README.md) for when to
 |-------|------|---------|
 | `default` | Every PR / develop push | Excludes `ExtendedHostMatrix` suite |
 | `extended-matrix` | Release tags (`v*`) and manual | Extended host/block matrix only |
+
+Sanitizer CI builds (`SCYCLONE_SANITIZERS` preset) skip the Google Benchmark dependency; see [docs/maintainer/TESTING_SANITIZERS.md](../docs/maintainer/TESTING_SANITIZERS.md).
 
 ```powershell
 cmake --preset default
@@ -202,7 +204,7 @@ If `ctest -L` is unavailable, use `ctest --label-regex "default"`.
 
 ## CMake presets
 
-Shared presets live in [`CMakePresets.json`](../CMakePresets.json). Machine-specific overrides (e.g. macOS arch) belong in a gitignored `CMakeUserPresets.json`.
+Shared presets live in [`CMakePresets.json`](../CMakePresets.json). Machine-specific overrides belong in a gitignored `CMakeUserPresets.json` (see [`CMakeUserPresets.json.example`](../CMakeUserPresets.json.example)).
 
 | Configure preset | Build dir | Purpose |
 |------------------|-----------|---------|
@@ -211,6 +213,16 @@ Shared presets live in [`CMakePresets.json`](../CMakePresets.json). Machine-spec
 | `asan-ubsan` | `build-asan-ubsan/` | Linux/macOS ASan + UBSan (`Test` only) |
 | `asan` | `build-asan/` | Windows MSVC ASan (`Test` only) |
 | `tsan` | `build-tsan/` | Linux/macOS ThreadSanitizer (`Test` only) |
+
+### Windows (MSVC)
+
+Scyclone on Windows expects **MSVC** (prebuilt ONNX, RNBO, plugin toolchain). Shared presets do not pin a compiler.
+
+If **LLVM/Clang is on PATH** (common for clangd) but **`cl.exe` is not** (normal PowerShell), `cmake --preset default` may select Clang and fail (`-fPIC`, Benchmark `-Werror`, etc.). The `release` preset has the same behavior.
+
+1. Open **x64 Native Tools Command Prompt for VS 2022**, or run `vcvars64.bat` in your shell.
+2. Copy `CMakeUserPresets.json.example` → `CMakeUserPresets.json` (repo root). User presets override shared preset names on Windows and set `CMAKE_C_COMPILER` / `CMAKE_CXX_COMPILER` to `cl`.
+3. Configure and build as usual:
 
 ```powershell
 cmake --preset default
@@ -230,7 +242,7 @@ cmake --build --preset asan
 ctest --test-dir build-asan -L default --output-on-failure
 ```
 
-MSan and LeakSanitizer are not preset-wired (extra toolchain setup). See maintainer doc below.
+MSan and extra sanitizer presets are not wired in CMakePresets.json (extra toolchain setup). See maintainer doc below.
 
 ## Sanitizer CI
 
