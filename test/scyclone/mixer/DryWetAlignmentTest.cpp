@@ -17,6 +17,18 @@ TEST_P(DryWetHostConfigTest, DryWet_DiracPeakAlignedAtTotalLatency)
     assertDryWetDiracAligned(cfg.hostSR, static_cast<uint32_t>(cfg.hostBlock));
 }
 
+// Wet path only: reported total latency must match measured group delay (no mixer compensation).
+TEST_P(DryWet48kSignalConfigTest, WetPath_DiracPeakMatchesReportedLatency)
+{
+    const auto &cfg = GetParam();
+    skipIfInfeasible(cfg);
+    assertProductionWetPeakMatchesReportedLatency(cfg.hostSR, static_cast<uint32_t>(cfg.hostBlock));
+}
+
 INSTANTIATE_TEST_SUITE_P(DryWetAlignment, DryWetHostConfigTest,
                          torsion::test::hostConfigValues(dryWetHostConfigs()),
+                         torsion::test::hostConfigName);
+
+INSTANTIATE_TEST_SUITE_P(DryWetWetPath, DryWet48kSignalConfigTest,
+                         torsion::test::hostConfigValues(productionSignalContractConfigs()),
                          torsion::test::hostConfigName);

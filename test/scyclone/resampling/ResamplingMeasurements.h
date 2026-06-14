@@ -17,6 +17,7 @@
 #include "ImpulseMetrics.h"
 #include "ResamplingChainDriver.h"
 #include "ResamplingRunner.h"
+#include "ResamplingSignalUtils.h"
 #include "SignalFidelity.h"
 #include "SignalGenerators.h"
 #include "SignalMetrics.h"
@@ -70,7 +71,8 @@ namespace scyclone::test::resampling
             chain, hostSR, hostBlock, productionChainTotalLatency(chain, hostSR));
     }
 
-    inline double measureUpSnrDb(double hostSR, int hostBlock, int passBandPeaks = 1)
+    inline double measureUpSnrDb(double hostSR, int hostBlock, int passBandPeaks = 1,
+                                   SnrCorruptionKind corruption = SnrCorruptionKind::None)
     {
         constexpr int kInputBlocks = 64;
         const int inputLen = hostBlock * kInputBlocks;
@@ -81,7 +83,8 @@ namespace scyclone::test::resampling
         ResamplingProcessor up;
         prepareUpOnly(hostSR, hostBlock, up);
         juce::AudioBuffer<float> buf(1, hostBlock);
-        const auto output = collectUpOutput(up, buf, input.data(), inputLen, kPreRollBlocks);
+        auto output = collectUpOutput(up, buf, input.data(), inputLen, kPreRollBlocks);
+        applySnrCorruption(output, corruption);
 
         const int skip = static_cast<int>(std::round(static_cast<double>(up.getLatencyInSamples()) * up.getSrcRatio()))
                          + up.getOutputBufferSize();
@@ -92,7 +95,8 @@ namespace scyclone::test::resampling
         return torsion::test::calculateSnrDb(output.data() + skip, static_cast<int>(output.size()) - skip, passBandPeaks);
     }
 
-    inline double measureDownSnrDb(double hostSR, int hostBlock, int passBandPeaks = 1)
+    inline double measureDownSnrDb(double hostSR, int hostBlock, int passBandPeaks = 1,
+                                    SnrCorruptionKind corruption = SnrCorruptionKind::None)
     {
         const auto ratioCase = makeProductionRatioCase(hostSR, hostBlock);
         constexpr int kInputBlocks = 64;
@@ -105,7 +109,8 @@ namespace scyclone::test::resampling
         ResamplingProcessor down;
         prepareDownOnly(hostSR, onnxBlock, hostBlock, down, true);
         juce::AudioBuffer<float> buf(1, onnxBlock);
-        const auto output = collectDownOutput(down, buf, input.data(), inputLen, kPreRollBlocks);
+        auto output = collectDownOutput(down, buf, input.data(), inputLen, kPreRollBlocks);
+        applySnrCorruption(output, corruption);
 
         const int skip = down.getLatencyInSamples() + hostBlock;
         if (skip + 512 >= static_cast<int>(output.size()))
@@ -120,7 +125,8 @@ namespace scyclone::test::resampling
                                                      int impulseSample, int preRollBlocks)
     {
         ImpulseResponse response;
-        response.expectedPeak = expectedMiddleChainPeakSamples(chain, middle, hostSR);
+        const int latency = expectedMiddleChainPeakSamples(chain, middle, hostSR);
+        response.expectedPeak = impulseSample + latency;
         response.hostBlock = hostBlock;
 
         runMiddleChainSilencePreRoll(chain, middle, preRollBlocks);
@@ -136,10 +142,10 @@ namespace scyclone::test::resampling
                                                      double hostSR, int hostBlock,
                                                      int impulseSample = 0)
     {
-        const int expectedPeak = expectedMiddleChainPeakSamples(chain, middle, hostSR);
+        const int latency = expectedMiddleChainPeakSamples(chain, middle, hostSR);
         return measureMiddleChainImpulse(
             chain, middle, hostSR, hostBlock, impulseSample,
-            latencyPreRollBlocks(expectedPeak, hostBlock));
+            latencyPreRollBlocks(latency, hostBlock));
     }
 
     inline ImpulseResponse measureRoundTripImpulse(RoundTripChain &chain, double hostSR, int hostBlock,
