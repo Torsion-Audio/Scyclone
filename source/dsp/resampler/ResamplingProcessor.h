@@ -14,10 +14,18 @@ public:
     void setOutputBufferSize(int size);
     juce::AudioBuffer<float>& processBlock(juce::AudioBuffer<float>& inputBufferMono);
     /** Latency in input-rate samples. */
-    int getLatencyInSamples() const { return latencyInSamples; };
+    int getLatencyInSamples() const { return latencyInSamples; }
+
+    int getInputBufferSize() const { return inputBufferSize; }
+    int getOutputBufferSize() const { return outputBufferSize; }
+    double getSrcRatio() const { return sampleRateRatio; }
+    long getLastOutputFramesGenerated() const { return lastOutputFramesGenerated; }
+    long getLastInputFramesUsed() const { return lastInputFramesUsed; }
 
 private:
     int latencyInSamples = 0;
+    long lastOutputFramesGenerated = 0;
+    long lastInputFramesUsed = 0;
     std::string processorName;
 
     double inputSampleRate = 0.0;
