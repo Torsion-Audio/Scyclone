@@ -1,8 +1,9 @@
 # Externally provided libraries
 # Using zip files instead is faster
 
-# get all test cpp and header files
+# get all test cpp and header files (benchmark lives in test/benchmark/ — separate from gtest)
 file(GLOB_RECURSE TestFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/test/*.h")
+list(FILTER TestFiles EXCLUDE REGEX ".*/benchmark/.*")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test PREFIX "" FILES ${TestFiles})
 
 # This module enables populating content at configure time via any method supported by the ExternalProject module. Whereas ExternalProject_Add() downloads at build time, the FetchContent module makes content available immediately, allowing the configure step to use the content in commands like add_subdirectory(), include() or file() operations.
@@ -51,7 +52,11 @@ endif()
 # Therefore we steal the compile definitions and include directories from the main target and pass them to our test target
 # Since we linked the shared juce targets in PRIVATE mode, they are not linked to the test target again
 target_compile_definitions(Test PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},COMPILE_DEFINITIONS>)
-target_include_directories(Test PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},INCLUDE_DIRECTORIES>)
+target_include_directories(Test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/support
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/support/processors
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/support/resampling
+        $<TARGET_PROPERTY:${PROJECT_NAME},INCLUDE_DIRECTORIES>)
 
 # Make an Xcode Scheme for the test executable so we can run Test in the IDE
 set_target_properties(Test PROPERTIES XCODE_GENERATE_SCHEME ON)
@@ -62,10 +67,10 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test PREFIX "" FILES ${TestFiles})
 # include Loads and runs CMake code from the file given. Loads and runs CMake code from the file given.
 include(GoogleTest)
 
-# Default CI / sanitizer jobs: Tier A (exclude ResamplingTierB extended matrix).
-add_test(NAME ScycloneTests COMMAND Test --gtest_filter=-*ResamplingTierB*)
+# Default CI / sanitizer jobs: exclude ExtendedHostMatrix suite.
+add_test(NAME ScycloneTests COMMAND Test --gtest_filter=-*ExtendedHostMatrix*)
 set_tests_properties(ScycloneTests PROPERTIES LABELS "default")
 
-# Extended block-size matrix — release tags and manual: ctest -L tier-b
-add_test(NAME ScycloneTestsTierB COMMAND Test --gtest_filter=*ResamplingTierB*)
-set_tests_properties(ScycloneTestsTierB PROPERTIES LABELS "tier-b")
+# Extended host matrix — release tags and manual: ctest -L extended-matrix
+add_test(NAME ScycloneTestsExtendedMatrix COMMAND Test --gtest_filter=*ExtendedHostMatrix*)
+set_tests_properties(ScycloneTestsExtendedMatrix PROPERTIES LABELS "extended-matrix")
