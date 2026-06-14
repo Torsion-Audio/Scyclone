@@ -108,6 +108,8 @@ juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<fl
     srcData.end_of_input = 0;
 
     int error = src_process(converter, &srcData);
+    lastOutputFramesGenerated = srcData.output_frames_gen;
+    lastInputFramesUsed = srcData.input_frames_used;
     if (error != 0) {
         DBG("Error during sample rate conversion: " << error);
     }
@@ -129,6 +131,9 @@ void ResamplingProcessor::setOutputBufferSize(int size)
     outputBufferSize = size;
     outputBuffer.setSize(1, size);
     outputBuffer.clear();
+    if (inputBufferSize > 0) {
+        sampleRateRatio = static_cast<double>(outputBufferSize) / static_cast<double>(inputBufferSize);
+    }
 }
 
 void ResamplingProcessor::releaseResources() {
