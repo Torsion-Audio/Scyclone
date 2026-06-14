@@ -19,6 +19,7 @@ int ResamplingProcessor::prepare(const juce::dsp::ProcessSpec &inputSpec,
 
     sampleRateRatio = calculateSampleRateRatio(targetSampleRate, inputSampleRate);
     outputBufferSize = calculateOutputBufferSize(sampleRateRatio, inputBufferSize);
+    bufferSizeRatio = calculateBufferSizeRatio(outputBufferSize, inputBufferSize);
     outputSampleRate = targetSampleRate;
     outputBuffer.setSize(1, outputBufferSize);
     outputBuffer.clear();
@@ -43,6 +44,11 @@ int ResamplingProcessor::calculateOutputBufferSize(double ratio, int blockSize)
 double ResamplingProcessor::calculateSampleRateRatio(double outputRate, double inputRate)
 {
     return outputRate / inputRate;
+}
+
+double ResamplingProcessor::calculateBufferSizeRatio(int outputBufferSize, int inputBufferSize)
+{
+    return static_cast<double>(outputBufferSize) / static_cast<double>(inputBufferSize);
 }
 
 void ResamplingProcessor::measureLatency()
@@ -104,7 +110,7 @@ juce::AudioBuffer<float>& ResamplingProcessor::processBlock(juce::AudioBuffer<fl
 
     srcData.data_out = outputBuffer.getWritePointer(0);
     srcData.output_frames = outputBuffer.getNumSamples();
-    srcData.src_ratio = sampleRateRatio;
+    srcData.src_ratio = bufferSizeRatio;
     srcData.end_of_input = 0;
 
     int error = src_process(converter, &srcData);
@@ -132,7 +138,7 @@ void ResamplingProcessor::setOutputBufferSize(int size)
     outputBuffer.setSize(1, size);
     outputBuffer.clear();
     if (inputBufferSize > 0) {
-        sampleRateRatio = static_cast<double>(outputBufferSize) / static_cast<double>(inputBufferSize);
+        bufferSizeRatio = calculateBufferSizeRatio(outputBufferSize, inputBufferSize);
     }
 }
 

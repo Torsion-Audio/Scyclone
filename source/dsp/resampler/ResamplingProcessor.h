@@ -18,7 +18,8 @@ public:
 
     int getInputBufferSize() const { return inputBufferSize; }
     int getOutputBufferSize() const { return outputBufferSize; }
-    double getSrcRatio() const { return sampleRateRatio; }
+    /** Effective per-block ratio passed to libsamplerate (N_out / N_in). */
+    double getSrcRatio() const { return bufferSizeRatio; }
     long getLastOutputFramesGenerated() const { return lastOutputFramesGenerated; }
     long getLastInputFramesUsed() const { return lastInputFramesUsed; }
 
@@ -34,9 +35,11 @@ private:
     int outputBufferSize = 0;
 
     double sampleRateRatio = 1.0;
+    double bufferSizeRatio = 1.0;
 
     double calculateSampleRateRatio(double outputRate, double inputRate);
     int calculateOutputBufferSize(double ratio, int blockSize);
+    double calculateBufferSizeRatio(int outputBufferSize, int inputBufferSize);
     void measureLatency();
     void printMetrics();
 
