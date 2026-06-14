@@ -56,9 +56,7 @@ float RingBuffer::popSample(int channel) {
 }
 
 int RingBuffer::getAvailableSamples(int channel, bool debug) {
-    if (debug) {
-        std::cout << "getAvailableSamples["<< readPos[channel] << ", " << writePos[channel] << "]: ";
-    }
+    juce::ignoreUnused(debug);
     int returnValue;
 
     if (readPos[channel] <= writePos[channel]) {
@@ -66,11 +64,6 @@ int RingBuffer::getAvailableSamples(int channel, bool debug) {
     } else {
         returnValue = writePos[channel] + buffer.getNumSamples() - readPos[channel];
     }
-
-    if (debug) {
-        std::cout << returnValue << std::endl;
-    }
-
 
     return returnValue;
 }

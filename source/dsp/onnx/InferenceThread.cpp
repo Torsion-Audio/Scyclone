@@ -79,7 +79,7 @@ void InferenceThread::run() {
         try {
             session.Run(runOptions, inputNames.data(), inputTensor.get(), 1, outputNames.data(), outputTensor.get(), 1);
         } catch (Ort::Exception &e) {
-            std::cout << e.what() << std::endl;
+            juce::Logger::writeToLog("ONNX inference error: " + juce::String(e.what()));
         }
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
@@ -122,7 +122,7 @@ bool InferenceThread::stopInferenceThreadAndWait()
     {
         if (juce::Time::getMillisecondCounter() >= deadline)
         {
-            std::cout << "InferenceThread: timed out waiting for inference thread to stop" << std::endl;
+            juce::Logger::writeToLog("InferenceThread: timed out waiting for inference thread to stop");
             return false;
         }
 
@@ -175,11 +175,11 @@ void InferenceThread::loadExternalModel(juce::File modelPath) {
     }
     catch (const Ort::Exception& e)
     {
-        std::cout << e.what() << std::endl;
+        juce::Logger::writeToLog("ONNX model load error: " + juce::String(e.what()));
     }
     catch (const std::exception& e)
     {
-        std::cout << e.what() << std::endl;
+        juce::Logger::writeToLog("ONNX model load error: " + juce::String(e.what()));
     }
 }
 
