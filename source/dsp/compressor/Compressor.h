@@ -24,11 +24,11 @@ struct CompressorParameter{
     float range;
     float attackTime;
     float releaseTime;
-    bool autoMakeUpGain;
+    bool isAutoMakeUpGainEnabled;
     CompressorType compType;
 };
 
-struct AutoMakeUpGain{
+struct AutoMakeUpGainState{
     juce::AudioBuffer<float> inputBuffer;
     juce::AudioBuffer<float> outputBuffer;
     int inputBufferIndex;
@@ -80,10 +80,10 @@ public:
     
 private:
     CompressorParameter parameter {0.f, 4.0f, 4.0f, 0.0f, 80.0f, 0.05f, 0.3f, true, Upward};
-    AutoMakeUpGain autoMakeUpGain;
+    AutoMakeUpGainState autoMakeUpGain;
     Envelope envelope;
     
-    void copyAutoMakeUpBuffer(juce::AudioBuffer<float>& target, juce::AudioBuffer<float>& source, bool input);
+    void copyAutoMakeUpBuffer(juce::AudioBuffer<float>& target, juce::AudioBuffer<float>& source, bool isInput);
 };
 
 #endif
