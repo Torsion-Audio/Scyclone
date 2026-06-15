@@ -363,22 +363,34 @@
 
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
       font-variant-numeric: tabular-nums;
+    }
+
+    @media (min-width: 900px) {
+      .kpi-grid-overview {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
     }
 
     .kpi-tile {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 12px;
       min-width: 0;
-      padding: 12px 14px 11px;
+      min-height: 104px;
+      padding: 14px 16px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
-      cursor: default;
+      cursor: pointer;
       transition: opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .kpi-tile:focus-visible {
+      outline: 2px solid rgba(0, 255, 230, 0.4);
+      outline-offset: 2px;
     }
 
     .kpi-tile.metric-dimmed {
@@ -394,42 +406,71 @@
       border-color: rgba(255, 143, 107, 0.42);
     }
 
-    .kpi-swatch {
-      display: block;
-      height: 3px;
-      width: calc(100% + 28px);
-      margin: -12px -14px 2px;
-      border-radius: 8px 8px 0 0;
-      background: var(--kpi-color);
+    .kpi-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .kpi-icon {
+      display: inline-flex;
       flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--kpi-color);
+    }
+
+    .kpi-icon svg {
+      display: block;
+      width: 15px;
+      height: 15px;
     }
 
     .kpi-label {
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       font-weight: 600;
-      color: var(--muted);
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      line-height: 1.35;
+      color: var(--text-label);
+      letter-spacing: 0.01em;
+      line-height: 1.3;
+      min-width: 0;
     }
 
     .kpi-tile.metric-active .kpi-label {
-      color: var(--text-label);
+      color: var(--text);
+    }
+
+    .kpi-tile.metric-active .kpi-icon {
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .kpi-body {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: auto;
     }
 
     .kpi-value {
-      font-size: 1.25rem;
-      font-weight: 600;
+      font-size: 1.375rem;
+      font-weight: 700;
       color: var(--text);
-      line-height: 1.1;
-      letter-spacing: -0.01em;
+      line-height: 1;
+      letter-spacing: -0.02em;
     }
 
     .kpi-delta {
-      font-size: 0.75rem;
+      font-size: 0.8125rem;
       font-weight: 600;
       line-height: 1.2;
-      margin-top: auto;
+      text-align: right;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .kpi-delta.flat,
@@ -484,21 +525,59 @@
       font-size: inherit;
     }
 
+    .chart-header {
+      margin-bottom: 8px;
+    }
+
+    .chart-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .chart-icon {
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      color: var(--chart-color);
+      opacity: 0.92;
+    }
+
+    .chart-icon svg {
+      display: block;
+      width: 14px;
+      height: 14px;
+    }
+
+    .chart-label {
+      margin: 0;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-label);
+      line-height: 1.3;
+      transition: color 0.12s ease;
+    }
+
+    .chart-block.metric-active .chart-label {
+      color: var(--accent-cyan);
+    }
+
     .chart-block {
       position: relative;
       min-width: 0;
       transition: opacity 0.15s ease;
+      scroll-margin-top: 16px;
+      scroll-margin-bottom: 8px;
     }
 
     .chart-block.metric-dimmed {
       opacity: 0.42;
     }
 
-    .chart-block .info-tip {
-      position: absolute;
-      top: 0;
-      right: 0;
-      z-index: 1;
+    .chart-title-row .info-tip {
+      margin-left: 2px;
     }
 
     .info-tip {
@@ -720,47 +799,94 @@
       const benchMeta = {
         reference_cpu: {
           label: 'Reference CPU',
+          icon: 'cpu',
           summary: 'Synthetic FMA loop, CPU baseline.',
           tooltip: '1M fused-multiply-add operations per iteration. Not Scyclone code.',
           kind: 'sentinel',
         },
         reference_memory: {
           label: 'Reference Memory',
+          icon: 'memory',
           summary: 'Synthetic ~1 MiB fill/read, memory baseline.',
           tooltip: 'Fills ~1 MiB and does strided reads each iteration. Not Scyclone code.',
           kind: 'sentinel',
         },
         processor_prepare: {
           label: 'Prepare',
+          icon: 'prepare',
           summary: 'Host prepare/release on an already-constructed processor.',
           tooltip: 'Fixture: processor created once. Each iteration calls prepareToPlay(44100, 512) then releaseResources(). ONNX models load at fixture setup, not per iteration.',
           kind: 'app',
         },
         processor: {
           label: 'Prepare',
+          icon: 'prepare',
           summary: 'Host prepare/release on an already-constructed processor.',
           tooltip: 'Legacy benchmark name (BM_processor). Same as Prepare: processor created once; each iteration calls prepareToPlay(44100, 512) then releaseResources().',
           kind: 'app',
         },
         process_block: {
           label: 'Process',
+          icon: 'process',
           summary: 'Stereo 512-sample audio callback, the real-time DSP path.',
           tooltip: 'Fixture: processor prepared at 44.1 kHz / 512 samples. Each iteration calls processBlock() with a cleared stereo buffer.',
           kind: 'app',
         },
         editor: {
           label: 'Editor',
+          icon: 'editor',
           summary: 'UI open/close cost; catches heavier components or layout regressions.',
           tooltip: 'Fixture: processor created once. Each iteration creates and destroys the full editor (JUCE UI, OpenGL background). Headless CI, no real display.',
           kind: 'app',
         },
         compile_benchmark_target: {
           label: 'Compile',
+          icon: 'compile',
           summary: 'Wall-clock Release build of the Benchmark executable and its dependencies.',
           tooltip: 'Measured once per CI run after a fresh configure. FetchContent deps may be cached; object files are not reused between runs.',
           kind: 'build',
         },
       };
+
+      const benchIconPaths = {
+        // Host prepareToPlay / releaseResources — sample-rate & block-size controls
+        prepare: '<line x1="4" y1="8" x2="20" y2="8"/><circle cx="10" cy="8" r="1.75" fill="currentColor" stroke="none"/>'
+          + '<line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="1.75" fill="currentColor" stroke="none"/>'
+          + '<line x1="4" y1="16" x2="20" y2="16"/><circle cx="8" cy="16" r="1.75" fill="currentColor" stroke="none"/>',
+        // Stereo processBlock — audio waveform
+        process: '<path d="M3 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0" fill="none"/>',
+        // Editor create/destroy — plugin UI window
+        editor: '<rect x="4" y="5" width="16" height="15" rx="1.5"/>'
+          + '<line x1="4" y1="9" x2="20" y2="9"/>'
+          + '<line x1="8" y1="13" x2="16" y2="13"/>'
+          + '<line x1="8" y1="16" x2="13" y2="16"/>',
+        // Release wall-clock build of Benchmark target
+        compile: '<path d="M14.5 4.5L12 7 6 13a2.2 2.2 0 1 0 3.1 3.1l6-6 2.5-2.5"/>'
+          + '<line x1="9.5" y1="14.5" x2="4" y2="20"/>',
+        // Synthetic FMA CPU sentinel
+        cpu: '<rect x="7" y="7" width="10" height="10" rx="1"/>'
+          + '<rect x="10" y="10" width="4" height="4"/>'
+          + '<line x1="12" y1="4" x2="12" y2="7"/><line x1="12" y1="17" x2="12" y2="20"/>'
+          + '<line x1="4" y1="12" x2="7" y2="12"/><line x1="17" y1="12" x2="20" y2="12"/>',
+        // Synthetic memory fill/read sentinel
+        memory: '<rect x="4" y="5" width="16" height="4" rx="0.75"/>'
+          + '<rect x="4" y="10" width="16" height="4" rx="0.75"/>'
+          + '<rect x="4" y="15" width="16" height="4" rx="0.75"/>',
+        // Unknown benchmark fallback
+        metric: '<polyline points="4,17 9,11 13,14 17,8 20,10" fill="none"/>',
+      };
+
+      function benchIconSvg(iconId) {
+        const paths = benchIconPaths[iconId] || benchIconPaths.metric;
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+          + paths
+          + '</svg>';
+      }
+
+      function getBenchIconId(benchName) {
+        const meta = getBenchMeta(benchName);
+        return meta.icon || 'metric';
+      }
 
       const appBenchOrder = ['processor_prepare', 'process_block', 'editor'];
       const buildBenchOrder = ['compile_benchmark_target'];
@@ -916,6 +1042,7 @@
           },
           setCommitHover,
           clearCommitHover,
+          setMetricHover,
           clearAll() {
             cancelClear();
             hoveredCommitId = null;
@@ -924,6 +1051,75 @@
           },
         };
       })();
+
+      function benchChartId(benchName) {
+        return 'bench-chart-' + benchKey(benchName);
+      }
+
+      const chartAnchors = new Map();
+
+      function scrollToChart(benchName) {
+        let block = chartAnchors.get(benchName);
+        if (!block) {
+          block = document.getElementById(benchChartId(benchName));
+        }
+        if (!block) return;
+
+        const details = block.closest('details.baseline-section');
+        const focusChart = () => {
+          chartSync.setMetricHover(benchName);
+          block.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        };
+
+        if (details && !details.open) {
+          details.open = true;
+          requestAnimationFrame(() => requestAnimationFrame(focusChart));
+        } else {
+          focusChart();
+        }
+      }
+
+      function chartTooltipCommitterUser(row) {
+        return row.commit.committer && row.commit.committer.username
+          ? '@' + row.commit.committer.username
+          : '';
+      }
+
+      function chartTooltipAfterTitle(row) {
+        const user = chartTooltipCommitterUser(row);
+        return '\n' + row.commit.message + '\n\n' + row.commit.timestamp + ' ' + user + '\n';
+      }
+
+      function chartTooltipValueLabel(row) {
+        const { value, range } = row.bench;
+        let label = formatBenchValue(value) || '';
+        if (range) label += ' (' + range + ')';
+        return label;
+      }
+
+      function chartPointTooltipText(row) {
+        return row.commit.id.slice(0, 7) + chartTooltipAfterTitle(row) + chartTooltipValueLabel(row);
+      }
+
+      function latestChartTooltipText(dataset) {
+        if (!dataset || !dataset.length) return '';
+        return chartPointTooltipText(dataset[dataset.length - 1]);
+      }
+
+      function bindKpiNavigation(tile, benchName, tooltipText) {
+        tile.setAttribute('role', 'button');
+        tile.setAttribute('tabindex', '0');
+        const clickHint = 'Click to view trend chart.';
+        tile.title = tooltipText ? tooltipText + '\n\n' + clickHint : clickHint;
+
+        tile.addEventListener('click', () => scrollToChart(benchName));
+        tile.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            scrollToChart(benchName);
+          }
+        });
+      }
 
       function benchKey(raw) {
         const m = raw.match(/^BM_([^/]+)/);
@@ -936,6 +1132,7 @@
         if (meta) return meta;
         return {
           label: formatBenchName(raw),
+          icon: 'metric',
           summary: '',
           tooltip: '',
           kind: 'app',
@@ -1116,46 +1313,53 @@
         const meta = getBenchMeta(benchName);
         const delta = enrichDelta(computeVsPreviousDelta(dataset));
         const latest = dataset.length > 0 ? dataset[dataset.length - 1].bench.value : null;
-        const latestLabel = formatBenchValue(delta?.latest ?? latest);
         const color = chartPalette[colorIndex % chartPalette.length];
-        const runnerNote = meta.kind === 'app' ? appVsRunnerNote(delta, runnerDriftMax) : '';
 
         const tile = document.createElement('div');
         tile.className = 'kpi-tile';
-        tile.title = deltaTooltipText(delta, meta.kind, latestLabel, runnerNote);
         tile.style.setProperty('--kpi-color', color);
+        bindKpiNavigation(tile, benchName, latestChartTooltipText(dataset));
 
-        const swatch = document.createElement('span');
-        swatch.className = 'kpi-swatch';
-        swatch.setAttribute('aria-hidden', 'true');
-        tile.appendChild(swatch);
+        const head = document.createElement('div');
+        head.className = 'kpi-head';
+
+        const icon = document.createElement('span');
+        icon.className = 'kpi-icon';
+        icon.innerHTML = benchIconSvg(getBenchIconId(benchName));
+        head.appendChild(icon);
 
         const label = document.createElement('span');
         label.className = 'kpi-label';
         label.textContent = meta.label;
-        tile.appendChild(label);
+        head.appendChild(label);
+        tile.appendChild(head);
+
+        const body = document.createElement('div');
+        body.className = 'kpi-body';
 
         const value = document.createElement('span');
         value.className = 'kpi-value';
         value.textContent = formatCompactBenchValue(delta?.latest ?? latest, meta);
-        tile.appendChild(value);
+        body.appendChild(value);
 
         const change = createDeltaChangeSpan(
           delta,
           'kpi-delta',
           { neutral: meta.kind === 'sentinel' },
         );
+        body.appendChild(change);
+        tile.appendChild(body);
+
         if (delta && delta.magnitude === 'alert' && meta.kind !== 'sentinel') {
           tile.classList.add('metrics-alert');
         }
-        tile.appendChild(change);
 
         chartSync.registerKpi({ tile, benchName });
 
         return { tile, color };
       }
 
-      function createKpiPanel(benches, startColorIndex, { runnerDriftMax = 0, panelLabel = 'Latest vs previous develop push' } = {}) {
+      function createKpiPanel(benches, startColorIndex, { runnerDriftMax = 0, panelLabel = 'Latest vs previous develop push', overview = false } = {}) {
         const panel = document.createElement('div');
         panel.className = 'kpi-panel';
 
@@ -1165,7 +1369,7 @@
         panel.appendChild(label);
 
         const grid = document.createElement('div');
-        grid.className = 'kpi-grid';
+        grid.className = 'kpi-grid' + (overview ? ' kpi-grid-overview' : '');
         grid.setAttribute('aria-label', 'Latest benchmark summary');
         panel.appendChild(grid);
 
@@ -1307,7 +1511,28 @@
         const meta = getBenchMeta(name);
         const block = document.createElement('div');
         block.className = 'chart-block';
+        block.id = benchChartId(name);
         block.setAttribute('aria-label', meta.label + ' trend');
+        block.style.setProperty('--chart-color', color);
+        chartAnchors.set(name, block);
+
+        const header = document.createElement('div');
+        header.className = 'chart-header';
+        block.appendChild(header);
+
+        const titleRow = document.createElement('div');
+        titleRow.className = 'chart-title-row';
+
+        const icon = document.createElement('span');
+        icon.className = 'chart-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.innerHTML = benchIconSvg(getBenchIconId(name));
+        titleRow.appendChild(icon);
+
+        const label = document.createElement('h3');
+        label.className = 'chart-label';
+        label.textContent = meta.label;
+        titleRow.appendChild(label);
 
         if (meta.tooltip) {
           const tip = document.createElement('button');
@@ -1316,8 +1541,10 @@
           tip.textContent = '?';
           tip.title = meta.tooltip;
           tip.setAttribute('aria-label', meta.label + ': ' + meta.tooltip);
-          block.appendChild(tip);
+          titleRow.appendChild(tip);
         }
+
+        header.appendChild(titleRow);
 
         const canvas = document.createElement('canvas');
         canvas.className = 'benchmark-chart';
@@ -1406,18 +1633,10 @@
               yPadding: 10,
               callbacks: {
                 afterTitle(items) {
-                  const { index } = items[0];
-                  const row = dataset[index];
-                  const user = row.commit.committer && row.commit.committer.username
-                    ? '@' + row.commit.committer.username
-                    : '';
-                  return '\n' + row.commit.message + '\n\n' + row.commit.timestamp + ' ' + user + '\n';
+                  return chartTooltipAfterTitle(dataset[items[0].index]);
                 },
                 label(item) {
-                  const { value, range } = dataset[item.index].bench;
-                  let label = formatBenchValue(value) || String(item.yLabel);
-                  if (range) label += ' (' + range + ')';
-                  return label;
+                  return chartTooltipValueLabel(dataset[item.index]);
                 },
               },
             },
@@ -1464,7 +1683,7 @@
           overviewBlock.className = 'overview-block';
           main.appendChild(overviewBlock);
 
-          const { panel, colors, nextColorIndex } = createKpiPanel(overview, colorIndex, { runnerDriftMax });
+          const { panel, colors, nextColorIndex } = createKpiPanel(overview, colorIndex, { runnerDriftMax, overview: true });
           overviewBlock.appendChild(panel);
           if (sentinel.length > 0) {
             overviewBlock.appendChild(createRunnerContextStrip(sentinel));
