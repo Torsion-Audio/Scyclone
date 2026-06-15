@@ -58,7 +58,7 @@ cmake --build --preset release
 
 See [test/README.md](test/README.md) for the full test layout, sanitizer presets, and calibration probes.
 
-**CI:** Pull requests to `develop` require [Build & Test](.github/workflows/build-and-test.yml) and [Sanitizers](.github/workflows/sanitizers.yml) (Linux/macOS ASan+UBSan, Linux/macOS TSan). Pushes to `develop` run the same validation (no downloadable artifacts). To release signed builds, push a version tag — see [Release process](docs/maintainer/release.md).
+**CI:** Pull requests to `develop` require [Build & Test](.github/workflows/build-and-test.yml) and [Sanitizers](.github/workflows/sanitizers.yml) (`sanitizers-required`: Linux/macOS ASan+UBSan, Linux/macOS TSan). Advisory sanitizer jobs are non-blocking — see [Sanitizers (advisory)](.github/workflows/sanitizers-advisory.yml) and [TESTING_SANITIZERS.md](docs/maintainer/TESTING_SANITIZERS.md). Pushes to `develop` run the same validation (no downloadable artifacts). To release signed builds, push a version tag — see [Release process](docs/maintainer/release.md).
 
 **Notes:**
 - The onnx library is now linked statically. No more need to download the onnx library via homebrew or via the github repository. macOS distribution builds are code-signed with Developer ID and notarized in CI.
