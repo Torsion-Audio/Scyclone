@@ -40,4 +40,4 @@ If `gh-pages` does not exist yet, create an orphan branch first, then copy `inde
 1. Edit `.github/benchmark-dashboard/index.html` in this repo (CSS is in the `<style>` block).
 2. Copy `index.html`, `favicon.svg`, `fonts/`, and `torsion-audio-lockup.svg` to `gh-pages:dev/bench/` and push (same paths as above).
 
-Do **not** rename `data.js` or change `window.BENCHMARK_DATA` — [github-action-benchmark](https://github.com/benchmark-action/github-action-benchmark) owns that file.
+Do **not** rename `data.js` or change `window.BENCHMARK_DATA`. [github-action-benchmark](https://github.com/benchmark-action/github-action-benchmark) owns that file.
