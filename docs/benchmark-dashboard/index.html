@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scyclone Benchmarks</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <style>
+    @font-face {
+      font-family: 'Inter';
+      src: url('fonts/Inter-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Inter';
+      src: url('fonts/Inter-Medium.ttf') format('truetype');
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Inter';
+      src: url('fonts/Inter-Bold.ttf') format('truetype');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Inter';
+      src: url('fonts/Inter-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      /* ColorPallete + plugin gradient accents */
+      --bg: #111111;
+      --surface: #1a1a1a;
+      --surface-raised: #222222;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.13);
+      --text: #ffffff;
+      --text-label: #c4c9ce;
+      --muted: #868686;
+      --accent-pink: #eb1e79;
+      --accent-magenta: #f02fc2;
+      --accent-blue: #004e92;
+      --accent-sky: #6094ea;
+      --accent-cyan: #00ffe6;
+      --accent-teal: #18a5a7;
+      --gradient-brand: linear-gradient(135deg, var(--accent-magenta) 0%, var(--accent-sky) 100%);
+      --gradient-subtle: linear-gradient(180deg, rgba(240, 47, 194, 0.06) 0%, rgba(96, 148, 234, 0.04) 100%);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      font-family: 'Inter', BlinkMacSystemFont, -apple-system, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background-color: var(--bg);
+      font-size: 16px;
+    }
+
+    body {
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      font-weight: 400;
+      line-height: 1.5;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 255, 230, 0.07), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 0%, rgba(240, 47, 194, 0.05), transparent),
+        var(--bg);
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+    }
+
+    /* Header — mirrors plugin title row */
+    .site-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      margin-bottom: 40px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      margin-top: 2px;
+    }
+
+    .header-text { flex: 1; min-width: 0; }
+
+    .title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 12px 16px;
+      margin-bottom: 6px;
+    }
+
+    .title-row h1 {
+      margin: 0;
+      font-size: 1.875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0.01em;
+    }
+
+    .tagline {
+      margin: 0 0 12px;
+      font-size: 0.875rem;
+      color: var(--text-label);
+      line-height: 1.5;
+      max-width: 52rem;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 20px;
+      font-size: 0.8125rem;
+      color: var(--muted);
+      padding-top: 4px;
+    }
+
+    .meta-row strong {
+      color: var(--text-label);
+      font-weight: 500;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text-label);
+      font-weight: 500;
+    }
+
+    .pill::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 6px rgba(0, 255, 230, 0.5);
+    }
+
+    a {
+      color: var(--accent-sky);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+
+    a:hover { color: var(--accent-cyan); }
+
+    code {
+      font-family: ui-monospace, 'Cascadia Code', 'Fira Mono', Consolas, monospace;
+      font-size: 0.85em;
+      color: var(--accent-cyan);
+      background: rgba(0, 255, 230, 0.08);
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+    }
+
+    main { width: 100%; }
+
+    .content-section {
+      margin-bottom: 28px;
+    }
+
+    .section-header {
+      margin-bottom: 20px;
+    }
+
+    .section-header h2 {
+      margin: 0 0 6px;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    .section-header p {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 40rem;
+    }
+
+    /* Plugin metrics — primary content */
+    .plugin-section {
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background-image: var(--gradient-subtle);
+    }
+
+    /* Runner baseline — collapsed secondary content */
+    .baseline-section {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+    }
+
+    .baseline-section > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 18px 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      user-select: none;
+    }
+
+    .baseline-section > summary::-webkit-details-marker { display: none; }
+
+    .baseline-summary-text h2 {
+      margin: 0 0 4px;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--text-label);
+      letter-spacing: 0.02em;
+    }
+
+    .baseline-summary-text p {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .baseline-chevron {
+      flex-shrink: 0;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.875rem;
+      transition: transform 0.15s ease;
+    }
+
+    .baseline-section[open] .baseline-chevron {
+      transform: rotate(90deg);
+    }
+
+    .baseline-body {
+      padding: 0 20px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .baseline-intro {
+      margin: 16px 0 20px;
+      font-size: 0.8125rem;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 40rem;
+    }
+
+    .benchmark-graphs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .chart-card {
+      padding: 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-width: 0;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .chart-heading {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chart-title-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+      margin-bottom: 4px;
+    }
+
+    .chart-label {
+      margin: 0;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-label);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      line-height: 1.3;
+    }
+
+    .delta-badge {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
+
+    .delta-badge.faster {
+      color: var(--accent-cyan);
+      background: rgba(0, 255, 230, 0.1);
+      border: 1px solid rgba(0, 255, 230, 0.22);
+    }
+
+    .delta-badge.slower {
+      color: #ff9ec0;
+      background: rgba(235, 30, 121, 0.12);
+      border: 1px solid rgba(235, 30, 121, 0.28);
+    }
+
+    .delta-badge.slower.alert {
+      border-color: rgba(255, 120, 160, 0.75);
+      box-shadow: 0 0 0 1px rgba(235, 30, 121, 0.35);
+    }
+
+    .delta-badge.faster.alert {
+      border-color: rgba(0, 255, 230, 0.45);
+      box-shadow: 0 0 0 1px rgba(0, 255, 230, 0.2);
+    }
+
+    .delta-badge.flat,
+    .delta-badge.neutral,
+    .delta-badge.first-run {
+      color: var(--text-label);
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+    }
+
+    .delta-badge.first-run {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .chart-summary {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .info-tip {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      padding: 0;
+      border: 1px solid var(--border-strong);
+      border-radius: 50%;
+      background: var(--surface-raised);
+      color: var(--muted);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      line-height: 1;
+      cursor: help;
+    }
+
+    .info-tip:hover {
+      color: var(--text-label);
+      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba(48, 48, 48, 0.85);
+    }
+
+    .benchmark-chart {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+      font-size: 0.8125rem;
+      color: var(--muted);
+    }
+
+    .footer-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+    }
+
+    .torsion-lockup {
+      display: inline-flex;
+      align-items: center;
+      opacity: 0.8;
+      transition: opacity 0.15s ease;
+    }
+
+    .torsion-lockup:hover {
+      opacity: 1;
+    }
+
+    .torsion-lockup img {
+      display: block;
+      height: 26px;
+      width: auto;
+    }
+
+    button {
+      font-family: inherit;
+      color: var(--text-label);
+      background: rgba(48, 48, 48, 0.5);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    button:hover {
+      background: rgba(48, 48, 48, 0.85);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: var(--text);
+    }
+
+    @media (max-width: 900px) {
+      .benchmark-graphs { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      .page { padding: 20px 16px 32px; }
+      .site-header { flex-direction: column; gap: 12px; }
+      .title-row h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <svg class="logo" viewBox="0 0 149 150" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M74 40.4c8.2 0 14.8-6.6 14.8-14.8S82.2 10.8 74 10.8 59.2 17.4 59.2 25.6 65.8 40.4 74 40.4Z" fill="#0000FF"/>
+        <path d="M24.2 40.4c8.2 0 14.8-6.6 14.8-14.8S32.4 10.8 24.2 10.8 9.4 17.4 9.4 25.6 16 40.4 24.2 40.4Z" fill="#0000FF"/>
+        <path d="M123.8 40.4c8.2 0 14.8-6.6 14.8-14.8S132 10.8 123.8 10.8 109 17.4 109 25.6 115.6 40.4 123.8 40.4Z" fill="#0000FF"/>
+        <path d="M74 139.2c8.2 0 14.8-6.6 14.8-14.8S82.2 109.6 74 109.6 59.2 116.2 59.2 124.4 65.8 139.2 74 139.2Z" fill="#0000FF"/>
+        <path d="M24.2 139.2c8.2 0 14.8-6.6 14.8-14.8S32.4 109.6 24.2 109.6 9.4 116.2 9.4 124.4 16 139.2 24.2 139.2Z" fill="#0000FF"/>
+        <path d="M123.8 139.2c8.2 0 14.8-6.6 14.8-14.8S132 109.6 123.8 109.6 109 116.2 109 124.4 115.6 139.2 123.8 139.2Z" fill="#0000FF"/>
+        <path d="M24.2 89.8c8.2 0 14.8-6.6 14.8-14.8S32.4 60.2 24.2 60.2 9.4 66.8 9.4 75 16 89.8 24.2 89.8Z" fill="#0000FF"/>
+        <path d="M123.8 89.8c8.2 0 14.8-6.6 14.8-14.8S132 60.2 123.8 60.2 109 66.8 109 75 115.6 89.8 123.8 89.8Z" fill="#0000FF"/>
+        <path opacity="0.85" d="M74 89.8c8.2 0 14.8-6.6 14.8-14.8S82.2 60.2 74 60.2 59.2 66.8 59.2 75 65.8 89.8 74 89.8Z" fill="#00FFE6"/>
+        <path opacity="0.85" d="M14.8 89.8c8.2 0 14.8-6.6 14.8-14.8S22.9 60.2 14.8 60.2 0 66.8 0 75 6.6 89.8 14.8 89.8Z" fill="#00FFE6"/>
+        <path opacity="0.85" d="M133.2 89.8c8.2 0 14.8-6.6 14.8-14.8S141.4 60.2 133.2 60.2 118.4 66.8 118.4 75 125 89.8 133.2 89.8Z" fill="#00FFE6"/>
+        <path opacity="0.85" d="M74 29.6c8.2 0 14.8-6.6 14.8-14.8S82.2 0 74 0 59.2 6.6 59.2 14.8 65.8 29.6 74 29.6Z" fill="#00FFE6"/>
+        <path opacity="0.85" d="M14.8 29.6c8.2 0 14.8-6.6 14.8-14.8S22.9 0 14.8 0 0 6.6 0 14.8 6.6 29.6 14.8 29.6Z" fill="#00FFE6"/>
+        <path opacity="0.85" d="M133.2 29.6c8.2 0 14.8-6.6 14.8-14.8S141.4 0 133.2 0 118.4 6.6 118.4 14.8 125 29.6 133.2 29.6Z" fill="#00FFE6"/>
+        <path opacity="0.85" d="M74 150c8.2 0 14.8-6.6 14.8-14.8S82.2 120.4 74 120.4 59.2 127 59.2 135.2 65.8 150 74 150Z" fill="#00FFE6"/>
+        <path opacity="0.85" d="M14.8 150c8.2 0 14.8-6.6 14.8-14.8S22.9 120.4 14.8 120.4 0 127 0 135.2 6.6 150 14.8 150Z" fill="#00FFE6"/>
+        <path opacity="0.85" d="M133.2 150c8.2 0 14.8-6.6 14.8-14.8S141.4 120.4 133.2 120.4 118.4 127 118.4 135.2 125 150 133.2 150Z" fill="#00FFE6"/>
+      </svg>
+      <div class="header-text">
+        <div class="title-row">
+          <h1>Scyclone</h1>
+          <span class="pill">CI benchmarks</span>
+        </div>
+        <p class="subtitle">Performance tracking</p>
+        <p class="tagline">Plugin prepare, process, and editor benchmarks on macOS arm64 CI (44.1 kHz, 512 samples). Each point is the mean of five repetitions for that commit.</p>
+        <div class="meta-row">
+          <span><strong>Platform</strong> macOS arm64</span>
+          <span><strong>Last update</strong> <span id="last-update">—</span></span>
+          <span><strong>Repository</strong> <a id="repository-link" href="#">—</a></span>
+        </div>
+      </div>
+    </header>
+
+    <main id="main"></main>
+
+    <footer>
+      <div class="footer-meta">
+        <button id="dl-button" type="button">Download JSON</button>
+        <span>Charts by <a href="https://github.com/benchmark-action/github-action-benchmark">github-action-benchmark</a></span>
+      </div>
+      <a class="torsion-lockup" href="https://github.com/Torsion-Audio" target="_blank" rel="noopener noreferrer" aria-label="Torsion Audio">
+        <img src="torsion-audio-lockup.svg" alt="Torsion Audio" width="290" height="26">
+      </a>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+  <script src="data.js"></script>
+  <script>
+    'use strict';
+    (function () {
+      const chartPalette = [
+        '#EB1E79', '#00FFE6', '#6094EA', '#F02FC2', '#18A5A7',
+        '#C82471', '#CCFFAA', '#004E92',
+      ];
+
+      const chartTheme = {
+        grid: 'rgba(206, 206, 206, 0.12)',
+        tick: '#868686',
+        label: '#C4C9CE',
+        tooltipBg: 'rgba(26, 26, 26, 0.95)',
+        tooltipTitle: '#ffffff',
+        tooltipBody: '#C4C9CE',
+        tooltipBorder: 'rgba(255, 255, 255, 0.1)',
+      };
+
+      const benchMeta = {
+        reference_cpu: {
+          label: 'Reference CPU',
+          summary: 'Synthetic FMA loop — CPU baseline.',
+          tooltip: '1M fused-multiply-add operations per iteration. Not Scyclone code.',
+          kind: 'sentinel',
+        },
+        reference_memory: {
+          label: 'Reference Memory',
+          summary: 'Synthetic ~1 MiB fill/read — memory baseline.',
+          tooltip: 'Fills ~1 MiB and does strided reads each iteration. Not Scyclone code.',
+          kind: 'sentinel',
+        },
+        processor_prepare: {
+          label: 'Processor prepare',
+          summary: 'Host-style prepare/release on an already-constructed processor.',
+          tooltip: 'Fixture: processor created once. Each iteration calls prepareToPlay(44100, 512) then releaseResources(). ONNX models load at fixture setup, not per iteration.',
+          kind: 'app',
+        },
+        process_block: {
+          label: 'Process block',
+          summary: 'Stereo 512-sample audio callback — the real-time DSP path.',
+          tooltip: 'Fixture: processor prepared at 44.1 kHz / 512 samples. Each iteration calls processBlock() with a cleared stereo buffer.',
+          kind: 'app',
+        },
+        editor: {
+          label: 'Editor lifecycle',
+          summary: 'UI open/close cost — catches heavier components or layout regressions.',
+          tooltip: 'Fixture: processor created once. Each iteration creates and destroys the full editor (JUCE UI, OpenGL background). Headless CI — no real display.',
+          kind: 'app',
+        },
+      };
+
+      const appBenchOrder = ['processor_prepare', 'process_block', 'editor'];
+      const sentinelBenchOrder = ['reference_cpu', 'reference_memory'];
+
+      function benchKey(raw) {
+        const m = raw.match(/^BM_([^/]+)/);
+        return m ? m[1] : raw;
+      }
+
+      function getBenchMeta(raw) {
+        const key = benchKey(raw);
+        const meta = benchMeta[key];
+        if (meta) return meta;
+        return {
+          label: formatBenchName(raw),
+          summary: '',
+          tooltip: '',
+          kind: 'app',
+        };
+      }
+
+      function formatBenchName(raw) {
+        const m = raw.match(/^BM_([^/]+)/);
+        if (!m) return raw;
+        return m[1]
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, c => c.toUpperCase());
+      }
+
+      const deltaAlertThresholdPct = 5;
+
+      function formatBenchValue(valueNs) {
+        if (!Number.isFinite(valueNs)) return null;
+        const abs = Math.abs(valueNs);
+        if (abs >= 1e9) return (valueNs / 1e9).toFixed(2) + ' s';
+        if (abs >= 1e6) return (valueNs / 1e6).toFixed(1) + ' ms';
+        if (abs >= 1e3) return (valueNs / 1e3).toFixed(1) + ' µs';
+        return valueNs.toFixed(0) + ' ns';
+      }
+
+      /** Google Benchmark reports cpu_time in ns/iter; charts use ms for readability. */
+      function benchNsToMs(valueNs) {
+        return valueNs / 1e6;
+      }
+
+      function chartYAxisUnit(rawUnit) {
+        return rawUnit === 'ns/iter' ? 'ms/iter' : (rawUnit || '');
+      }
+
+      function formatAxisMs(valueMs) {
+        if (!Number.isFinite(valueMs)) return '';
+        const abs = Math.abs(valueMs);
+        if (abs >= 100) return valueMs.toFixed(0);
+        if (abs >= 10) return valueMs.toFixed(1);
+        if (abs >= 1) return valueMs.toFixed(1);
+        return valueMs.toFixed(2);
+      }
+
+      function computeVsPreviousDelta(dataset) {
+        if (!dataset || dataset.length < 2) return null;
+        const previous = dataset[dataset.length - 2].bench.value;
+        const latest = dataset[dataset.length - 1].bench.value;
+        if (!Number.isFinite(previous) || !Number.isFinite(latest) || previous === 0) return null;
+        const pct = ((latest - previous) / previous) * 100;
+        return {
+          pct,
+          latest,
+          tone: Math.abs(pct) < 0.05 ? 'flat' : pct > 0 ? 'slower' : 'faster',
+        };
+      }
+
+      function formatDeltaLabel(delta) {
+        if (delta.tone === 'flat') {
+          return formatBenchValue(delta.latest) || '0%';
+        }
+        const sign = delta.pct > 0 ? '+' : '';
+        return sign + delta.pct.toFixed(1) + '%';
+      }
+
+      function createDeltaBadge(delta, kind, dataset) {
+        const badge = document.createElement('span');
+        badge.className = 'delta-badge';
+        const latestOnly = dataset.length > 0 ? dataset[dataset.length - 1].bench.value : null;
+        const latestLabel = formatBenchValue(delta?.latest ?? latestOnly);
+
+        if (!delta) {
+          badge.classList.add('first-run');
+          badge.textContent = latestLabel || '—';
+          badge.title = 'No previous commit to compare against yet.';
+          return badge;
+        }
+
+        if (kind === 'sentinel') {
+          badge.classList.add(delta.tone === 'flat' ? 'flat' : 'neutral');
+          badge.title = 'Runner baseline change — check this before blaming Scyclone.';
+        } else {
+          badge.classList.add(delta.tone);
+          badge.title = delta.tone === 'faster'
+            ? formatBenchValue(delta.latest) + ' — ' + delta.pct.toFixed(1) + '% faster than previous commit'
+            : delta.tone === 'slower'
+              ? formatBenchValue(delta.latest) + ' — ' + delta.pct.toFixed(1) + '% slower than previous commit'
+              : formatBenchValue(delta.latest) + ' — about the same as previous commit';
+          if (Math.abs(delta.pct) >= deltaAlertThresholdPct) {
+            badge.classList.add('alert');
+          }
+        }
+
+        badge.textContent = formatDeltaLabel(delta);
+        return badge;
+      }
+
+      function collectBenchesPerTestCase(entries) {
+        const map = new Map();
+        for (const entry of entries) {
+          const { commit, date, tool, benches } = entry;
+          for (const bench of benches) {
+            const result = { commit, date, tool, bench };
+            const arr = map.get(bench.name);
+            if (arr === undefined) map.set(bench.name, [result]);
+            else arr.push(result);
+          }
+        }
+        return map;
+      }
+
+      function init() {
+        const data = window.BENCHMARK_DATA;
+        document.getElementById('last-update').textContent =
+          new Date(data.lastUpdate).toLocaleString(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          });
+        const repoLink = document.getElementById('repository-link');
+        repoLink.href = data.repoUrl;
+        repoLink.textContent = data.repoUrl.replace(/^https?:\/\/github\.com\//, '');
+
+        document.getElementById('dl-button').onclick = () => {
+          const a = document.createElement('a');
+          a.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(data, null, 2));
+          a.download = 'benchmark_data.json';
+          a.click();
+        };
+
+        return Object.keys(data.entries).map(name => ({
+          name,
+          dataSet: collectBenchesPerTestCase(data.entries[name]),
+        }));
+      }
+
+      function sortBenches(entries, order) {
+        return [...entries].sort((a, b) => {
+          const ia = order.indexOf(benchKey(a[0]));
+          const ib = order.indexOf(benchKey(b[0]));
+          const ai = ia === -1 ? order.length : ia;
+          const bi = ib === -1 ? order.length : ib;
+          return ai - bi;
+        });
+      }
+
+      function partitionBenches(benchSet) {
+        const app = [];
+        const sentinel = [];
+        for (const entry of benchSet.entries()) {
+          if (getBenchMeta(entry[0]).kind === 'sentinel') sentinel.push(entry);
+          else app.push(entry);
+        }
+        return {
+          app: sortBenches(app, appBenchOrder),
+          sentinel: sortBenches(sentinel, sentinelBenchOrder),
+        };
+      }
+
+      function createChartCard(name, dataset) {
+        const meta = getBenchMeta(name);
+        const card = document.createElement('div');
+        card.className = 'chart-card';
+
+        const header = document.createElement('div');
+        header.className = 'chart-header';
+        card.appendChild(header);
+
+        const heading = document.createElement('div');
+        heading.className = 'chart-heading';
+        header.appendChild(heading);
+
+        const titleGroup = document.createElement('div');
+        titleGroup.className = 'chart-title-group';
+        heading.appendChild(titleGroup);
+
+        const label = document.createElement('h3');
+        label.className = 'chart-label';
+        label.textContent = meta.label;
+        titleGroup.appendChild(label);
+        titleGroup.appendChild(createDeltaBadge(computeVsPreviousDelta(dataset), meta.kind, dataset));
+
+        if (meta.summary) {
+          const summary = document.createElement('p');
+          summary.className = 'chart-summary';
+          summary.textContent = meta.summary;
+          heading.appendChild(summary);
+        }
+
+        if (meta.tooltip) {
+          const tip = document.createElement('button');
+          tip.type = 'button';
+          tip.className = 'info-tip';
+          tip.textContent = '?';
+          tip.title = meta.tooltip;
+          tip.setAttribute('aria-label', meta.tooltip);
+          header.appendChild(tip);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.className = 'benchmark-chart';
+        card.appendChild(canvas);
+
+        return { card, canvas, meta };
+      }
+
+      function initChart(canvas, meta, dataset, colorIndex) {
+        const color = chartPalette[colorIndex % chartPalette.length];
+        const yUnit = chartYAxisUnit(dataset.length > 0 ? dataset[0].bench.unit : '');
+        const chartData = {
+          labels: dataset.map(d => d.commit.id.slice(0, 7)),
+          datasets: [{
+            label: meta.label,
+            data: dataset.map(d => benchNsToMs(d.bench.value)),
+            borderColor: color,
+            backgroundColor: color + '22',
+            borderWidth: 2,
+            pointBackgroundColor: color,
+            pointBorderColor: '#111111',
+            pointBorderWidth: 1,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            fill: true,
+            lineTension: 0.2,
+          }],
+        };
+
+        new Chart(canvas, {
+          type: 'line',
+          data: chartData,
+          options: {
+            legend: { display: false },
+            maintainAspectRatio: true,
+            aspectRatio: 2.1,
+            scales: {
+              xAxes: [{
+                gridLines: { color: chartTheme.grid, zeroLineColor: chartTheme.grid },
+                ticks: { fontColor: chartTheme.tick, fontFamily: 'Inter', fontSize: 11 },
+                scaleLabel: {
+                  display: true,
+                  labelString: 'commit',
+                  fontColor: chartTheme.label,
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                },
+              }],
+              yAxes: [{
+                gridLines: { color: chartTheme.grid, zeroLineColor: chartTheme.grid },
+                ticks: {
+                  fontColor: chartTheme.tick,
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  beginAtZero: true,
+                  callback: value => formatAxisMs(value),
+                },
+                scaleLabel: {
+                  display: true,
+                  labelString: yUnit,
+                  fontColor: chartTheme.label,
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                },
+              }],
+            },
+            tooltips: {
+              backgroundColor: chartTheme.tooltipBg,
+              titleFontFamily: 'Inter',
+              bodyFontFamily: 'Inter',
+              titleFontColor: chartTheme.tooltipTitle,
+              bodyFontColor: chartTheme.tooltipBody,
+              borderColor: chartTheme.tooltipBorder,
+              borderWidth: 1,
+              cornerRadius: 6,
+              xPadding: 12,
+              yPadding: 10,
+              callbacks: {
+                afterTitle(items) {
+                  const { index } = items[0];
+                  const row = dataset[index];
+                  const user = row.commit.committer && row.commit.committer.username
+                    ? '@' + row.commit.committer.username
+                    : '';
+                  return '\n' + row.commit.message + '\n\n' + row.commit.timestamp + ' ' + user + '\n';
+                },
+                label(item) {
+                  const { value, range } = dataset[item.index].bench;
+                  let label = formatBenchValue(value) || String(item.yLabel);
+                  if (range) label += ' (' + range + ')';
+                  return label;
+                },
+              },
+            },
+            onClick(_evt, active) {
+              if (active.length === 0) return;
+              const url = dataset[active[0]._index].commit.url;
+              if (url) window.open(url, '_blank');
+            },
+          },
+        });
+      }
+
+      function renderGraphs(parent, benches, startColorIndex) {
+        let colorIndex = startColorIndex;
+        for (const [benchName, data] of benches) {
+          const { card, canvas, meta } = createChartCard(benchName, data);
+          parent.appendChild(card);
+          initChart(canvas, meta, data, colorIndex++);
+        }
+        return colorIndex;
+      }
+
+      function renderBenchSet(benchSet, main) {
+        const { app, sentinel } = partitionBenches(benchSet);
+
+        if (app.length > 0) {
+          const section = document.createElement('section');
+          section.className = 'content-section plugin-section';
+          main.appendChild(section);
+
+          const sectionHeader = document.createElement('div');
+          sectionHeader.className = 'section-header';
+          sectionHeader.innerHTML =
+            '<h2>Plugin performance</h2>' +
+            '<p>Prepare, audio processing, and editor costs — did the latest commit get faster or slower?</p>';
+          section.appendChild(sectionHeader);
+
+          const graphsElem = document.createElement('div');
+          graphsElem.className = 'benchmark-graphs';
+          section.appendChild(graphsElem);
+          renderGraphs(graphsElem, app, 0);
+        }
+
+        if (sentinel.length > 0) {
+          const details = document.createElement('details');
+          details.className = 'content-section baseline-section';
+
+          const summary = document.createElement('summary');
+          summary.innerHTML =
+            '<div class="baseline-summary-text">' +
+              '<h2>Runner baseline</h2>' +
+              '<p>Synthetic checks for CI machine noise — not Scyclone code</p>' +
+            '</div>' +
+            '<span class="baseline-chevron" aria-hidden="true">▸</span>';
+          details.appendChild(summary);
+
+          const body = document.createElement('div');
+          body.className = 'baseline-body';
+          details.appendChild(body);
+
+          const intro = document.createElement('p');
+          intro.className = 'baseline-intro';
+          intro.textContent =
+            'If plugin metrics moved but these did too, suspect a noisy CI host — not a Scyclone regression.';
+          body.appendChild(intro);
+
+          const graphsElem = document.createElement('div');
+          graphsElem.className = 'benchmark-graphs';
+          body.appendChild(graphsElem);
+
+          const pending = sentinel.map(([benchName, data]) => {
+            const { card, canvas, meta } = createChartCard(benchName, data);
+            graphsElem.appendChild(card);
+            return { canvas, meta, data };
+          });
+
+          let baselineReady = false;
+          function drawBaselineCharts() {
+            if (baselineReady) return;
+            baselineReady = true;
+            pending.forEach((item, index) => {
+              initChart(item.canvas, item.meta, item.data, index);
+            });
+          }
+
+          details.addEventListener('toggle', () => {
+            if (details.open) drawBaselineCharts();
+          });
+
+          main.appendChild(details);
+        }
+      }
+
+      const main = document.getElementById('main');
+      for (const { dataSet } of init()) {
+        renderBenchSet(dataSet, main);
+      }
+    })();
+  </script>
+</body>
+</html>

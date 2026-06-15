@@ -27,3 +27,7 @@ githooks/
 
 # Platform
 Plugin/xcode/
+
+# Local benchmark runs
+benchmark_result.json
+docs/benchmark-dashboard/data.js

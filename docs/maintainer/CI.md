@@ -5,6 +5,7 @@
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | [Build & Test](../../.github/workflows/build-and-test.yml) | PR, `develop` push, `v*` tag, manual | Build + test on Linux/macOS/Windows; distribution zips on tags |
+| [Benchmark](../../.github/workflows/benchmark.yml) | PR, `develop` push | macOS arm64 benchmarks; [dashboard](https://torsion-audio.github.io/Scyclone/dev/bench/) on `gh-pages` (push only); step summary |
 | [Sanitizers](../../.github/workflows/sanitizers.yml) | PR, `develop` push, `v*` tag, manual | **Required** ASan+UBSan and TSan gates |
 | [Sanitizers (advisory)](../../.github/workflows/sanitizers-advisory.yml) | PR, `develop` push, `v*` tag, manual | Experimental sanitizer jobs — do not block merge |
 
@@ -16,6 +17,8 @@ Require these check jobs:
 - **Sanitizers** — `sanitizers-required` (aggregates four required sanitizer jobs)
 
 Advisory sanitizer jobs run in parallel but use `continue-on-error` and must not be required.
+
+Optional: require **Benchmark** — `benchmark (macOS)` when the `develop` baseline is stable. Dashboard: [torsion-audio.github.io/Scyclone/dev/bench/](https://torsion-audio.github.io/Scyclone/dev/bench/). See [benchmarks.md](benchmarks.md).
 
 ## Shared composite actions
 

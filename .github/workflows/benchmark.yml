@@ -1,0 +1,99 @@
+name: Benchmark
+
+# Triggers: develop only. Do not add push triggers for other branches
+# without revisiting job concurrency (develop pushes use benchmark-gh-pages).
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+
+concurrency:
+  group: ${{ github.event_name == 'push' && 'benchmark-gh-pages' || format('benchmark-{0}', github.event.pull_request.number || github.ref_name) }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+env:
+  BUILD_TYPE: Release
+  BUILD_DIR: build
+
+jobs:
+  benchmark:
+    name: benchmark (macOS)
+    runs-on: macos-14
+    timeout-minutes: 20
+    permissions:
+      contents: write
+
+    steps:
+      - name: get repo and submodules
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - uses: ./.github/actions/setup-macos-juce
+        with:
+          install_osxutils: 'false'
+
+      - uses: ./.github/actions/set-parallel-build-level
+
+      - name: restore FetchContent cache
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: fetchcontent-${{ runner.os }}-${{ hashFiles('cmake/setup_tests_and_benchmarks.cmake') }}
+          restore-keys: |
+            fetchcontent-${{ runner.os }}-
+
+      - name: cmake configure
+        shell: bash
+        run: |
+          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_OSX_ARCHITECTURES=arm64
+
+      - name: cmake build Benchmark
+        run: cmake --build build --target Benchmark --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+      - name: run benchmarks
+        run: |
+          ./build/Benchmark \
+            --benchmark_format=json \
+            --benchmark_out=benchmark_result.json \
+            --benchmark_out_format=json \
+            --benchmark_repetitions=5 \
+            --benchmark_min_time=2.0s \
+            --benchmark_report_aggregates_only=true \
+            --benchmark_display_aggregates_only=true \
+            --benchmark_enable_random_interleaving=false
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-results-macos-${{ github.sha }}
+          path: benchmark_result.json
+          retention-days: 90
+
+      - name: store benchmark results
+        uses: benchmark-action/github-action-benchmark@52576c92bccf6ac60c8223ec7eb2565637cae9ba
+        with:
+          name: Scyclone macOS
+          tool: googlecpp
+          output-file-path: benchmark_result.json
+          ref: ${{ github.sha }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-pages-branch: gh-pages
+          benchmark-data-dir-path: dev/bench
+          auto-push: ${{ github.event_name == 'push' }}
+          summary-always: true
+          comment-on-alert: false
+          fail-on-alert: false
+
+      - name: benchmark dashboard link
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Benchmark dashboard"
+            echo ""
+            echo "[View benchmark history](https://torsion-audio.github.io/Scyclone/dev/bench/)"
+            echo ""
+            echo "Charts update on \`develop\` pushes; PR runs show the step summary above."
+          } >> "$GITHUB_STEP_SUMMARY"
