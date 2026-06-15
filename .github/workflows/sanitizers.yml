@@ -49,7 +49,8 @@ jobs:
         continue-on-error: true
         run: ./build/Test --gtest_filter=*PrintSnrMeasurements* --gtest_also_run_disabled_tests
 
-  # Apple Clang does not support detect_leaks in ASAN_OPTIONS; leak coverage is sanitize-leak-macos.
+  # Apple Clang does not support detect_leaks in ASAN_OPTIONS. Required leak gate: sanitize-asan-ubsan-linux.
+  # Experimental macOS probe: sanitize-asan-leaks-macos (Homebrew Clang + detect_leaks=1).
   sanitize-asan-ubsan-macos:
     runs-on: macos-14
     timeout-minutes: 120
@@ -281,10 +282,9 @@ jobs:
           LD_LIBRARY_PATH: ${{ github.workspace }}/msan-libcxx-prefix/lib:${{ env.LD_LIBRARY_PATH }}
         run: ctest --test-dir build -L default --output-on-failure
 
-  # Standalone LeakSan (Homebrew Clang 18): secondary macOS leak signal (Apple Clang ASan has no detect_leaks).
-  # LEAK forces ONNX stub — prebuilt ORT fails to link with Homebrew Clang (undefined GetOpSchema symbols).
-  # Job is non-blocking; LSAN_OPTIONS=exitcode=0 reports leaks without failing the test run.
-  sanitize-leak-macos:
+  # Homebrew Clang 18 + ASan detect_leaks: experimental macOS leak probe (Apple Clang has no detect_leaks).
+  # Prebuilt ORT fails to link with Homebrew Clang — force ONNX stub. Non-blocking; see TESTING_SANITIZERS.md.
+  sanitize-asan-leaks-macos:
     runs-on: macos-14
     timeout-minutes: 120
     continue-on-error: true
@@ -301,7 +301,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-homebrew-downloads-
 
-      - name: Install Homebrew LLVM 18 (for LeakSanitizer)
+      - name: Install Homebrew LLVM 18 (for ASan + detect_leaks)
         run: |
           brew install llvm@18
           LLVM_PREFIX="$(brew --prefix llvm@18)"
@@ -321,16 +321,33 @@ jobs:
         with:
           xcode-version: '15.4'
 
-      - name: Configure (LEAK - macOS with open-source Clang)
+      - name: Configure (ASAN_UBSAN — Homebrew Clang, ONNX stub auto)
         run: |
           cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
-            -DSCYCLONE_SANITIZERS=LEAK
+            -DSCYCLONE_SANITIZERS=ASAN_UBSAN
 
       - name: Build Test
         run: cmake --build build --target Test --parallel
 
       - name: Run tests (leaks warn-only)
+        id: leak_probe
         env:
-          LSAN_OPTIONS: exitcode=0:print_summary=1
-        run: ctest --test-dir build -L default --output-on-failure
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=0
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=0
+          LSAN_OPTIONS: exitcode=0:print_summary=1:suppressions=${{ github.workspace }}/test/sanitizer/lsan-macos.supp
+        run: |
+          set -o pipefail
+          ctest --test-dir build -L default --output-on-failure 2>&1 | tee ctest-leak-probe.log
+          if grep -qE 'LeakSanitizer: CHECK failed|Subprocess aborted' ctest-leak-probe.log; then
+            echo "LSan internal abort detected — probe failed (see llvm/llvm-project#117476)"
+            exit 1
+          fi
+
+      - name: Upload leak probe log on failure
+        if: failure() && steps.leak_probe.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanitize-asan-leaks-macos-log
+          path: ctest-leak-probe.log
+          retention-days: 14
