@@ -1,8 +1,8 @@
-name: Scyclone
+name: Build & Test
 
 # CI Model
 #
-# develop push:
+# pull_request / develop push:
 #   - ci-validation only
 #   - no distributable artifacts (this is intentional)
 #
@@ -21,6 +21,8 @@ on:
   push:
     branches: [ develop ]
     tags: [ 'v*' ]
+  pull_request:
+    branches: [ develop ]
   workflow_dispatch:
     inputs:
       distribution_type:
@@ -41,6 +43,7 @@ run-name: >-
   ${{
     startsWith(github.ref, 'refs/tags/v') && format('Release {0}', github.ref_name) ||
     github.event_name == 'workflow_dispatch' && format('Manual build ({0}, {1})', inputs.distribution_type, github.ref_name) ||
+    github.event_name == 'pull_request' && format('PR #{0} validation', github.event.pull_request.number) ||
     format('Validation ({0})', github.ref_name)
   }}
 
@@ -208,13 +211,13 @@ jobs:
           ✓ Tests passed
 
           EOF
-          if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.ref }}" = "refs/heads/develop" ]; then
             cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
-          **No distributable artifacts were produced.** This is expected for develop pushes.
+          **No distributable artifacts were produced.** This is expected for PRs and develop pushes.
 
           To create downloadable builds:
           - Push a version tag (`vX.Y.Z`)
-          - Or run **Actions → Scyclone → Run workflow**
+          - Or run **Actions → Build & Test → Run workflow**
           EOF
           fi
 
