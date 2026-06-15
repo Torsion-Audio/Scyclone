@@ -30,8 +30,9 @@ set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 # This command ensures that each of the named dependencies are made available to the project by the time it returns. If the dependency has already been populated the command does nothing. Otherwise, the command populates the dependency and then calls add_subdirectory() on the result.
 FetchContent_MakeAvailable(googletest)
 
-# MSan / LEAK: every object in the link must be instrumented (including FetchContent gtest).
+# MSan: every object in the link must be instrumented (including FetchContent gtest).
 # Propagate flags directly — do not link scyclone_sanitizer_flags (breaks GTest install export validation).
+# LEAK is included for harmless flag propagation; standalone LSan does not require it per Clang docs.
 if(SCYCLONE_SANITIZERS STREQUAL "MEMORY" OR SCYCLONE_SANITIZERS STREQUAL "LEAK")
     if(TARGET scyclone_sanitizer_flags)
         get_target_property(_scyclone_gt_san_compile_opts scyclone_sanitizer_flags INTERFACE_COMPILE_OPTIONS)
