@@ -1,0 +1,261 @@
+# Advisory / experimental sanitizer jobs — do not block merge.
+# Policy: docs/maintainer/TESTING_SANITIZERS.md
+name: Sanitizers (advisory)
+
+on:
+  push:
+    branches: [develop]
+    tags: ['v*']
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+
+run-name: >-
+  ${{
+    github.event_name == 'pull_request' && format('Sanitizers advisory PR #{0}', github.event.pull_request.number) ||
+    startsWith(github.ref, 'refs/tags/v') && format('Sanitizers advisory release {0}', github.ref_name) ||
+    format('Sanitizers advisory ({0})', github.ref_name)
+  }}
+
+concurrency:
+  group: sanitizers-advisory-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  SCYCLONE_MSAN_LIBCXX_LLVM_TAG: llvmorg-14.0.6
+
+jobs:
+  sanitize-asan-msvc-windows:
+    name: '[advisory] ASan (Windows MSVC)'
+    runs-on: windows-latest
+    timeout-minutes: 120
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install Ninja
+        run: choco install ninja --yes
+
+      - uses: ./.github/actions/setup-msvc
+        id: setup_msvc
+        with:
+          export_asan_path: 'true'
+
+      - name: Configure (CMake preset asan)
+        shell: bash
+        run: cmake --preset asan
+
+      - name: Build Test
+        shell: bash
+        run: cmake --build --preset asan
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          $env:PATH = "${{ steps.setup_msvc.outputs.asan_bin_path }};$env:PATH"
+          ctest --test-dir build-asan -C RelWithDebInfo -L default --output-on-failure
+
+      - uses: ./.github/actions/sanitizer-job-summary
+        if: always()
+        with:
+          title: '[advisory] ASan (Windows MSVC)'
+          preset: ASAN / asan (ONNX stub)
+          build_dir: build-asan
+          gate: advisory — continue-on-error
+          outcome: ${{ job.status }}
+
+  sanitize-msan-linux:
+    name: '[advisory] MSan (Linux)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - uses: ./.github/actions/setup-linux-juce
+        with:
+          install_clang: 'true'
+          extra_packages: python3 curl
+
+      - name: Cache MSan-instrumented libc++
+        id: msan_libcxx
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/msan-libcxx-prefix
+          key: msan-libcxx-${{ runner.os }}-${{ env.SCYCLONE_MSAN_LIBCXX_LLVM_TAG }}-v2-${{ hashFiles('.github/workflows/sanitizers-advisory.yml', 'cmake/ScycloneSanitizers.cmake') }}
+
+      - name: Build MSan-instrumented libc++/libc++abi (LLVM)
+        if: steps.msan_libcxx.outputs.cache-hit != 'true'
+        timeout-minutes: 45
+        run: |
+          set -euxo pipefail
+          TAG="${SCYCLONE_MSAN_LIBCXX_LLVM_TAG}"
+          VER="${TAG#llvmorg-}"
+          curl -fsSL -o /tmp/llvm-project.tar.xz \
+            "https://github.com/llvm/llvm-project/releases/download/${TAG}/llvm-project-${VER}.src.tar.xz"
+          tar xf /tmp/llvm-project.tar.xz -C /tmp
+          SRC="/tmp/llvm-project-${VER}.src"
+          PREFIX="${GITHUB_WORKSPACE}/msan-libcxx-prefix"
+          cmake -S "${SRC}/llvm" -B /tmp/libcxx-msan-b -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DLLVM_ENABLE_PROJECTS='libcxx;libcxxabi' \
+            -DLLVM_TARGETS_TO_BUILD=X86 \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_INCLUDE_DOCS=OFF \
+            -DLLVM_ENABLE_BINDINGS=OFF \
+            -DLLVM_ENABLE_Z3_SOLVER=OFF \
+            -DLLVM_USE_SANITIZER=Memory
+          cmake --build /tmp/libcxx-msan-b --target cxx cxxabi
+          rm -rf "${PREFIX}"
+          mkdir -p "${PREFIX}/include/c++" "${PREFIX}/lib"
+          if [ -d /tmp/libcxx-msan-b/include/c++/v1 ]; then
+            cp -a /tmp/libcxx-msan-b/include/c++/v1 "${PREFIX}/include/c++/"
+          else
+            echo "Missing generated libc++ headers under build/include/c++/v1"
+            find /tmp/libcxx-msan-b -maxdepth 4 -type d -name v1 2>/dev/null | head
+            exit 1
+          fi
+          while IFS= read -r -d '' f; do cp -P "$f" "${PREFIX}/lib/"; done < <(find /tmp/libcxx-msan-b/lib -maxdepth 3 \( -name 'libc++.so*' -o -name 'libc++abi.so*' \) -print0)
+          for f in /tmp/libcxx-msan-b/lib/libc++.a /tmp/libcxx-msan-b/lib/libc++abi.a; do
+            [ -f "$f" ] && cp -P "$f" "${PREFIX}/lib/" || true
+          done
+          compgen -G "${PREFIX}/lib/libc++.so*" >/dev/null || { echo "No libc++.so under ${PREFIX}/lib"; ls -la "${PREFIX}/lib"; exit 1; }
+
+      - name: Configure (MEMORY - Linux + Clang)
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          cmake -G Ninja -B build-msan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSCYCLONE_SANITIZERS=MEMORY \
+            -DSCYCLONE_MSAN_LIBCXX_PREFIX="${GITHUB_WORKSPACE}/msan-libcxx-prefix"
+
+      - name: Build Test
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/msan-libcxx-prefix/lib:${{ env.LD_LIBRARY_PATH }}
+        run: cmake --build build-msan --target Test --parallel
+
+      - name: Run tests
+        env:
+          MSAN_OPTIONS: halt_on_error=1
+          LD_LIBRARY_PATH: ${{ github.workspace }}/msan-libcxx-prefix/lib:${{ env.LD_LIBRARY_PATH }}
+        run: ctest --test-dir build-msan -L default --output-on-failure
+
+      - uses: ./.github/actions/sanitizer-job-summary
+        if: always()
+        with:
+          title: '[advisory] MSan (Linux)'
+          preset: MEMORY (ONNX stub, instrumented libc++)
+          build_dir: build-msan
+          gate: advisory — continue-on-error
+          runtime_env: MSAN_OPTIONS=halt_on_error=1
+          outcome: ${{ job.status }}
+
+  # Homebrew Clang 18 + ASan detect_leaks — experimental macOS leak probe (Apple Clang has no detect_leaks).
+  sanitize-asan-leaks-macos:
+    name: '[advisory] ASan leaks probe (macOS)'
+    runs-on: macos-14
+    timeout-minutes: 120
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Cache Homebrew downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: ${{ runner.os }}-homebrew-downloads-llvm-18-${{ hashFiles('.github/workflows/sanitizers-advisory.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-homebrew-downloads-
+
+      - name: Install Homebrew LLVM 18 (for ASan + detect_leaks)
+        run: |
+          brew install llvm@18
+          LLVM_PREFIX="$(brew --prefix llvm@18)"
+          if [ ! -x "$LLVM_PREFIX/bin/clang" ]; then
+            brew reinstall llvm@18
+            LLVM_PREFIX="$(brew --prefix llvm@18)"
+          fi
+          echo "CC=$LLVM_PREFIX/bin/clang" >> "$GITHUB_ENV"
+          echo "CXX=$LLVM_PREFIX/bin/clang++" >> "$GITHUB_ENV"
+          echo "PATH=$LLVM_PREFIX/bin:$PATH" >> "$GITHUB_ENV"
+
+      - uses: ./.github/actions/setup-macos-juce
+        with:
+          install_osxutils: 'false'
+
+      - name: Configure (ASAN_UBSAN — Homebrew Clang, ONNX stub auto)
+        run: |
+          cmake -G Ninja -B build-asan-leaks-macos -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DSCYCLONE_SANITIZERS=ASAN_UBSAN
+
+      - name: Build Test
+        run: cmake --build build-asan-leaks-macos --target Test --parallel
+
+      - name: Run tests (leaks warn-only)
+        id: leak_probe
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=0
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=0
+          LSAN_OPTIONS: exitcode=0:print_summary=1:suppressions=${{ github.workspace }}/test/sanitizer/lsan-macos.supp
+        run: |
+          set -o pipefail
+          ctest --test-dir build-asan-leaks-macos -L default --output-on-failure 2>&1 | tee ctest-leak-probe.log
+          if grep -qE 'LeakSanitizer: CHECK failed|Subprocess aborted' ctest-leak-probe.log; then
+            echo "LSan internal abort detected — probe failed (see llvm/llvm-project#117476)"
+            exit 1
+          fi
+
+      - name: Upload leak probe log on failure
+        if: failure() && steps.leak_probe.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanitize-asan-leaks-macos-log
+          path: ctest-leak-probe.log
+          retention-days: 14
+
+      - uses: ./.github/actions/sanitizer-job-summary
+        if: always()
+        with:
+          title: '[advisory] ASan leaks probe (macOS)'
+          preset: ASAN_UBSAN + Homebrew Clang + detect_leaks=1
+          build_dir: build-asan-leaks-macos
+          gate: advisory — informational leak probe
+          runtime_env: ASAN_OPTIONS=detect_leaks=1:abort_on_error=0; LSAN suppressions in test/sanitizer/lsan-macos.supp
+          outcome: ${{ job.status }}
+
+  sanitizers-advisory-summary:
+    name: sanitizers-advisory-summary
+    needs:
+      - sanitize-asan-msvc-windows
+      - sanitize-msan-linux
+      - sanitize-asan-leaks-macos
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Advisory summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          # Sanitizers — advisory jobs
+
+          These jobs use `continue-on-error` and **do not block merge**.
+
+          | Job | Purpose |
+          |-----|---------|
+          | Windows MSVC ASan | Memory checks with ONNX stub |
+          | Linux MSan | Uninitialized-read probe (experimental) |
+          | macOS leak probe | Homebrew Clang + `detect_leaks=1` |
+
+          Promotion criteria: see `docs/maintainer/TESTING_SANITIZERS.md`.
+          EOF

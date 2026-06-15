@@ -42,7 +42,7 @@ else()
 endif()
 
 # Linux MSan: distro libc++.so is not instrumented; link against a prefix built with -fsanitize=memory
-# (see sanitize-msan-linux job in .github/workflows/sanitizers.yml).
+# (see sanitize-msan-linux job in .github/workflows/sanitizers-advisory.yml).
 set(SCYCLONE_MSAN_LIBCXX_PREFIX "" CACHE PATH
     "Install prefix of MSan-instrumented libc++/libc++abi (include/c++/v1, lib/libc++.so)")
 
@@ -182,7 +182,7 @@ else()
       else()
         message(WARNING
           "Linux MSan: SCYCLONE_MSAN_LIBCXX_PREFIX is empty; distro libc++.so is not MSan-instrumented "
-          "(false positives likely). CI builds a prefix - see sanitize-msan-linux in .github/workflows/sanitizers.yml.")
+          "(false positives likely). CI builds a prefix - see sanitize-msan-linux in .github/workflows/sanitizers-advisory.yml.")
       endif()
     endif()
     if(SCYCLONE_MSAN_TRACK_ORIGINS)

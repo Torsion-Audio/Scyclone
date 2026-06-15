@@ -1,0 +1,51 @@
+name: Sanitizer job summary
+description: Write a GITHUB_STEP_SUMMARY for sanitizer CI jobs
+
+inputs:
+  title:
+    description: Summary heading
+    required: true
+  preset:
+    description: SCYCLONE_SANITIZERS / CMake preset name
+    required: true
+  build_dir:
+    description: CMake binary directory
+    required: true
+  gate:
+    description: Merge gate policy (required or advisory)
+    required: true
+  runtime_env:
+    description: Sanitizer runtime environment variables used
+    required: false
+    default: ''
+  outcome:
+    description: Job outcome (success, failure, etc.)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Write summary
+      shell: bash
+      run: |
+        {
+          echo "## ${{ inputs.title }}"
+          echo ""
+          echo "| Field | Value |"
+          echo "|-------|-------|"
+          echo "| Preset | \`${{ inputs.preset }}\` |"
+          echo "| Build dir | \`${{ inputs.build_dir }}\` |"
+          echo "| Tests | \`ctest -L default\` |"
+          echo "| Merge gate | **${{ inputs.gate }}** |"
+          if [ -n "${{ inputs.runtime_env }}" ]; then
+            echo "| Runtime env | \`${{ inputs.runtime_env }}\` |"
+          fi
+          echo ""
+          if [ "${{ inputs.outcome }}" = "success" ]; then
+            echo "✓ Sanitizer job completed successfully."
+          else
+            echo "✗ Sanitizer job finished with: **${{ inputs.outcome }}**"
+            echo ""
+            echo "See [TESTING_SANITIZERS.md](docs/maintainer/TESTING_SANITIZERS.md) — **When CI breaks**."
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
