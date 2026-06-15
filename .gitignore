@@ -30,4 +30,4 @@ Plugin/xcode/
 
 # Local benchmark runs
 benchmark_result.json
-docs/benchmark-dashboard/data.js
+.github/benchmark-dashboard/data.js

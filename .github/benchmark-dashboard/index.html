@@ -214,7 +214,8 @@
     }
 
     /* Plugin metrics — primary content */
-    .plugin-section {
+    .plugin-section,
+    .build-section {
       padding: 24px;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -502,7 +503,7 @@
           <span class="pill">CI benchmarks</span>
         </div>
         <p class="subtitle">Performance tracking</p>
-        <p class="tagline">Plugin prepare, process, and editor benchmarks on macOS arm64 CI (44.1 kHz, 512 samples). Each point is the mean of five repetitions for that commit.</p>
+        <p class="tagline">Plugin prepare, process, and editor benchmarks on macOS arm64 CI (44.1 kHz, 512 samples). Each runtime point is the mean of five repetitions; compile time is the wall-clock Release build of the Benchmark target.</p>
         <div class="meta-row">
           <span><strong>Platform</strong> macOS arm64</span>
           <span><strong>Last update</strong> <span id="last-update">—</span></span>
@@ -575,9 +576,16 @@
           tooltip: 'Fixture: processor created once. Each iteration creates and destroys the full editor (JUCE UI, OpenGL background). Headless CI — no real display.',
           kind: 'app',
         },
+        compile_benchmark_target: {
+          label: 'Compile (Benchmark target)',
+          summary: 'Wall-clock Release build of the Benchmark executable and its dependencies.',
+          tooltip: 'Measured once per CI run after a fresh configure. FetchContent deps may be cached; object files are not reused between runs.',
+          kind: 'build',
+        },
       };
 
       const appBenchOrder = ['processor_prepare', 'process_block', 'editor'];
+      const buildBenchOrder = ['compile_benchmark_target'];
       const sentinelBenchOrder = ['reference_cpu', 'reference_memory'];
 
       function benchKey(raw) {
@@ -616,12 +624,14 @@
         return valueNs.toFixed(0) + ' ns';
       }
 
-      /** Google Benchmark reports cpu_time in ns/iter; charts use ms for readability. */
-      function benchNsToMs(valueNs) {
+      /** Google Benchmark reports cpu_time in ns/iter; charts use ms for runtime, seconds for build. */
+      function benchValueToChart(meta, valueNs) {
+        if (meta.kind === 'build') return valueNs / 1e9;
         return valueNs / 1e6;
       }
 
-      function chartYAxisUnit(rawUnit) {
+      function chartYAxisLabel(meta, rawUnit) {
+        if (meta.kind === 'build') return 's';
         return rawUnit === 'ns/iter' ? 'ms/iter' : (rawUnit || '');
       }
 
@@ -632,6 +642,14 @@
         if (abs >= 10) return valueMs.toFixed(1);
         if (abs >= 1) return valueMs.toFixed(1);
         return valueMs.toFixed(2);
+      }
+
+      function formatAxisSeconds(valueSec) {
+        if (!Number.isFinite(valueSec)) return '';
+        const abs = Math.abs(valueSec);
+        if (abs >= 100) return valueSec.toFixed(0);
+        if (abs >= 10) return valueSec.toFixed(1);
+        return valueSec.toFixed(2);
       }
 
       function computeVsPreviousDelta(dataset) {
@@ -737,13 +755,17 @@
 
       function partitionBenches(benchSet) {
         const app = [];
+        const build = [];
         const sentinel = [];
         for (const entry of benchSet.entries()) {
-          if (getBenchMeta(entry[0]).kind === 'sentinel') sentinel.push(entry);
+          const kind = getBenchMeta(entry[0]).kind;
+          if (kind === 'sentinel') sentinel.push(entry);
+          else if (kind === 'build') build.push(entry);
           else app.push(entry);
         }
         return {
           app: sortBenches(app, appBenchOrder),
+          build: sortBenches(build, buildBenchOrder),
           sentinel: sortBenches(sentinel, sentinelBenchOrder),
         };
       }
@@ -797,12 +819,12 @@
 
       function initChart(canvas, meta, dataset, colorIndex) {
         const color = chartPalette[colorIndex % chartPalette.length];
-        const yUnit = chartYAxisUnit(dataset.length > 0 ? dataset[0].bench.unit : '');
+        const yUnit = chartYAxisLabel(meta, dataset.length > 0 ? dataset[0].bench.unit : '');
         const chartData = {
           labels: dataset.map(d => d.commit.id.slice(0, 7)),
           datasets: [{
             label: meta.label,
-            data: dataset.map(d => benchNsToMs(d.bench.value)),
+            data: dataset.map(d => benchValueToChart(meta, d.bench.value)),
             borderColor: color,
             backgroundColor: color + '22',
             borderWidth: 2,
@@ -842,7 +864,9 @@
                   fontFamily: 'Inter',
                   fontSize: 11,
                   beginAtZero: true,
-                  callback: value => formatAxisMs(value),
+                  callback: value => meta.kind === 'build'
+                    ? formatAxisSeconds(value)
+                    : formatAxisMs(value),
                 },
                 scaleLabel: {
                   display: true,
@@ -901,7 +925,8 @@
       }
 
       function renderBenchSet(benchSet, main) {
-        const { app, sentinel } = partitionBenches(benchSet);
+        const { app, build, sentinel } = partitionBenches(benchSet);
+        let colorIndex = 0;
 
         if (app.length > 0) {
           const section = document.createElement('section');
@@ -918,7 +943,25 @@
           const graphsElem = document.createElement('div');
           graphsElem.className = 'benchmark-graphs';
           section.appendChild(graphsElem);
-          renderGraphs(graphsElem, app, 0);
+          colorIndex = renderGraphs(graphsElem, app, colorIndex);
+        }
+
+        if (build.length > 0) {
+          const section = document.createElement('section');
+          section.className = 'content-section build-section';
+          main.appendChild(section);
+
+          const sectionHeader = document.createElement('div');
+          sectionHeader.className = 'section-header';
+          sectionHeader.innerHTML =
+            '<h2>Compile time</h2>' +
+            '<p>Release build wall clock for the Benchmark target after a fresh configure.</p>';
+          section.appendChild(sectionHeader);
+
+          const graphsElem = document.createElement('div');
+          graphsElem.className = 'benchmark-graphs';
+          section.appendChild(graphsElem);
+          colorIndex = renderGraphs(graphsElem, build, colorIndex);
         }
 
         if (sentinel.length > 0) {

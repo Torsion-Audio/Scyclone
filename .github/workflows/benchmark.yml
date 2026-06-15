@@ -51,7 +51,14 @@ jobs:
             -DCMAKE_OSX_ARCHITECTURES=arm64
 
       - name: cmake build Benchmark
-        run: cmake --build build --target Benchmark --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+        id: build_benchmark
+        shell: bash
+        run: |
+          start=$(perl -MTime::HiRes=time -e 'print time')
+          cmake --build build --target Benchmark --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+          elapsed_sec=$(perl -MTime::HiRes=time -e "print time - $start")
+          echo "elapsed_sec=${elapsed_sec}" >> "$GITHUB_OUTPUT"
+          echo "Compile time (Benchmark target): ${elapsed_sec}s"
 
       - name: run benchmarks
         run: |
@@ -64,6 +71,30 @@ jobs:
             --benchmark_report_aggregates_only=true \
             --benchmark_display_aggregates_only=true \
             --benchmark_enable_random_interleaving=false
+
+      - name: append compile time to benchmark results
+        shell: bash
+        run: |
+          elapsed_sec="${{ steps.build_benchmark.outputs.elapsed_sec }}"
+          elapsed_ns=$(awk "BEGIN {printf \"%.0f\", ${elapsed_sec} * 1e9}")
+          jq --argjson ns "$elapsed_ns" '
+            .benchmarks += [{
+              "name": "BM_compile_benchmark_target/min_time:2.000_mean",
+              "family_index": 99,
+              "per_family_instance_index": 0,
+              "run_name": "BM_compile_benchmark_target/min_time:2.000",
+              "run_type": "aggregate",
+              "repetitions": 1,
+              "threads": 1,
+              "aggregate_name": "mean",
+              "aggregate_unit": "time",
+              "iterations": 1,
+              "real_time": $ns,
+              "cpu_time": $ns,
+              "time_unit": "ns"
+            }]
+          ' benchmark_result.json > benchmark_result.tmp.json
+          mv benchmark_result.tmp.json benchmark_result.json
 
       - uses: actions/upload-artifact@v7
         with:
