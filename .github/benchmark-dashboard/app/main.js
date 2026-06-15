@@ -4,7 +4,6 @@ import { chartCommitTooltip, styledTooltip } from './tooltips.js';
 import {
   initPageData,
   renderBenchSet,
-  syncFoldPrimaryMinHeight,
 } from './render.js';
 
 registerChartPlugins();
@@ -22,14 +21,9 @@ window.addEventListener('resize', () => {
   clearTimeout(chartResizeTimer);
   chartResizeTimer = setTimeout(() => {
     chartSync.resizeCharts();
-    syncFoldPrimaryMinHeight();
   }, 150);
 });
 
 for (const { dataSet } of initPageData()) {
   renderBenchSet(dataSet, main);
 }
-
-requestAnimationFrame(() => {
-  requestAnimationFrame(syncFoldPrimaryMinHeight);
-});

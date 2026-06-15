@@ -2,6 +2,7 @@ import { chartCommitTooltip } from './tooltips.js';
 import {
   chartAspectRatio,
   chartFillColor,
+  alignInlineKpiToPlot,
   configureCommitAxisTicks,
 } from './chart-layout.js';
 
@@ -53,9 +54,9 @@ export function createChartSync() {
       let borderColor;
 
       if (isMatch) {
-        radius = isNativeHover ? 9 : 7;
-        borderWidth = 2;
-        backgroundColor = '#ffffff';
+        radius = 0;
+        borderWidth = 0;
+        backgroundColor = baseColor;
         borderColor = baseColor;
       } else if (dim) {
         radius = 0;
@@ -86,6 +87,35 @@ export function createChartSync() {
     }
   }
 
+  function paintCommitCrosshair(chart) {
+    if (!hoveredCommitId) return;
+
+    const entry = chartEntryByChart.get(chart);
+    if (!entry) return;
+
+    const matchIndex = findCommitIndex(entry.dataset, hoveredCommitId);
+    if (matchIndex < 0) return;
+
+    const point = chart.getDatasetMeta(0)?.data[matchIndex];
+    if (!point?._view) return;
+
+    const { top, bottom } = chart.chartArea;
+    const x = point._view.x;
+    const activeMetric = hoveredBenchName === entry.benchName;
+    const ctx = chart.ctx;
+
+    ctx.save();
+    ctx.strokeStyle = activeMetric
+      ? entry.baseColor
+      : 'rgba(255, 255, 255, 0.38)';
+    ctx.lineWidth = activeMetric ? 2 : 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function applyChartEntry(entry) {
     const { chart, baseColor, block, benchName } = entry;
     const ds = chart.data.datasets[0];
@@ -96,14 +126,22 @@ export function createChartSync() {
     ds.backgroundColor = chartFillColor(baseColor, dimMetric ? '0a' : '14');
 
     if (block) {
-      block.classList.toggle('metric-dimmed', dimMetric);
-      block.classList.toggle('metric-active', activeMetric);
+      const row = block.closest('.chart-row--card');
+      if (row) {
+        row.classList.toggle('metric-dimmed', dimMetric);
+        row.classList.toggle('metric-active', activeMetric);
+        block.classList.remove('metric-dimmed', 'metric-active');
+      } else {
+        block.classList.toggle('metric-dimmed', dimMetric);
+        block.classList.toggle('metric-active', activeMetric);
+      }
     }
 
-    const showCommitLabels = activeMetric;
+    const showCommitLabels = entry.emphasizeXAxisLabels && Boolean(hoveredBenchName);
+    const hideLabels = entry.reserveXAxisSpace && !showCommitLabels;
     const prevAxis = entry._axisEmphasis;
     entry._axisEmphasis = showCommitLabels;
-    configureCommitAxisTicks(chart, chart.data.labels, showCommitLabels);
+    configureCommitAxisTicks(chart, chart.data.labels, showCommitLabels, { hideLabels });
 
     if (prevAxis !== showCommitLabels) {
       chart.update({ duration: 0 });
@@ -114,6 +152,8 @@ export function createChartSync() {
 
   function applyKpiEntry(entry) {
     const { tile, benchName } = entry;
+    if (tile.closest('.chart-row--card')) return;
+
     const activeMetric = hoveredBenchName === benchName;
     const dimMetric = hoveredBenchName && !activeMetric;
     tile.classList.toggle('metric-active', activeMetric);
@@ -199,6 +239,8 @@ export function createChartSync() {
 
   return {
     paintPointsForChart,
+    paintCommitCrosshair,
+    getHoveredCommitId: () => hoveredCommitId,
     registerChart(entry) {
       chartEntries.push(entry);
       chartEntryByChart.set(entry.chart, entry);
@@ -230,10 +272,16 @@ export function createChartSync() {
     resizeCharts() {
       const ratio = chartAspectRatio();
       chartEntries.forEach((entry) => {
-        entry.chart.options.aspectRatio = ratio;
-        const active = hoveredBenchName === entry.benchName;
-        configureCommitAxisTicks(entry.chart, entry.chart.data.labels, active);
+        const isStacked = entry.layout === 'stacked';
+        entry.chart.options.maintainAspectRatio = !isStacked;
+        entry.chart.options.aspectRatio = isStacked ? 2 : ratio;
+        const showLabels = entry.emphasizeXAxisLabels && Boolean(hoveredBenchName);
+        const hideLabels = entry.reserveXAxisSpace && !showLabels;
+        configureCommitAxisTicks(entry.chart, entry.chart.data.labels, showLabels, { hideLabels });
         entry.chart.resize();
+        if (entry.layout === 'stacked') {
+          alignInlineKpiToPlot(entry.chart, entry.block);
+        }
       });
     },
   };

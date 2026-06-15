@@ -100,6 +100,13 @@ export const chartCommitTickRotation = 45;
 export const chartCommitTickPadding = 48;
 export const chartCommitTickPlaceholder = '0000000';
 
+/** Fixed plot height for stacked inline KPI rows (maintainAspectRatio off). */
+export const stackedChartHeightPx = 168;
+/** Fixed y-axis gutter so commit columns align across stacked charts. */
+export const stackedYAxisWidthPx = 56;
+/** Reserved x-axis gutter (rotated commit labels) on every stacked row for alignment. */
+export const stackedXAxisHeightPx = 52;
+
 export const deltaFlatThresholdPct = 0.05;
 export const deltaNoiseBandPct = 3;
 export const deltaAlertThresholdPct = 5;

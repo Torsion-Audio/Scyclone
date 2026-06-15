@@ -1,18 +1,21 @@
 import {
   chartCommitTickPadding,
   chartTheme,
+  stackedYAxisWidthPx,
+  stackedXAxisHeightPx,
 } from './config.js';
 import {
   benchValueToChart,
   chartYAxisLabel,
-  formatAxisMs,
-  formatAxisSeconds,
 } from './format.js';
 import {
   chartAspectRatio,
   chartFillColor,
+  alignInlineKpiToPlot,
   commitTickAxisOptions,
   configureCommitAxisTicks,
+  stackedYAxisMax,
+  yAxisTickOptions,
 } from './chart-layout.js';
 import { chartSync } from './chart-sync.js';
 import { chartCommitTooltip } from './tooltips.js';
@@ -44,10 +47,18 @@ export function registerChartPlugins() {
     beforeDatasetsDraw(chart) {
       chartSync.paintPointsForChart(chart);
     },
+    afterDatasetsDraw(chart) {
+      chartSync.paintCommitCrosshair(chart);
+    },
   });
 }
 
-export function initChart(canvas, meta, dataset, color, block, benchName) {
+export function initChart(canvas, meta, dataset, color, block, benchName, {
+  layout = 'default',
+  showXAxisLabels = true,
+  emphasizeXAxisLabels = showXAxisLabels,
+  reserveXAxisSpace = false,
+} = {}) {
   const yUnit = chartYAxisLabel(meta, dataset.length > 0 ? dataset[0].bench.unit : '');
   const chartData = {
     labels: dataset.map(d => d.commit.id.slice(0, 7)),
@@ -62,21 +73,27 @@ export function initChart(canvas, meta, dataset, color, block, benchName) {
       pointBorderWidth: 1,
       pointRadius: 0,
       pointHoverRadius: 7,
-      fill: true,
-      lineTension: 0.3,
+      fill: false,
+      lineTension: 0,
     }],
   };
+
+  const isStacked = layout === 'stacked';
+  const xTicksDisplayed = isStacked ? true : showXAxisLabels;
+  const stackedYMax = isStacked
+    ? stackedYAxisMax(chartData.datasets[0].data, { kind: meta.kind })
+    : undefined;
 
   const chart = new Chart(canvas, {
     type: 'line',
     data: chartData,
     options: {
       legend: { display: false },
-      maintainAspectRatio: true,
-      aspectRatio: chartAspectRatio(),
+      maintainAspectRatio: !isStacked,
+      aspectRatio: isStacked ? 2 : chartAspectRatio(),
       layout: {
         padding: {
-          bottom: chartCommitTickPadding,
+          bottom: isStacked ? 0 : (showXAxisLabels ? chartCommitTickPadding : 8),
         },
       },
       elements: {
@@ -90,30 +107,37 @@ export function initChart(canvas, meta, dataset, color, block, benchName) {
       },
       scales: {
         xAxes: [{
-          gridLines: {
-            color: chartTheme.grid,
-            zeroLineColor: chartTheme.grid,
-            drawBorder: false,
+          afterFit(scale) {
+            if (isStacked) {
+              scale.height = stackedXAxisHeightPx;
+            }
           },
-          ticks: commitTickAxisOptions(),
-        }],
-        yAxes: [{
           gridLines: {
-            color: chartTheme.grid,
-            zeroLineColor: chartTheme.grid,
+            display: false,
             drawBorder: false,
           },
           ticks: {
-            fontColor: chartTheme.tick,
-            fontFamily: 'Inter',
-            fontSize: 11,
-            beginAtZero: true,
-            callback: value => meta.kind === 'build'
-              ? formatAxisSeconds(value)
-              : formatAxisMs(value),
+            ...commitTickAxisOptions(),
+            display: xTicksDisplayed,
+            fontColor: reserveXAxisSpace && !emphasizeXAxisLabels
+              ? 'rgba(0,0,0,0)'
+              : chartTheme.tickMuted,
           },
+        }],
+        yAxes: [{
+          afterFit(scale) {
+            if (isStacked) {
+              scale.width = stackedYAxisWidthPx;
+            }
+          },
+          gridLines: {
+            color: chartTheme.grid,
+            zeroLineColor: chartTheme.grid,
+            drawBorder: false,
+          },
+          ticks: yAxisTickOptions(meta, { stacked: isStacked, yMax: stackedYMax }),
           scaleLabel: {
-            display: true,
+            display: !isStacked,
             labelString: yUnit,
             fontColor: chartTheme.label,
             fontFamily: 'Inter',
@@ -150,8 +174,26 @@ export function initChart(canvas, meta, dataset, color, block, benchName) {
     },
   });
 
-  configureCommitAxisTicks(chart, chart.data.labels, false);
+  configureCommitAxisTicks(
+    chart,
+    chart.data.labels,
+    emphasizeXAxisLabels,
+    { hideLabels: reserveXAxisSpace && !emphasizeXAxisLabels },
+  );
   chart.update(0);
-  chartSync.registerChart({ chart, dataset, baseColor: color, block, benchName });
+  if (layout === 'stacked') {
+    alignInlineKpiToPlot(chart, block);
+  }
+  chartSync.registerChart({
+    chart,
+    dataset,
+    baseColor: color,
+    block,
+    benchName,
+    layout,
+    showXAxisLabels: xTicksDisplayed,
+    emphasizeXAxisLabels,
+    reserveXAxisSpace,
+  });
   return chart;
 }

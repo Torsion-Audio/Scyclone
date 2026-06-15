@@ -65,33 +65,26 @@ function bindKpiNavigation(tile, benchName, tooltipText) {
   });
 }
 
-function appendOverviewLeadSep(parent) {
-  parent.appendChild(document.createTextNode(' '));
-  const sep = document.createElement('span');
-  sep.className = 'overview-lead-sep';
-  sep.setAttribute('aria-hidden', 'true');
-  sep.textContent = '·';
-  parent.appendChild(document.createTextNode(' '));
-  parent.appendChild(sep);
-  parent.appendChild(document.createTextNode(' '));
-}
-
-function appendSentinelDrift(parent, sentinelBenches) {
+function appendBaselineDriftMetrics(parent, sentinelBenches) {
   if (!sentinelBenches.length) return null;
 
   const parts = [];
-  sentinelBenches.forEach(([benchName, data], index) => {
-    if (index > 0) {
-      parent.appendChild(document.createTextNode(' · '));
-    }
+  const metrics = document.createElement('div');
+  metrics.className = 'baseline-drift-metrics';
+
+  sentinelBenches.forEach(([benchName, data]) => {
     const meta = getBenchMeta(benchName);
     const delta = enrichDelta(computeVsPreviousDelta(data));
-    parent.appendChild(document.createTextNode(shortSentinelLabel(meta) + ' '));
+    const row = document.createElement('div');
+    row.className = 'baseline-drift-metric';
+    row.appendChild(document.createTextNode(shortSentinelLabel(meta) + ' '));
     const changeEl = createDeltaChangeSpan(delta, 'kpi-delta', { neutral: true });
-    parent.appendChild(changeEl);
+    row.appendChild(changeEl);
+    metrics.appendChild(row);
     parts.push({ data, changeEl });
   });
 
+  parent.appendChild(metrics);
   return { parts };
 }
 
@@ -200,6 +193,7 @@ function createKpiTile(
     runnerDriftMax = 0,
     compact = false,
     rankPrimary = false,
+    inline = false,
   } = {},
 ) {
   const meta = getBenchMeta(benchName);
@@ -218,6 +212,9 @@ function createKpiTile(
     ({ tile, numEl, unitEl, changeEl } = createCompactKpiTile(
       benchName, dataset, color, delta, latest, meta, deltaClass, runnerDriftMax, rankPrimary,
     ));
+    if (inline) {
+      tile.classList.add('kpi-col--inline');
+    }
   } else {
     ({ tile, changeEl } = createStandardKpiTile(
       benchName, dataset, color, delta, latest, meta, deltaClass,
@@ -310,47 +307,51 @@ function createKpiPanel(
   return { panel, colors, nextColorIndex: colorIndex };
 }
 
-function createOverviewContextStrip(sentinelBenches, analysis, overviewBenches) {
-  const copy = resolveVerdictCopy(analysis);
+function createRunnerContextColumn(sentinelBenches, analysis, overviewBenches) {
+  const copy = analysis ? resolveVerdictCopy(analysis) : { status: '', tone: 'neutral' };
   const hasSentinel = sentinelBenches.length > 0;
   const hasVerdict = Boolean(copy.status);
   if (!hasSentinel && !hasVerdict) return null;
 
-  const line = document.createElement('p');
-  line.className = 'runner-context';
-  line.setAttribute('role', 'status');
-
-  let sentinelParts = [];
-  if (hasSentinel) {
-    const runnerLabel = document.createElement('span');
-    runnerLabel.className = 'runner-context-label';
-    runnerLabel.textContent = 'Runner drift';
-    runnerLabel.setAttribute('tabindex', '0');
-    styledTooltip.bind(runnerLabel, runnerDriftTooltipText);
-    line.appendChild(runnerLabel);
-    line.appendChild(document.createTextNode(' '));
-
-    const drift = appendSentinelDrift(line, sentinelBenches);
-    sentinelParts = drift?.parts ?? [];
-  }
+  const col = document.createElement('div');
+  col.className = 'baseline-context-col';
 
   let verdictEl = null;
   let verdictWrap = null;
   let tooltipAnalysis = analysis;
   if (hasVerdict) {
-    verdictWrap = document.createElement('span');
-    verdictWrap.className = 'overview-verdict-wrap';
-    if (hasSentinel) appendOverviewLeadSep(verdictWrap);
+    verdictWrap = document.createElement('div');
+    verdictWrap.className = 'baseline-interpretation';
+    verdictWrap.setAttribute('role', 'status');
     verdictEl = document.createElement('span');
     verdictEl.className = 'overview-lead-verdict overview-lead-verdict--' + copy.tone;
     verdictEl.textContent = copy.status;
     verdictEl.setAttribute('tabindex', '0');
     styledTooltip.bind(verdictEl, () => verdictLabelTooltip(tooltipAnalysis));
     verdictWrap.appendChild(verdictEl);
-    line.appendChild(verdictWrap);
+    col.appendChild(verdictWrap);
+  }
+
+  let sentinelParts = [];
+  if (hasSentinel) {
+    const drift = document.createElement('div');
+    drift.className = 'baseline-runner-drift';
+
+    const runnerLabel = document.createElement('span');
+    runnerLabel.className = 'baseline-runner-label';
+    runnerLabel.textContent = 'Runner drift';
+    runnerLabel.setAttribute('tabindex', '0');
+    styledTooltip.bind(runnerLabel, runnerDriftTooltipText);
+    drift.appendChild(runnerLabel);
+
+    const sentinelDrift = appendBaselineDriftMetrics(drift, sentinelBenches);
+    sentinelParts = sentinelDrift?.parts ?? [];
+    col.appendChild(drift);
   }
 
   function updateAtCommitIndex(commitIndex) {
+    if (!overviewBenches?.length) return;
+
     const runnerDriftMax = maxRunnerDriftPctAtIndex(sentinelBenches, commitIndex);
     const analysisAt = analyzeOverviewMetricsAtIndex(
       overviewBenches,
@@ -378,14 +379,80 @@ function createOverviewContextStrip(sentinelBenches, analysis, overviewBenches) 
     }
   }
 
-  return { line, updateAtCommitIndex };
+  return { root: col, updateAtCommitIndex };
 }
 
-function createBaselineSummaryDrift(sentinelBenches) {
-  const wrap = document.createElement('span');
-  wrap.className = 'baseline-summary-drift';
-  appendSentinelDrift(wrap, sentinelBenches);
-  return wrap;
+function createBaselineSection(sentinel, contextStrip) {
+  const details = document.createElement('details');
+  details.className = 'content-section baseline-section';
+
+  const summary = document.createElement('summary');
+  const row = document.createElement('div');
+  row.className = 'chart-row baseline-summary-row';
+
+  const summaryMain = document.createElement('div');
+  summaryMain.className = 'baseline-summary-main';
+
+  const summaryTitle = document.createElement('div');
+  summaryTitle.className = 'baseline-summary-text';
+  summaryTitle.innerHTML = '<h2>Runner baseline</h2>';
+  const runnerEnv = document.createElement('p');
+  runnerEnv.className = 'baseline-runner-env';
+  runnerEnv.textContent = 'macOS arm64 · 44.1 kHz / 512 samples';
+  summaryTitle.appendChild(runnerEnv);
+  summaryMain.appendChild(summaryTitle);
+
+  const chevron = document.createElement('span');
+  chevron.className = 'baseline-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = '▸';
+  summaryMain.appendChild(chevron);
+
+  row.appendChild(summaryMain);
+
+  if (contextStrip) {
+    row.appendChild(contextStrip.root);
+  }
+
+  summary.appendChild(row);
+  details.appendChild(summary);
+
+  const body = document.createElement('div');
+  body.className = 'baseline-body';
+  details.appendChild(body);
+
+  const { panel, colors } = createKpiPanel(sentinel, 0, {
+    panelLabel: 'Synthetic host checks — compare drift to Scyclone metrics above',
+  });
+  body.appendChild(panel);
+
+  const graphsElem = document.createElement('div');
+  graphsElem.className = 'benchmark-graphs';
+  body.appendChild(graphsElem);
+
+  const pending = sentinel.map(([benchName, data]) => {
+    const color = colors.get(benchName);
+    const { block, canvas, meta } = createChartBlock(benchName, color);
+    graphsElem.appendChild(block);
+    return { block, canvas, meta, data };
+  });
+
+  let baselineReady = false;
+  function drawBaselineCharts() {
+    if (baselineReady) return;
+    baselineReady = true;
+    pending.forEach((item, index) => {
+      const [benchName] = sentinel[index];
+      const color = colors.get(benchName);
+      initChart(item.canvas, item.meta, item.data, color, item.block, benchName);
+    });
+  }
+
+  details.addEventListener('toggle', () => {
+    if (details.open) drawBaselineCharts();
+  });
+
+  return details;
 }
 
 function createSectionHeader(title) {
@@ -397,10 +464,10 @@ function createSectionHeader(title) {
   return header;
 }
 
-function createChartBlock(name, color) {
+function createChartBlock(name, color, { inlineKpi = false } = {}) {
   const meta = getBenchMeta(name);
   const block = document.createElement('div');
-  block.className = 'chart-block';
+  block.className = 'chart-block' + (inlineKpi ? ' chart-block--inline-kpi' : '');
   block.id = benchChartId(name);
   block.setAttribute('aria-label', meta.label + ' trend');
   block.style.setProperty('--chart-color', color);
@@ -408,6 +475,9 @@ function createChartBlock(name, color) {
 
   const header = document.createElement('div');
   header.className = 'chart-header';
+  if (inlineKpi) {
+    header.hidden = true;
+  }
   block.appendChild(header);
 
   const titleRow = document.createElement('div');
@@ -437,27 +507,23 @@ function createChartBlock(name, color) {
   return { block, canvas, meta };
 }
 
-function createBuildSectionHeader(buildBenches) {
+function buildColorMap(benches, startColorIndex = 0) {
+  const colors = new Map();
+  let colorIndex = startColorIndex;
+  for (const [benchName] of benches) {
+    colors.set(benchName, chartPalette[colorIndex % chartPalette.length]);
+    colorIndex++;
+  }
+  return { colors, nextColorIndex: colorIndex };
+}
+
+function createBuildSectionHeader() {
   const header = document.createElement('div');
   header.className = 'section-header';
 
   const heading = document.createElement('h2');
   heading.textContent = 'Build';
   header.appendChild(heading);
-
-  if (buildBenches.length > 0) {
-    const [, data] = buildBenches[0];
-    const meta = getBenchMeta(buildBenches[0][0]);
-    const delta = enrichDelta(computeVsPreviousDelta(data));
-    const latest = data.length > 0 ? data[data.length - 1].bench.value : null;
-    const summary = document.createElement('span');
-    summary.className = 'build-summary-delta';
-    summary.appendChild(document.createTextNode(
-      'Compile ' + formatCompactBenchValue(delta?.latest ?? latest, meta) + ' ',
-    ));
-    summary.appendChild(createDeltaChangeSpan(delta, 'kpi-delta'));
-    header.appendChild(summary);
-  }
 
   return header;
 }
@@ -466,13 +532,51 @@ function mergeOverviewBenches(app, build) {
   return [...sortOverviewBenches(app), ...sortBenches(build, buildBenchOrder)];
 }
 
-function renderGraphs(parent, benches, startColorIndex, colorMap = null) {
+function renderGraphs(parent, benches, startColorIndex, colorMap = null, {
+  stacked = false,
+  inlineKpi = false,
+  runnerDriftMax = 0,
+  overviewAnalysis = null,
+} = {}) {
+  const entries = [...benches];
   let colorIndex = startColorIndex;
-  for (const [benchName, data] of benches) {
+  for (let i = 0; i < entries.length; i++) {
+    const [benchName, data] = entries[i];
     const color = colorMap?.get(benchName) ?? chartPalette[colorIndex % chartPalette.length];
-    const { block, canvas, meta } = createChartBlock(benchName, color);
-    parent.appendChild(block);
-    initChart(canvas, meta, data, color, block, benchName);
+    const chartOptions = {
+      layout: stacked ? 'stacked' : 'default',
+      showXAxisLabels: stacked || i === entries.length - 1,
+      emphasizeXAxisLabels: stacked ? i === entries.length - 1 : true,
+      reserveXAxisSpace: stacked,
+    };
+
+    if (inlineKpi) {
+      const row = document.createElement('div');
+      row.className = 'chart-row chart-row--card';
+      row.style.setProperty('--chart-color', color);
+      row.setAttribute('aria-label', getBenchMeta(benchName).label + ' benchmark row');
+
+      const { block, canvas, meta } = createChartBlock(benchName, color, { inlineKpi: true });
+      row.appendChild(block);
+
+      const rankPrimary = overviewAnalysis?.primaryBench === benchName
+        && getBenchMeta(benchName).kind !== 'build';
+      const { tile } = createKpiTile(benchName, data, colorIndex, {
+        runnerDriftMax,
+        compact: true,
+        rankPrimary,
+        inline: true,
+      });
+      row.appendChild(tile);
+      parent.appendChild(row);
+
+      initChart(canvas, meta, data, color, block, benchName, chartOptions);
+    } else {
+      const { block, canvas, meta } = createChartBlock(benchName, color);
+      parent.appendChild(block);
+      initChart(canvas, meta, data, color, block, benchName, chartOptions);
+    }
+
     colorIndex++;
   }
   return colorIndex;
@@ -484,45 +588,25 @@ export function renderBenchSet(benchSet, main) {
   const runnerDriftMax = sentinel.length > 0 ? maxRunnerDriftPct(sentinel) : 0;
   const overview = mergeOverviewBenches(app, build);
   let sharedColors = new Map();
+  let overviewAnalysis = null;
+  let contextStrip = null;
 
   const foldPrimary = document.createElement('div');
   foldPrimary.className = 'fold-primary';
   main.appendChild(foldPrimary);
 
   if (overview.length > 0) {
-    const overviewBlock = document.createElement('div');
-    overviewBlock.className = 'overview-block';
-    foldPrimary.appendChild(overviewBlock);
+    overviewAnalysis = analyzeOverviewMetrics(overview, runnerDriftMax);
+    const { colors, nextColorIndex } = buildColorMap(sortOverviewBenches(overview), colorIndex);
+    sharedColors = colors;
+    colorIndex = nextColorIndex;
 
-    const overviewLayout = document.createElement('div');
-    overviewLayout.className = 'overview-layout';
-    overviewBlock.appendChild(overviewLayout);
-
-    const overviewAnalysis = analyzeOverviewMetrics(overview, runnerDriftMax);
-
-    const metricsGroup = document.createElement('div');
-    metricsGroup.className = 'overview-metrics';
-    overviewLayout.appendChild(metricsGroup);
-
-    const { panel, colors, nextColorIndex } = createKpiPanel(overview, colorIndex, {
-      runnerDriftMax,
-      overview: true,
-      overviewAnalysis,
-    });
-    metricsGroup.appendChild(panel);
-
-    const contextStrip = createOverviewContextStrip(sentinel, overviewAnalysis, overview);
-    if (contextStrip) {
-      metricsGroup.appendChild(contextStrip.line);
-    }
+    contextStrip = createRunnerContextColumn(sentinel, overviewAnalysis, overview);
 
     chartSync.registerOverview({
       contextStrip,
       updateKpiAtIndex: updateKpiTileAtIndex,
     });
-
-    sharedColors = colors;
-    colorIndex = nextColorIndex;
   }
 
   if (app.length > 0) {
@@ -532,94 +616,42 @@ export function renderBenchSet(benchSet, main) {
     section.appendChild(createSectionHeader('Plugin performance'));
 
     const graphsElem = document.createElement('div');
-    graphsElem.className = 'benchmark-graphs';
+    graphsElem.className = 'benchmark-graphs benchmark-graphs--stacked';
     section.appendChild(graphsElem);
-    colorIndex = renderGraphs(graphsElem, app, colorIndex - overview.length, sharedColors);
+    renderGraphs(graphsElem, app, 0, sharedColors, {
+      stacked: true,
+      inlineKpi: true,
+      runnerDriftMax,
+      overviewAnalysis,
+    });
   }
 
   if (build.length > 0) {
     const section = document.createElement('section');
     section.className = 'content-section content-section--build';
     main.appendChild(section);
-    section.appendChild(createBuildSectionHeader(build));
+    section.appendChild(createBuildSectionHeader());
 
     const graphsElem = document.createElement('div');
-    graphsElem.className = 'benchmark-graphs';
+    graphsElem.className = 'benchmark-graphs benchmark-graphs--stacked';
     section.appendChild(graphsElem);
-    colorIndex = renderGraphs(graphsElem, build, colorIndex - build.length, sharedColors);
+    renderGraphs(graphsElem, build, 0, sharedColors, {
+      stacked: true,
+      inlineKpi: true,
+      runnerDriftMax,
+      overviewAnalysis,
+    });
   }
 
   if (sentinel.length > 0) {
-    const details = document.createElement('details');
-    details.className = 'content-section baseline-section';
-
-    const summary = document.createElement('summary');
-    const summaryTitle = document.createElement('div');
-    summaryTitle.className = 'baseline-summary-text';
-    summaryTitle.innerHTML = '<h2>Runner baseline</h2>';
-    const runnerEnv = document.createElement('p');
-    runnerEnv.className = 'baseline-runner-env';
-    runnerEnv.textContent = 'macOS arm64 · 44.1 kHz / 512 samples';
-    summaryTitle.appendChild(runnerEnv);
-    summary.appendChild(summaryTitle);
-
-    const summaryActions = document.createElement('div');
-    summaryActions.className = 'baseline-summary-actions';
-    summaryActions.appendChild(createBaselineSummaryDrift(sentinel));
-    const chevron = document.createElement('span');
-    chevron.className = 'baseline-chevron';
-    chevron.setAttribute('aria-hidden', 'true');
-    chevron.textContent = '▸';
-    summaryActions.appendChild(chevron);
-    summary.appendChild(summaryActions);
-    details.appendChild(summary);
-
-    const body = document.createElement('div');
-    body.className = 'baseline-body';
-    details.appendChild(body);
-
-    const { panel, colors } = createKpiPanel(sentinel, 0, {
-      panelLabel: 'Synthetic host checks — compare drift to Scyclone metrics above',
-    });
-    body.appendChild(panel);
-
-    const graphsElem = document.createElement('div');
-    graphsElem.className = 'benchmark-graphs';
-    body.appendChild(graphsElem);
-
-    const pending = sentinel.map(([benchName, data]) => {
-      const color = colors.get(benchName);
-      const { block, canvas, meta } = createChartBlock(benchName, color);
-      graphsElem.appendChild(block);
-      return { block, canvas, meta, data };
-    });
-
-    let baselineReady = false;
-    function drawBaselineCharts() {
-      if (baselineReady) return;
-      baselineReady = true;
-      pending.forEach((item, index) => {
-        const [benchName] = sentinel[index];
-        const color = colors.get(benchName);
-        initChart(item.canvas, item.meta, item.data, color, item.block, benchName);
-      });
-    }
-
-    details.addEventListener('toggle', () => {
-      if (details.open) drawBaselineCharts();
-    });
-
-    main.appendChild(details);
+    const footer = document.querySelector('footer');
+    const baselineContext = contextStrip
+      ?? createRunnerContextColumn(sentinel, null, []);
+    footer.insertBefore(
+      createBaselineSection(sentinel, baselineContext),
+      footer.firstChild,
+    );
   }
-}
-
-export function syncFoldPrimaryMinHeight() {
-  const fold = document.querySelector('.fold-primary');
-  if (!fold) return;
-  const top = fold.getBoundingClientRect().top;
-  if (!Number.isFinite(top) || top < 0) return;
-  const buffer = 32;
-  fold.style.minHeight = `calc(100dvh - ${Math.ceil(top)}px + ${buffer}px)`;
 }
 
 export function initPageData() {
