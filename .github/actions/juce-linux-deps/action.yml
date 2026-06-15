@@ -14,7 +14,10 @@ runs:
           libx11-dev \
           libxcomposite-dev \
           libxcursor-dev \
+          libxext-dev \
+          libxi-dev \
           libxinerama-dev \
           libxrandr-dev \
+          libgl1-mesa-dev \
           libglu1-mesa-dev \
           libcurl4-openssl-dev

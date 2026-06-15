@@ -1,0 +1,27 @@
+name: Setup macOS (JUCE)
+description: Homebrew tools and Xcode pin for JUCE 7 CI on macos-14
+
+inputs:
+  install_osxutils:
+    description: Install osxutils (distribution / validation builds)
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Install Homebrew packages
+      shell: bash
+      run: |
+        if [ "${{ inputs.install_osxutils }}" = "true" ]; then
+          brew install osxutils ninja
+        else
+          brew install ninja
+        fi
+
+    # TEMPORARY: JUCE 7.0.5 does not build juceaide against the macOS 15 SDK (Xcode 16+).
+    # Pin Xcode 15.4 until JUCE is upgraded (https://github.com/juce-framework/JUCE/issues/1427).
+    - name: Pin Xcode for JUCE 7 compatibility
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '15.4'
