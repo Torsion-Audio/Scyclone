@@ -1,0 +1,9 @@
+# LeakSanitizer suppressions for macOS system-library false positives.
+# See: https://github.com/llvm/llvm-project/issues/115992
+# Used by sanitize-asan-leaks-macos in .github/workflows/sanitizers.yml
+
+leak:_fetchInitializingClassList
+leak:dyld4::RuntimeState::_instantiateTLVs
+leak:libobjc.A.dylib
+leak:libxpc.dylib
+leak:libSystem.B.dylib

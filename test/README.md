@@ -231,22 +231,30 @@ cmake --build --preset test
 cmake --preset release
 cmake --build --preset release
 
-# Linux/macOS sanitizer (after configure)
+# Linux/macOS sanitizer (matches CI — use runtime env vars on Linux for leak detection)
 cmake --preset asan-ubsan
 cmake --build --preset asan-ubsan
+# Linux only:
+#   export ASAN_OPTIONS=detect_leaks=1:abort_on_error=1
+#   export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
+# macOS Apple Clang: omit detect_leaks from ASAN_OPTIONS
 ctest --test-dir build-asan-ubsan -L default --output-on-failure
 
-# Windows sanitizer
+# Windows sanitizer (advisory in CI)
 cmake --preset asan
 cmake --build --preset asan
 ctest --test-dir build-asan -L default --output-on-failure
 ```
 
-MSan and extra sanitizer presets are not wired in CMakePresets.json (extra toolchain setup). See maintainer doc below.
+MSan and the macOS Homebrew leak probe are not in CMakePresets.json — see [docs/maintainer/TESTING_SANITIZERS.md](../docs/maintainer/TESTING_SANITIZERS.md).
 
 ## Sanitizer CI
 
-AddressSanitizer, UndefinedBehaviorSanitizer, and ThreadSanitizer run on every push/PR to `develop` via [`.github/workflows/sanitizers.yml`](../.github/workflows/sanitizers.yml). Maintainer details: [docs/maintainer/TESTING_SANITIZERS.md](../docs/maintainer/TESTING_SANITIZERS.md).
+Required gates (ASan+UBSan Linux/macOS, TSan Linux/macOS) run on every PR/push to `develop` and on `v*` tags via [`.github/workflows/sanitizers.yml`](../.github/workflows/sanitizers.yml) — require job **`sanitizers-required`** in branch protection.
+
+Advisory jobs (Windows ASan, Linux MSan, macOS leak probe) run in [`.github/workflows/sanitizers-advisory.yml`](../.github/workflows/sanitizers-advisory.yml) and do not block merge.
+
+Also see: [docs/maintainer/TESTING_SANITIZERS.md](../docs/maintainer/TESTING_SANITIZERS.md).
 
 ## IDE / IntelliSense
 

@@ -1,8 +1,8 @@
-name: Scyclone
+name: Build & Test
 
-# CI Model
+# CI Model (see docs/maintainer/release.md for releases)
 #
-# develop push:
+# pull_request / develop push:
 #   - ci-validation only
 #   - no distributable artifacts (this is intentional)
 #
@@ -21,6 +21,8 @@ on:
   push:
     branches: [ develop ]
     tags: [ 'v*' ]
+  pull_request:
+    branches: [ develop ]
   workflow_dispatch:
     inputs:
       distribution_type:
@@ -41,6 +43,7 @@ run-name: >-
   ${{
     startsWith(github.ref, 'refs/tags/v') && format('Release {0}', github.ref_name) ||
     github.event_name == 'workflow_dispatch' && format('Manual build ({0}, {1})', inputs.distribution_type, github.ref_name) ||
+    github.event_name == 'pull_request' && format('PR #{0} validation', github.event.pull_request.number) ||
     format('Validation ({0})', github.ref_name)
   }}
 
@@ -75,34 +78,16 @@ jobs:
             ccache: ccache
 
     steps:
-      - name: install macOS deps
-        if: matrix.name == 'macOS'
-        run: brew install osxutils ninja
-
-      - name: install Linux deps
-        if: matrix.name == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build libfreetype6-dev libx11-dev libxext-dev \
-            libxinerama-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev \
-            libasound2-dev libcurl4-openssl-dev
-
       - name: get repo and submodules
         uses: actions/checkout@v6
         with:
           submodules: true # JUCE, libsamplerate, etc.
 
-      # TEMPORARY: JUCE 7.0.5 calls CGWindowListCreateImage, which Apple removed from the
-      # macOS 15 SDK (Xcode 16+). That breaks juceaide during cmake configure - unrelated to
-      # our deployment target; binaries can still run on macOS 10.13+ (see configure_platform.cmake).
-      # Pin Xcode 15.4 (macOS 14.5 SDK) until we upgrade JUCE to develop or JUCE 8, where the
-      # ScreenCaptureKit fix is proven upstream (https://github.com/juce-framework/JUCE/issues/1427).
-      # Then switch back to macos-latest and remove this step.
-      - name: pin Xcode for JUCE 7 compatibility (macOS)
+      - uses: ./.github/actions/setup-macos-juce
         if: matrix.name == 'macOS'
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '15.4'
+
+      - uses: ./.github/actions/setup-linux-juce
+        if: matrix.name == 'Linux'
 
       - name: restore FetchContent cache
         uses: actions/cache@v4
@@ -116,37 +101,10 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ninja
 
-      # Resolve VS via vswhere (ships with VS; survives VS 2022/2026 runner images).
-      # Exports cl.exe/link.exe env vars to GITHUB_ENV for subsequent bash steps.
-      - name: setup MSVC
+      - uses: ./.github/actions/setup-msvc
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          if (-not (Test-Path $vswhere)) { throw "vswhere.exe not found" }
-          $vsPath = & $vswhere -latest -products * `
-            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
-            -property installationPath
-          if (-not $vsPath) { throw "Visual Studio with C++ tools not found" }
-          $vcvars = Join-Path $vsPath 'VC\Auxiliary\Build\vcvars64.bat'
-          if (-not (Test-Path $vcvars)) { throw "vcvars64.bat not found at $vcvars" }
-          cmd /c "`"$vcvars`" && set" | ForEach-Object {
-            if ($_ -match '^([^=]+)=(.*)$') {
-              Add-Content -Path $env:GITHUB_ENV -Value "$($matches[1])=$($matches[2])"
-            }
-          }
 
-      # Use all runner CPU cores (replaces the old fixed CMAKE_BUILD_PARALLEL_LEVEL: 4).
-      - name: set parallel build level
-        shell: bash
-        run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            echo "CMAKE_BUILD_PARALLEL_LEVEL=${NUMBER_OF_PROCESSORS}" >> "$GITHUB_ENV"
-          elif [ "${{ runner.os }}" = "Linux" ]; then
-            echo "CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)" >> "$GITHUB_ENV"
-          else
-            echo "CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> "$GITHUB_ENV"
-          fi
+      - uses: ./.github/actions/set-parallel-build-level
 
       # append-timestamp: false avoids proliferating cache keys that never restore.
       - name: ccache
@@ -208,13 +166,13 @@ jobs:
           ✓ Tests passed
 
           EOF
-          if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.ref }}" = "refs/heads/develop" ]; then
             cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
-          **No distributable artifacts were produced.** This is expected for develop pushes.
+          **No distributable artifacts were produced.** This is expected for PRs and develop pushes.
 
           To create downloadable builds:
           - Push a version tag (`vX.Y.Z`)
-          - Or run **Actions → Scyclone → Run workflow**
+          - Or run **Actions → Build & Test → Run workflow**
           EOF
           fi
 
@@ -244,29 +202,16 @@ jobs:
             artifact_os: linux-x64
 
     steps:
-      - name: install macOS deps
-        if: matrix.name == 'macOS'
-        run: brew install osxutils ninja
-
-      - name: install Linux deps
-        if: matrix.name == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build libfreetype6-dev libx11-dev libxext-dev \
-            libxinerama-dev libxrandr-dev libxcursor-dev libxi-dev libgl1-mesa-dev \
-            libasound2-dev libcurl4-openssl-dev
-
       - name: get repo and submodules
         uses: actions/checkout@v6
         with:
           submodules: true
 
-      # TEMPORARY: JUCE 7.0.5 / Xcode 16+ — see ci-validation job for full explanation.
-      - name: pin Xcode for JUCE 7 compatibility (macOS)
+      - uses: ./.github/actions/setup-macos-juce
         if: matrix.name == 'macOS'
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '15.4'
+
+      - uses: ./.github/actions/setup-linux-juce
+        if: matrix.name == 'Linux'
 
       - name: verify tag matches CMake version
         if: startsWith(github.ref, 'refs/tags/v')
@@ -352,37 +297,10 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ninja
 
-      # Resolve VS via vswhere (ships with VS; survives VS 2022/2026 runner images).
-      # Exports cl.exe/link.exe env vars to GITHUB_ENV for subsequent bash steps.
-      - name: setup MSVC
+      - uses: ./.github/actions/setup-msvc
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          if (-not (Test-Path $vswhere)) { throw "vswhere.exe not found" }
-          $vsPath = & $vswhere -latest -products * `
-            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
-            -property installationPath
-          if (-not $vsPath) { throw "Visual Studio with C++ tools not found" }
-          $vcvars = Join-Path $vsPath 'VC\Auxiliary\Build\vcvars64.bat'
-          if (-not (Test-Path $vcvars)) { throw "vcvars64.bat not found at $vcvars" }
-          cmd /c "`"$vcvars`" && set" | ForEach-Object {
-            if ($_ -match '^([^=]+)=(.*)$') {
-              Add-Content -Path $env:GITHUB_ENV -Value "$($matches[1])=$($matches[2])"
-            }
-          }
 
-      # Use all runner CPU cores (replaces the old fixed CMAKE_BUILD_PARALLEL_LEVEL: 4).
-      - name: set parallel build level
-        shell: bash
-        run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            echo "CMAKE_BUILD_PARALLEL_LEVEL=${NUMBER_OF_PROCESSORS}" >> "$GITHUB_ENV"
-          elif [ "${{ runner.os }}" = "Linux" ]; then
-            echo "CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)" >> "$GITHUB_ENV"
-          else
-            echo "CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> "$GITHUB_ENV"
-          fi
+      - uses: ./.github/actions/set-parallel-build-level
 
       # append-timestamp: false avoids proliferating cache keys that never restore.
       - name: ccache

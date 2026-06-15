@@ -1,5 +1,5 @@
 # <img style="float: left;" src="assets/pictures/logo.png" width="40" /> &nbsp; SCYCLONE
-[![Scyclone](https://github.com/Torsion-Audio/Scyclone/actions/workflows/build_test_artifacts.yml/badge.svg)](https://github.com/Torsion-Audio/Scyclone/actions/workflows/build_test_artifacts.yml) [![Sanitizers](https://github.com/Torsion-Audio/Scyclone/actions/workflows/sanitizers.yml/badge.svg)](https://github.com/Torsion-Audio/Scyclone/actions/workflows/sanitizers.yml)
+[![Build & Test](https://github.com/Torsion-Audio/Scyclone/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/Torsion-Audio/Scyclone/actions/workflows/build-and-test.yml) [![Sanitizers](https://github.com/Torsion-Audio/Scyclone/actions/workflows/sanitizers.yml/badge.svg)](https://github.com/Torsion-Audio/Scyclone/actions/workflows/sanitizers.yml)
 ![interface](assets/pictures/interface.png)
 
 **Scyclone** is an audio plugin that utilizes **neural timbre transfer** technology to offer a new approach to audio production. The plugin builds upon [RAVE](https://github.com/acids-ircam/RAVE) methodology, a realtime audio variational auto encoder, facilitating neural timbre transfer in both single and couple inference mode. <br /><br />
@@ -58,7 +58,7 @@ cmake --build --preset release
 
 See [test/README.md](test/README.md) for the full test layout, sanitizer presets, and calibration probes.
 
-**CI:** Pushes to `develop` run validation only (no downloadable artifacts). To release signed builds, push a version tag — see [Release process](docs/maintainer/release.md).
+**CI:** Pull requests to `develop` require [Build & Test](.github/workflows/build-and-test.yml) and [Sanitizers](.github/workflows/sanitizers.yml) (`sanitizers-required`: Linux/macOS ASan+UBSan, Linux/macOS TSan). Advisory sanitizer jobs are non-blocking — see [Sanitizers (advisory)](.github/workflows/sanitizers-advisory.yml) and [TESTING_SANITIZERS.md](docs/maintainer/TESTING_SANITIZERS.md). Pushes to `develop` run the same validation (no downloadable artifacts). To release signed builds, push a version tag — see [Release process](docs/maintainer/release.md).
 
 **Notes:**
 - The onnx library is now linked statically. No more need to download the onnx library via homebrew or via the github repository. macOS distribution builds are code-signed with Developer ID and notarized in CI.

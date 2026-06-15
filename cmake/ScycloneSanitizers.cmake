@@ -11,10 +11,20 @@ option(SCYCLONE_SANITIZER_STUB_ONNX
     "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (MSan / MSVC ASan / LEAK)"
     OFF)
 
-# Prebuilt ONNX is not MSan-instrumented; MSVC ASan needs matching STL annotations; LEAK uses Homebrew Clang (ORT link fails).
+# Prebuilt ONNX is not MSan-instrumented; MSVC ASan needs matching STL annotations;
+# open-source Clang on macOS cannot link prebuilt ORT (Homebrew CI / LEAK preset).
+set(_scyclone_stub_onnx_required OFF)
 if(SCYCLONE_SANITIZERS STREQUAL "MEMORY"
     OR SCYCLONE_SANITIZERS STREQUAL "LEAK"
     OR (SCYCLONE_SANITIZERS STREQUAL "ASAN" AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"))
+  set(_scyclone_stub_onnx_required ON)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin"
+    AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+    AND (SCYCLONE_SANITIZERS STREQUAL "ASAN" OR SCYCLONE_SANITIZERS STREQUAL "ASAN_UBSAN"))
+  set(_scyclone_stub_onnx_required ON)
+endif()
+
+if(_scyclone_stub_onnx_required)
   set(SCYCLONE_SANITIZER_STUB_ONNX ON CACHE BOOL
       "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (MSan / MSVC ASan / LEAK)" FORCE)
 else()
@@ -32,7 +42,7 @@ else()
 endif()
 
 # Linux MSan: distro libc++.so is not instrumented; link against a prefix built with -fsanitize=memory
-# (see sanitize-msan-linux job in .github/workflows/sanitizers.yml).
+# (see sanitize-msan-linux job in .github/workflows/sanitizers-advisory.yml).
 set(SCYCLONE_MSAN_LIBCXX_PREFIX "" CACHE PATH
     "Install prefix of MSan-instrumented libc++/libc++abi (include/c++/v1, lib/libc++.so)")
 
@@ -113,6 +123,13 @@ if(SCYCLONE_SANITIZERS STREQUAL "LEAK")
     message(FATAL_ERROR
       "LEAK (LeakSanitizer) is Clang-only. Use -DCMAKE_CXX_COMPILER=clang++.")
   endif()
+  if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    message(WARNING
+      "Standalone LSan (SCYCLONE_SANITIZERS=LEAK) is not used in CI for GUI/JUCE tests "
+      "(llvm/llvm-project#117476). Prefer Linux ASan with ASAN_OPTIONS=detect_leaks=1, "
+      "sanitize-asan-leaks-macos in CI, or manual Xcode Instruments / leaks. "
+      "LEAK preset is retained for local experiments only.")
+  endif()
 endif()
 
 # --- Interface target: flags applied to library and all test executables ---
@@ -165,7 +182,7 @@ else()
       else()
         message(WARNING
           "Linux MSan: SCYCLONE_MSAN_LIBCXX_PREFIX is empty; distro libc++.so is not MSan-instrumented "
-          "(false positives likely). CI builds a prefix - see sanitize-msan-linux in .github/workflows/sanitizers.yml.")
+          "(false positives likely). CI builds a prefix - see sanitize-msan-linux in .github/workflows/sanitizers-advisory.yml.")
       endif()
     endif()
     if(SCYCLONE_MSAN_TRACK_ORIGINS)

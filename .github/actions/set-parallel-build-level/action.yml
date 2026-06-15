@@ -1,0 +1,16 @@
+name: Set parallel build level
+description: Export CMAKE_BUILD_PARALLEL_LEVEL to GITHUB_ENV from runner CPU count
+
+runs:
+  using: composite
+  steps:
+    - name: Set parallel build level
+      shell: bash
+      run: |
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=${NUMBER_OF_PROCESSORS}" >> "$GITHUB_ENV"
+        elif [ "${{ runner.os }}" = "Linux" ]; then
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)" >> "$GITHUB_ENV"
+        else
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> "$GITHUB_ENV"
+        fi

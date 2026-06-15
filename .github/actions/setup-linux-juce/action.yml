@@ -1,0 +1,31 @@
+name: Setup Linux (JUCE)
+description: Build tools and JUCE system dependencies for Ubuntu CI runners
+
+inputs:
+  install_clang:
+    description: Install clang and llvm (ThreadSanitizer jobs)
+    required: false
+    default: 'false'
+  extra_packages:
+    description: Space-separated extra apt packages (e.g. python3 curl for MSan libc++ build)
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Install build tools
+      shell: bash
+      run: |
+        sudo apt-get update
+        PACKAGES="build-essential cmake ninja-build"
+        if [ "${{ inputs.install_clang }}" = "true" ]; then
+          PACKAGES="$PACKAGES clang llvm"
+        fi
+        if [ -n "${{ inputs.extra_packages }}" ]; then
+          PACKAGES="$PACKAGES ${{ inputs.extra_packages }}"
+        fi
+        # shellcheck disable=SC2086
+        sudo apt-get install -y $PACKAGES
+
+    - uses: ./.github/actions/juce-linux-deps

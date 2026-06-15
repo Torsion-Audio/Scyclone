@@ -26,7 +26,7 @@ Use this for test builds or sharing zips without cutting an official release.
 
 **Signed zips only (no GitHub Release)**
 
-1. Go to **Actions → [Scyclone](https://github.com/Torsion-Audio/Scyclone/actions/workflows/build_test_artifacts.yml) → Run workflow**.
+1. Go to **Actions → [Build & Test](https://github.com/Torsion-Audio/Scyclone/actions/workflows/build-and-test.yml) → Run workflow**.
 2. Choose branch (usually `develop`), `distribution_type` (`arm64` or `universal` on macOS).
 3. Leave **create_release** off.
 4. Download zips from that run’s **Artifacts** tab (kept ~90 days). Names look like `Scyclone-macOS-universal-manual.zip`.
@@ -42,7 +42,7 @@ Same workflow, but enable **create_release** and set **release_version** to `X.Y
 | --------------------- | ------------------------------------------------------------------------------------------------ |
 | Official release zips | [GitHub → Releases](https://github.com/Torsion-Audio/Scyclone/releases)                          |
 | Manual / test zips    | Actions run → Artifacts                                                                          |
-| Workflow definition   | `[.github/workflows/build_test_artifacts.yml](../../.github/workflows/build_test_artifacts.yml)` |
+| Workflow definition   | `[.github/workflows/build-and-test.yml](../../.github/workflows/build-and-test.yml)` |
 | Pre-tag checks        | `[.github/scripts/prepare-release.sh](../../.github/scripts/prepare-release.sh)`                 |
 
 
