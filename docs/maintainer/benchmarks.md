@@ -6,8 +6,8 @@ macOS-only Google Benchmark job with charts and step summaries via [github-actio
 
 [`.github/workflows/benchmark.yml`](../../.github/workflows/benchmark.yml) runs on:
 
-- `push` to `develop` — updates `gh-pages` charts + step summary
-- `pull_request` targeting `develop` — step summary only (no `gh-pages` push)
+- `push` to `develop`: updates `gh-pages` charts + step summary
+- `pull_request` targeting `develop`: step summary only (no `gh-pages` push)
 
 Composite actions: [`setup-macos-juce`](../../.github/actions/setup-macos-juce/action.yml), [`set-parallel-build-level`](../../.github/actions/set-parallel-build-level/action.yml).
 
@@ -33,8 +33,8 @@ Host-style configuration: **44.1 kHz**, **512 samples**, stereo. Expensive setup
 | `BM_process_block` | `processBlock` on a prepared processor (512-sample stereo buffer) |
 | `BM_editor` | Editor create/destroy per iteration (processor reused) |
 | `BM_compile_benchmark_target` | CI wall-clock Release build of the Benchmark target (not a Google Benchmark case) |
-| `BM_reference_cpu` | FMA loop — CPU / scheduler noise sentinel |
-| `BM_reference_memory` | ~1 MiB fill + strided arithmetic — memory bandwidth sentinel |
+| `BM_reference_cpu` | FMA loop, CPU / scheduler noise sentinel |
+| `BM_reference_memory` | ~1 MiB fill + strided arithmetic, memory bandwidth sentinel |
 
 Defined in [`test/benchmark/benchmark.cpp`](../../test/benchmark/benchmark.cpp) with `MinTime(2.0)`. Compile time is measured in the workflow build step and merged into `benchmark_result.json` with `jq` before upload.
 
@@ -43,16 +43,16 @@ Defined in [`test/benchmark/benchmark.cpp`](../../test/benchmark/benchmark.cpp) 
 | Item | Location |
 |------|----------|
 | Time series data | `gh-pages` → `dev/bench/data.js` (updated by CI) |
-| Layout / CSS / fonts / lockup | [`.github/benchmark-dashboard/`](../../.github/benchmark-dashboard/) (`index.html`, `favicon.svg`, `fonts/`, `torsion-audio-lockup.svg`; copied to `gh-pages` once; **not** overwritten by the action) |
+| Layout / CSS / JS / fonts / lockup | [`.github/benchmark-dashboard/`](../../.github/benchmark-dashboard/) (`index.html`, `styles.css`, `app/`, `favicon.svg`, `fonts/`, `torsion-audio-lockup.svg`; copied to `gh-pages` once; **not** overwritten by the action) |
 | Public URL | [torsion-audio.github.io/Scyclone/dev/bench/](https://torsion-audio.github.io/Scyclone/dev/bench/) |
 
-**Custom styling:** edit the `<style>` block in `.github/benchmark-dashboard/index.html`. The action only auto-generates `index.html` when it is missing; after you seed the Scyclone layout, CI leaves it alone and updates `data.js` only.
+**Custom styling:** edit [`styles.css`](../../.github/benchmark-dashboard/styles.css). App logic lives in [`app/`](../../.github/benchmark-dashboard/app/). The action only auto-generates `index.html` when it is missing; after you seed the Scyclone layout, CI leaves it alone and updates `data.js` only.
 
 Setup and local preview: [`.github/benchmark-dashboard/README.md`](../../.github/benchmark-dashboard/README.md).
 
 ## PR / CI feedback
 
-- **Step summary** on every run (`summary-always: true`) — comparison vs previous `gh-pages` entry when available, plus a [dashboard link](https://torsion-audio.github.io/Scyclone/dev/bench/)
+- **Step summary** on every run (`summary-always: true`): comparison vs previous `gh-pages` entry when available, plus a [dashboard link](https://torsion-audio.github.io/Scyclone/dev/bench/)
 - **Artifacts:** `benchmark-results-macos-<sha>` (90 days)
 - Built-in PR comments and `fail-on-alert` are **off** (advisory job)
 
@@ -61,7 +61,7 @@ To enable regression alerts later, set `fail-on-alert: true` and/or `comment-on-
 ## gh-pages setup (one-time)
 
 1. Enable GitHub Pages from the `gh-pages` branch (repo **Settings → Pages**).
-2. Copy [`.github/benchmark-dashboard/index.html`](../../.github/benchmark-dashboard/index.html), [`favicon.svg`](../../.github/benchmark-dashboard/favicon.svg), [`fonts/`](../../.github/benchmark-dashboard/fonts/), and [`torsion-audio-lockup.svg`](../../.github/benchmark-dashboard/torsion-audio-lockup.svg) to `gh-pages:dev/bench/` before the first CI run if you want the Scyclone layout instead of the action default. See the [dashboard README](../../.github/benchmark-dashboard/README.md).
+2. Copy [`.github/benchmark-dashboard/index.html`](../../.github/benchmark-dashboard/index.html), [`styles.css`](../../.github/benchmark-dashboard/styles.css), [`app/`](../../.github/benchmark-dashboard/app/), [`favicon.svg`](../../.github/benchmark-dashboard/favicon.svg), [`fonts/`](../../.github/benchmark-dashboard/fonts/), and [`torsion-audio-lockup.svg`](../../.github/benchmark-dashboard/torsion-audio-lockup.svg) to `gh-pages:dev/bench/` before the first CI run if you want the Scyclone layout instead of the action default. See the [dashboard README](../../.github/benchmark-dashboard/README.md).
 
 ## Local benchmark run
 
