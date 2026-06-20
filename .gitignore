@@ -1,7 +1,6 @@
 # Dependencies
 modules/RnboExport/
 modules/onnxruntime/
-modules/onnxruntime-1.14.1-win-x86_64_Debug
 
 # Build
 cmake-build*

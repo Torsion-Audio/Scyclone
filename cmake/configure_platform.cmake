@@ -15,5 +15,5 @@ endif()
 
 # MSVC runtime linking
 if(MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>") #static linking runtime library in Windows (for onnxruntime)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL") # match ONNX Runtime binaries built with the DLL CRT
 endif()

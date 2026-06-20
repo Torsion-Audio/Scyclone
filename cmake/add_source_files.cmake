@@ -23,12 +23,14 @@ file(GLOB_RECURSE SOURCE_DIRS LIST_DIRECTORIES true
 list(APPEND SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/source)
 
 # Add include directories for all directories found in 'source'
+if(NOT SCYCLONE_ONNXRUNTIME_INCLUDE_DIR)
+    set(SCYCLONE_ONNXRUNTIME_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime/include)
+endif()
+
 target_include_directories(${TARGET_NAME} PRIVATE
         ${SOURCE_DIRS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime/include
+        ${SCYCLONE_ONNXRUNTIME_INCLUDE_DIR}
 )
-
-target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime/include)
 
 # Make the folder structure visible in the IDE
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/source PREFIX "source" FILES ${SOURCES})
