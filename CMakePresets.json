@@ -19,7 +19,7 @@
     {
       "name": "release",
       "displayName": "Release (plugin)",
-      "description": "VST3 / Standalone plugin build (required on Windows)",
+      "description": "VST3 / Standalone plugin build",
       "inherits": "ninja",
       "binaryDir": "${sourceDir}/build-release",
       "cacheVariables": {
@@ -96,12 +96,16 @@
     {
       "name": "test",
       "configurePreset": "default",
-      "targets": ["Test"]
+      "targets": [
+        "Test"
+      ]
     },
     {
       "name": "asan-ubsan",
       "configurePreset": "asan-ubsan",
-      "targets": ["Test"],
+      "targets": [
+        "Test"
+      ],
       "condition": {
         "type": "notEquals",
         "lhs": "${hostSystemName}",
@@ -111,7 +115,9 @@
     {
       "name": "asan",
       "configurePreset": "asan",
-      "targets": ["Test"],
+      "targets": [
+        "Test"
+      ],
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -121,7 +127,9 @@
     {
       "name": "tsan",
       "configurePreset": "tsan",
-      "targets": ["Test"],
+      "targets": [
+        "Test"
+      ],
       "condition": {
         "type": "notEquals",
         "lhs": "${hostSystemName}",

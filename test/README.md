@@ -204,33 +204,36 @@ If `ctest -L` is unavailable, use `ctest --label-regex "default"`.
 
 ## CMake presets
 
-Shared presets live in [`CMakePresets.json`](../CMakePresets.json). Machine-specific overrides belong in a gitignored `CMakeUserPresets.json` (see [`CMakeUserPresets.json.example`](../CMakeUserPresets.json.example)).
+Shared presets live in [`CMakePresets.json`](../CMakePresets.json). Machine-specific overrides belong in a gitignored `CMakeUserPresets.json` at the repo root. Windows: [`cmake/windows/CMakeUserPresets.json.example`](../cmake/windows/CMakeUserPresets.json.example) (copied automatically by `configure.ps1`).
 
 | Configure preset | Build dir | Purpose |
 |------------------|-----------|---------|
 | `default` | `build/` | Debug — tests, `ctest`, clangd |
-| `release` | `build-release/` | Release — VST3 / Standalone (required on Windows) |
+| `release` | `build-release/` | Release — VST3 / Standalone plugin |
 | `asan-ubsan` | `build-asan-ubsan/` | Linux/macOS ASan + UBSan (`Test` only) |
 | `asan` | `build-asan/` | Windows MSVC ASan (`Test` only) |
 | `tsan` | `build-tsan/` | Linux/macOS ThreadSanitizer (`Test` only) |
 
 ### Windows (MSVC)
 
-Scyclone on Windows expects **MSVC** (prebuilt ONNX, RNBO, plugin toolchain). Shared presets do not pin a compiler.
+See [docs/maintainer/windows-build.md](../docs/maintainer/windows-build.md) for MSVC toolset requirements and [`cmake/windows/`](../cmake/windows/) helpers.
 
-If **LLVM/Clang is on PATH** (common for clangd) but **`cl.exe` is not** (normal PowerShell), `cmake --preset default` may select Clang and fail (`-fPIC`, Benchmark `-Werror`, etc.). The `release` preset has the same behavior.
-
-1. Open **x64 Native Tools Command Prompt for VS 2022**, or run `vcvars64.bat` in your shell.
-2. Copy `CMakeUserPresets.json.example` → `CMakeUserPresets.json` (repo root). User presets override shared preset names on Windows and set `CMAKE_C_COMPILER` / `CMAKE_CXX_COMPILER` to `cl`.
-3. Configure and build as usual:
+For **tests and Debug/IDE** work (not the shipping plugin build):
 
 ```powershell
-cmake --preset default
-cmake --build --preset test
+.\cmake\windows\configure.ps1
+.\cmake\windows\build.ps1 -BuildPreset test
+ctest --test-dir build -L default --output-on-failure
 
-cmake --preset release
-cmake --build --preset release
+# Windows sanitizer (advisory in CI)
+.\cmake\windows\configure.ps1 -Preset asan
+.\cmake\windows\build.ps1 -BuildPreset asan
+ctest --test-dir build-asan -L default --output-on-failure
+```
 
+For **Release plugin** builds, use the `release` preset — see [windows-build.md](../docs/maintainer/windows-build.md).
+
+```powershell
 # Linux/macOS sanitizer (matches CI — use runtime env vars on Linux for leak detection)
 cmake --preset asan-ubsan
 cmake --build --preset asan-ubsan
@@ -239,11 +242,6 @@ cmake --build --preset asan-ubsan
 #   export UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
 # macOS Apple Clang: omit detect_leaks from ASAN_OPTIONS
 ctest --test-dir build-asan-ubsan -L default --output-on-failure
-
-# Windows sanitizer (advisory in CI)
-cmake --preset asan
-cmake --build --preset asan
-ctest --test-dir build-asan -L default --output-on-failure
 ```
 
 MSan and the macOS Homebrew leak probe are not in CMakePresets.json — see [docs/maintainer/TESTING_SANITIZERS.md](../docs/maintainer/TESTING_SANITIZERS.md).
