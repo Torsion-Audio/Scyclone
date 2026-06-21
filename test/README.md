@@ -204,7 +204,7 @@ If `ctest -L` is unavailable, use `ctest --label-regex "default"`.
 
 ## CMake presets
 
-Shared presets live in [`CMakePresets.json`](../CMakePresets.json). Machine-specific overrides belong in a gitignored `CMakeUserPresets.json` at the repo root. Windows: [`cmake/windows/CMakeUserPresets.json.example`](../cmake/windows/CMakeUserPresets.json.example) (copied automatically by `configure.ps1`).
+Shared presets live in [`CMakePresets.json`](../CMakePresets.json). Machine-specific overrides belong in a gitignored `CMakeUserPresets.json` at the repo root. Windows IDE optional: [`cmake/windows/CMakeUserPresets.json.example`](../cmake/windows/CMakeUserPresets.json.example) (`windows-release` / `windows-default`).
 
 | Configure preset | Build dir | Purpose |
 |------------------|-----------|---------|
