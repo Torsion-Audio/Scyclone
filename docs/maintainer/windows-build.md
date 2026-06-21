@@ -1,18 +1,29 @@
 # Windows build
 
-Scyclone on Windows requires **MSVC** (ONNX Runtime and RNBO). Shared presets in `CMakePresets.json` do not pin a toolset — use the helpers below (or the IDE presets) so configure picks **14.51** from normal PowerShell and can install it if missing. They load `vcvars64 -vcvars_ver=14.51` and pass explicit **`cl`** paths.
+Scyclone on Windows requires **MSVC 14.51** (v143, Visual Studio 2026) to link [anira-project/backends](https://github.com/anira-project/backends) ONNX Runtime. Shared CMake presets inherit a Windows-only toolchain that bakes include/lib paths from a generated snapshot — plain `cmake --build` works after the first configure.
 
-**Toolset:** MSVC **14.51** (v143, Visual Studio 2026). Needed to link [anira-project/backends](https://github.com/anira-project/backends) ONNX. If it is missing, `configure.ps1` can offer to install **Build Tools for Visual Studio 2026**.
+## First-time setup
 
 ```powershell
-.\cmake\windows\configure.ps1 -Preset release
-.\cmake\windows\build.ps1 -BuildPreset release
+.\cmake\windows\configure.ps1 -Preset release   # plugin
+# or
+.\cmake\windows\configure.ps1                   # Debug / tests
 ```
 
-After the first `configure.ps1`, builds can use presets directly (`cmake --build --preset release`) from a shell with the same MSVC env; `build.ps1` loads that for you. Re-configure with `configure.ps1` (not bare `cmake --preset`) to keep toolset **14.51** pinned.
+`configure.ps1` installs the MSVC toolset if missing, runs `vcvars64 -vcvars_ver=14.51`, writes `cmake/windows/generated/msvc-env.cmake`, and configures the chosen preset.
+
+## Day-to-day builds
+
+After configure, use normal CMake preset commands from any shell (no Developer Prompt, no build wrapper):
+
+```powershell
+cmake --build --preset release    # VST3 + Standalone
+cmake --build --preset test       # Test target only
+ctest --test-dir build -L default --output-on-failure
+```
+
+Re-run `configure.ps1` (not bare `cmake --preset`) when changing presets, toolset version, or after a VS update.
 
 Output: `build-release/Scyclone_artefacts/Release/` (VST3 and Standalone).
-
-**IDE:** copy [`CMakeUserPresets.json.example`](../../cmake/windows/CMakeUserPresets.json.example) to `CMakeUserPresets.json` at the repo root; use presets `windows-release` or `windows-default`.
 
 Debug, tests, and sanitizers: [test/README.md](../../test/README.md).

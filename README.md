@@ -54,7 +54,7 @@ Built plugins are under `build-release/Scyclone_artefacts/Release/` (VST3 and St
 
 **Linux:** The commands above apply as-is.
 
-**Windows:** MSVC is required — use [`cmake/windows/configure.ps1`](cmake/windows/configure.ps1) and [`cmake/windows/build.ps1`](cmake/windows/build.ps1). See [Windows build notes](docs/maintainer/windows-build.md).
+**Windows:** MSVC 14.51 is required. Run [`cmake/windows/configure.ps1`](cmake/windows/configure.ps1) once, then use the same `cmake --preset` / `cmake --build --preset` commands as other platforms. See [Windows build notes](docs/maintainer/windows-build.md).
 
 ## References
 
