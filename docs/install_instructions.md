@@ -14,7 +14,7 @@ Extract the archive and copy the formats you need:
 
 ### Own build
 
-If you build the plugins yourself, binaries are under `Scyclone/cmake-build/Scyclone_artefacts/Release/` (or `build/` if you used `-B build`):
+If you build the plugins yourself with the `release` preset, binaries are under `Scyclone/build-release/Scyclone_artefacts/Release/`:
 
 | Format | Path |
 |--------|------|
@@ -39,6 +39,6 @@ C:\Program Files\Common Files\VST3\
 | Source | Path |
 |--------|------|
 | Downloaded release | `path\to\extracted\Scyclone.vst3` |
-| Own build | `Scyclone\cmake-build\Scyclone_artefacts\Release\VST3\Scyclone.vst3` |
+| Own build | `Scyclone\build-release\Scyclone_artefacts\Release\VST3\Scyclone.vst3` |
 
 The standalone `.exe` and `Scyclone Installer.exe` can be run from any location after extraction.

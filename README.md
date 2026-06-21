@@ -41,20 +41,29 @@ Prerequisites: CMake 3.21+, Ninja, and a C++17 toolchain.
 git clone https://github.com/Torsion-Audio/Scyclone
 cd Scyclone
 git submodule update --init --recursive
+```
 
+**Linux / macOS** — configure and build the release plugin:
+
+```bash
 cmake --preset release
 cmake --build --preset release
 ```
+
+**Windows** — MSVC 14.51 ([Windows build notes](docs/maintainer/windows-build.md)):
+
+```powershell
+.\cmake\windows\configure.ps1 -Preset release
+cmake --build --preset release
+```
+
+On Windows, use [`configure.ps1`](cmake/windows/configure.ps1) for configure and `cmake --build --preset …` for day-to-day builds. Re-run `configure.ps1` (not bare `cmake --preset`) when changing presets or after a VS update.
 
 The first configure automatically downloads and statically links ONNX Runtime from [anira-project/backends](https://github.com/anira-project/backends).
 
 Built plugins are under `build-release/Scyclone_artefacts/Release/` (VST3 and Standalone; AU on macOS).
 
 **macOS:** Optional gitignored `CMakeUserPresets.json` at the repo root with `"CMAKE_OSX_ARCHITECTURES": "arm64"` or `"x86_64"` in the release preset’s `cacheVariables`. AU has not been tested with Logic yet.
-
-**Linux:** The commands above apply as-is.
-
-**Windows:** MSVC 14.51 is required. Run [`cmake/windows/configure.ps1`](cmake/windows/configure.ps1) once, then use the same `cmake --preset` / `cmake --build --preset` commands as other platforms. See [Windows build notes](docs/maintainer/windows-build.md).
 
 ## References
 

@@ -27,3 +27,7 @@ Re-run `configure.ps1` (not bare `cmake --preset`) when changing presets, toolse
 Output: `build-release/Scyclone_artefacts/Release/` (VST3 and Standalone).
 
 Debug, tests, and sanitizers: [test/README.md](../../test/README.md).
+
+## CI
+
+GitHub Actions loads vcvars via [`.github/actions/setup-msvc`](../../.github/actions/setup-msvc/action.yml). The Windows toolchain detects `$LIB`/`$INCLUDE` and skips the generated snapshot — no `configure.ps1` or interactive prompts in CI.
