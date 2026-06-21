@@ -7,7 +7,7 @@
   },
   "configurePresets": [
     {
-      "name": "default",
+      "name": "windows-default",
       "displayName": "Debug (MSVC cl, Windows)",
       "inherits": "default",
       "condition": {
@@ -21,7 +21,7 @@
       }
     },
     {
-      "name": "release",
+      "name": "windows-release",
       "displayName": "Release (MSVC cl, Windows)",
       "inherits": "release",
       "condition": {
@@ -33,6 +33,16 @@
         "CMAKE_C_COMPILER": "cl",
         "CMAKE_CXX_COMPILER": "cl"
       }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-default",
+      "configurePreset": "windows-default"
+    },
+    {
+      "name": "windows-release",
+      "configurePreset": "windows-release"
     }
   ]
 }
