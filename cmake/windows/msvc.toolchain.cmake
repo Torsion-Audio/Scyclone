@@ -1,6 +1,6 @@
 # Windows MSVC toolchain for Ninja builds.
 #
-# Local dev: cmake/windows/generated/msvc-env.cmake from configure.ps1 bakes include/lib
+# Local dev: cmake/windows/generated/msvc-env.cmake from ensure-msvc.ps1 bakes include/lib
 # paths so cmake --build works without vcvars in every shell.
 #
 # CI: when LIB is already set (e.g. setup-msvc / GITHUB_ENV), skip the snapshot and let
@@ -53,5 +53,5 @@ elseif(DEFINED ENV{INCLUDE} AND NOT "$ENV{INCLUDE}" STREQUAL "")
 else()
     message(FATAL_ERROR
         "Missing ${_scyclone_msvc_env} and no MSVC environment detected.\n"
-        "Run .\\cmake\\windows\\configure.ps1 once to install/pin MSVC and generate the environment snapshot.")
+        "Run .\\cmake\\windows\\ensure-msvc.ps1 once to install/pin MSVC and generate the environment snapshot.")
 endif()

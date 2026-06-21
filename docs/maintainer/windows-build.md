@@ -1,28 +1,27 @@
 # Windows build
 
-Scyclone on Windows requires **MSVC 14.51** (v143, Visual Studio 2026) to link [anira-project/backends](https://github.com/anira-project/backends) ONNX Runtime. Shared CMake presets inherit a Windows-only toolchain that bakes include/lib paths from a generated snapshot — plain `cmake --build` works after the first configure.
+Scyclone on Windows requires **MSVC 14.51** (v143, Visual Studio 2026) to link [anira-project/backends](https://github.com/anira-project/backends) ONNX Runtime. Shared CMake presets inherit a Windows-only toolchain that reads a generated environment snapshot — plain `cmake --preset` and `cmake --build` work like on Linux and macOS after bootstrap.
 
-## First-time setup
+## Bootstrap (once per machine, or after a VS update)
 
 ```powershell
-.\cmake\windows\configure.ps1 -Preset release   # plugin
-# or
-.\cmake\windows\configure.ps1                   # Debug / tests
+.\cmake\windows\ensure-msvc.ps1
 ```
 
-`configure.ps1` installs the MSVC toolset if missing, runs `vcvars64 -vcvars_ver=14.51`, writes `cmake/windows/generated/msvc-env.cmake`, and configures the chosen preset.
+`ensure-msvc.ps1` installs the MSVC toolset if missing, runs `vcvars64 -vcvars_ver=14.51`, and writes `cmake/windows/generated/msvc-env.cmake`. It does **not** run CMake.
 
-## Day-to-day builds
-
-After configure, use normal CMake preset commands from any shell (no Developer Prompt, no build wrapper):
+## Configure and build
 
 ```powershell
-cmake --build --preset release    # VST3 + Standalone
-cmake --build --preset test       # Test target only
+cmake --preset release          # plugin
+cmake --build --preset release
+
+cmake --preset default          # Debug / tests
+cmake --build --preset test
 ctest --test-dir build -L default --output-on-failure
 ```
 
-Re-run `configure.ps1` (not bare `cmake --preset`) when changing presets, toolset version, or after a VS update.
+Re-run `ensure-msvc.ps1` only after a Visual Studio or toolset update. Switching presets uses normal `cmake --preset …`.
 
 Output: `build-release/Scyclone_artefacts/Release/` (VST3 and Standalone).
 
@@ -30,4 +29,4 @@ Debug, tests, and sanitizers: [test/README.md](../../test/README.md).
 
 ## CI
 
-GitHub Actions loads vcvars via [`.github/actions/setup-msvc`](../../.github/actions/setup-msvc/action.yml). The Windows toolchain detects `$LIB`/`$INCLUDE` and skips the generated snapshot — no `configure.ps1` or interactive prompts in CI.
+GitHub Actions loads vcvars via [`.github/actions/setup-msvc`](../../.github/actions/setup-msvc/action.yml). The Windows toolchain detects `$LIB`/`$INCLUDE` and skips the generated snapshot — no `ensure-msvc.ps1` or interactive prompts in CI.

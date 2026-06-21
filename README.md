@@ -53,11 +53,12 @@ cmake --build --preset release
 **Windows** — MSVC 14.51 ([Windows build notes](docs/maintainer/windows-build.md)):
 
 ```powershell
-.\cmake\windows\configure.ps1 -Preset release
+.\cmake\windows\ensure-msvc.ps1
+cmake --preset release
 cmake --build --preset release
 ```
 
-On Windows, use [`configure.ps1`](cmake/windows/configure.ps1) for configure and `cmake --build --preset …` for day-to-day builds. Re-run `configure.ps1` (not bare `cmake --preset`) when changing presets or after a VS update.
+Run [`ensure-msvc.ps1`](cmake/windows/ensure-msvc.ps1) once after clone (or after a VS update); use `cmake --preset` / `cmake --build --preset` for everything else.
 
 The first configure automatically downloads and statically links ONNX Runtime from [anira-project/backends](https://github.com/anira-project/backends).
 

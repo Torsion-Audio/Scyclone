@@ -216,17 +216,18 @@ Shared presets live in [`CMakePresets.json`](../CMakePresets.json). Machine-spec
 
 ### Windows (MSVC)
 
-See [docs/maintainer/windows-build.md](../docs/maintainer/windows-build.md) for MSVC toolset requirements. Run [`cmake/windows/configure.ps1`](../cmake/windows/configure.ps1) once, then use the shared presets below.
+See [docs/maintainer/windows-build.md](../docs/maintainer/windows-build.md) for MSVC toolset requirements. Run [`cmake/windows/ensure-msvc.ps1`](../cmake/windows/ensure-msvc.ps1) once, then use the shared presets below.
 
 For **tests and Debug/IDE** work (not the shipping plugin build):
 
 ```powershell
-.\cmake\windows\configure.ps1
+.\cmake\windows\ensure-msvc.ps1
+cmake --preset default
 cmake --build --preset test
 ctest --test-dir build -L default --output-on-failure
 
 # Windows sanitizer (advisory in CI)
-.\cmake\windows\configure.ps1 -Preset asan
+cmake --preset asan
 cmake --build --preset asan
 ctest --test-dir build-asan -L default --output-on-failure
 ```
@@ -234,7 +235,7 @@ ctest --test-dir build-asan -L default --output-on-failure
 For **Release plugin** builds:
 
 ```powershell
-.\cmake\windows\configure.ps1 -Preset release
+cmake --preset release
 cmake --build --preset release
 ```
 
@@ -261,7 +262,7 @@ Also see: [docs/maintainer/TESTING_SANITIZERS.md](../docs/maintainer/TESTING_SAN
 
 ## IDE / IntelliSense
 
-After clone, run `cmake --preset default` and `cmake --build --preset test` (on Windows, run [`cmake/windows/configure.ps1`](../cmake/windows/configure.ps1) first). Squiggles on test includes before configure are normal. With clangd, [`.clangd`](../.clangd) picks up `build/compile_commands.json` automatically. If you use the Microsoft C/C++ extension instead, set `C_Cpp.default.compileCommands` locally to `build/compile_commands.json` (optional, IntelliSense-only — ctest is the source of truth).
+After clone, run `cmake --preset default` and `cmake --build --preset test` (on Windows, run [`cmake/windows/ensure-msvc.ps1`](../cmake/windows/ensure-msvc.ps1) first). Squiggles on test includes before configure are normal. With clangd, [`.clangd`](../.clangd) picks up `build/compile_commands.json` automatically. If you use the Microsoft C/C++ extension instead, set `C_Cpp.default.compileCommands` locally to `build/compile_commands.json` (optional, IntelliSense-only — ctest is the source of truth).
 
 CMake include roots for the `Test` target: `test/torsion`, `test/torsion/audio`, `test/torsion/processors`, `test/torsion/gtest`, `test/scyclone/resampling`, `test/scyclone/mixer`, plus plugin source includes from the main target.
 
