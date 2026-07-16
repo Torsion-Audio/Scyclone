@@ -159,7 +159,10 @@ export function initChart(canvas, meta, dataset, color, block, benchName, {
         if (url) window.open(url, '_blank');
       },
       onHover(_evt, active) {
-        if (active.length === 0) return;
+        if (active.length === 0) {
+          chartSync.clearAll();
+          return;
+        }
         const index = active[0]._index;
         chartSync.setMetricHover(benchName);
         chartSync.setCommitHover(dataset[index].commit.id);

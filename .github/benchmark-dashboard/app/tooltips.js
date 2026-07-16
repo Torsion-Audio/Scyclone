@@ -195,9 +195,15 @@ export function createChartCommitTooltip() {
   }
 
   function update(tooltipModel, chart, ctx) {
-    if (!tooltipModel || tooltipModel.opacity <= 0) return;
+    if (!tooltipModel || tooltipModel.opacity <= 0) {
+      hide();
+      return;
+    }
     const index = resolveTooltipIndex(tooltipModel, chart);
-    if (index == null) return;
+    if (index == null) {
+      hide();
+      return;
+    }
     showAt({ chart, index, ...ctx });
   }
 
