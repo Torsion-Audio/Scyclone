@@ -175,6 +175,32 @@ main {
   width: 100%;
 }
 
+.dashboard-state {
+  max-width: 46rem;
+  padding: 1.5rem 1.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.dashboard-state__title {
+  margin: 0 0 0.65rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dashboard-state__message,
+.dashboard-state__detail {
+  margin: 0;
+  color: var(--text-label);
+}
+
+.dashboard-state__detail {
+  margin-top: 0.75rem;
+  color: var(--muted);
+}
+
 .content-section {
   margin-bottom: 44px;
   padding-bottom: 0;

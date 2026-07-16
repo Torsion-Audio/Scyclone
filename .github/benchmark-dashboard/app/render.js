@@ -24,6 +24,45 @@ import { styledTooltip } from './tooltips.js';
 
 const chartAnchors = new Map();
 
+function renderDashboardState(main, title, message, detail = '') {
+  if (!main) return;
+  main.replaceChildren();
+
+  const section = document.createElement('section');
+  section.className = 'content-section dashboard-state';
+
+  const heading = document.createElement('h2');
+  heading.className = 'dashboard-state__title';
+  heading.textContent = title;
+  section.appendChild(heading);
+
+  const body = document.createElement('p');
+  body.className = 'dashboard-state__message';
+  body.textContent = message;
+  section.appendChild(body);
+
+  if (detail) {
+    const note = document.createElement('p');
+    note.className = 'dashboard-state__detail';
+    note.textContent = detail;
+    section.appendChild(note);
+  }
+
+  main.appendChild(section);
+}
+
+function isBenchmarkDataShapeValid(data) {
+  return Boolean(
+    data
+    && typeof data === 'object'
+    && typeof data.repoUrl === 'string'
+    && data.repoUrl.length > 0
+    && typeof data.lastUpdate === 'string'
+    && data.entries
+    && typeof data.entries === 'object',
+  );
+}
+
 function benchChartId(benchName) {
   return 'bench-chart-' + benchKey(benchName);
 }
@@ -656,18 +695,31 @@ export function renderBenchSet(benchSet, main) {
 
 export function initPageData() {
   const data = window.BENCHMARK_DATA;
+  const main = document.getElementById('main');
   const methodologyTip = document.getElementById('methodology-tip');
-  styledTooltip.bind(
-    methodologyTip,
-    'How these benchmarks are measured\n\n'
-    + 'Plugin performance\n'
-    + 'macOS arm64 CI · 44.1 kHz · 512 samples\n'
-    + 'Prepare, Process, Editor\n'
-    + 'Each point = mean of 5 repetitions\n\n'
-    + 'Build\n'
-    + 'Wall-clock Release build of the Benchmark target\n'
-    + 'Measured once per CI run',
-  );
+  if (methodologyTip) {
+    styledTooltip.bind(
+      methodologyTip,
+      'How these benchmarks are measured\n\n'
+      + 'Plugin performance\n'
+      + 'macOS arm64 CI · 44.1 kHz · 512 samples\n'
+      + 'Prepare, Process, Editor\n'
+      + 'Each point = mean of 5 repetitions\n\n'
+      + 'Build\n'
+      + 'Wall-clock Release build of the Benchmark target\n'
+      + 'Measured once per CI run',
+    );
+  }
+
+  if (!isBenchmarkDataShapeValid(data)) {
+    renderDashboardState(
+      main,
+      'Benchmark data unavailable',
+      'This dashboard needs a valid data.js file before it can render benchmark history.',
+      'For local preview, copy data.example.js to data.js and serve this folder over HTTP.',
+    );
+    return [];
+  }
 
   document.getElementById('last-update').textContent =
     new Date(data.lastUpdate).toLocaleString(undefined, {
