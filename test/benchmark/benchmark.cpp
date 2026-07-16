@@ -107,4 +107,6 @@ BENCHMARK_DEFINE_F(ProcessorFixture, BM_editor)(benchmark::State &state)
 }
 BENCHMARK_REGISTER_F(ProcessorFixture, BM_editor)->MinTime(2.0);
 
+} // namespace
+
 BENCHMARK_MAIN();
