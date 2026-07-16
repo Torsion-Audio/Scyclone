@@ -7,7 +7,7 @@ macOS-only Google Benchmark job with charts and step summaries via [github-actio
 [`.github/workflows/benchmark.yml`](../../.github/workflows/benchmark.yml) runs on:
 
 - `push` to `develop`: updates `gh-pages` charts + step summary
-- `pull_request` targeting `develop`: step summary only (no `gh-pages` push)
+- `pull_request` targeting `develop`: read-only step summary only (no `gh-pages` push)
 
 Composite actions: [`setup-macos-juce`](../../.github/actions/setup-macos-juce/action.yml), [`set-parallel-build-level`](../../.github/actions/set-parallel-build-level/action.yml).
 
@@ -48,6 +48,8 @@ Defined in [`test/benchmark/benchmark.cpp`](../../test/benchmark/benchmark.cpp) 
 
 **Custom styling:** edit [`styles.css`](../../.github/benchmark-dashboard/styles.css). App logic lives in [`app/`](../../.github/benchmark-dashboard/app/). The action only auto-generates `index.html` when it is missing; after you seed the Scyclone layout, CI leaves it alone and updates `data.js` only.
 
+The public URL stays broken until `gh-pages` is initialized and `dev/bench/` has been seeded. After that, any later layout edits still need a manual copy to `gh-pages:dev/bench/`.
+
 Setup and local preview: [`.github/benchmark-dashboard/README.md`](../../.github/benchmark-dashboard/README.md).
 
 ## PR / CI feedback
@@ -62,6 +64,14 @@ To enable regression alerts later, set `fail-on-alert: true` and/or `comment-on-
 
 1. Enable GitHub Pages from the `gh-pages` branch (repo **Settings → Pages**).
 2. Copy [`.github/benchmark-dashboard/index.html`](../../.github/benchmark-dashboard/index.html), [`styles.css`](../../.github/benchmark-dashboard/styles.css), [`app/`](../../.github/benchmark-dashboard/app/), [`favicon.svg`](../../.github/benchmark-dashboard/favicon.svg), [`fonts/`](../../.github/benchmark-dashboard/fonts/), and [`torsion-audio-lockup.svg`](../../.github/benchmark-dashboard/torsion-audio-lockup.svg) to `gh-pages:dev/bench/` before the first CI run if you want the Scyclone layout instead of the action default. See the [dashboard README](../../.github/benchmark-dashboard/README.md).
+
+## Layout update checklist
+
+After merging dashboard layout changes to `develop`:
+
+1. Copy the updated layout assets from [`.github/benchmark-dashboard/`](../../.github/benchmark-dashboard/) to `gh-pages:dev/bench/`.
+2. Push the `gh-pages` branch update.
+3. Open the public dashboard URL and confirm the layout changed as expected.
 
 ## Local benchmark run
 
