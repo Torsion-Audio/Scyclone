@@ -1,5 +1,4 @@
 # <img style="float: left;" src="assets/pictures/logo.png" width="40" /> &nbsp; SCYCLONE
-[![Build & Test](https://github.com/Torsion-Audio/Scyclone/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/Torsion-Audio/Scyclone/actions/workflows/build-and-test.yml) [![Sanitizers](https://github.com/Torsion-Audio/Scyclone/actions/workflows/sanitizers.yml/badge.svg)](https://github.com/Torsion-Audio/Scyclone/actions/workflows/sanitizers.yml)
 ![interface](assets/pictures/interface.png)
 
 **Scyclone** is an audio plugin that utilizes **neural timbre transfer** technology to offer a new approach to audio production. The plugin builds upon [RAVE](https://github.com/acids-ircam/RAVE) methodology, a realtime audio variational auto encoder, facilitating neural timbre transfer in both single and couple inference mode. <br /><br />
@@ -34,37 +33,38 @@ We have provided two pre-trained models (presets) accessible under **assets/mode
 
 Detailed instructions can be found in the [Installation Guide](docs/install_instructions.md).
 
-## Build instruction
+## Build from source
 
-Build with CMake presets ([`CMakePresets.json`](CMakePresets.json)):
+Prerequisites: CMake 3.21+, Ninja, and a C++17 toolchain.
 
 ```bash
-# clone the repository
 git clone https://github.com/Torsion-Audio/Scyclone
-cd Scyclone/
-
-# initialize and set up submodules
+cd Scyclone
 git submodule update --init --recursive
+```
 
-# Tests and IDE (Debug) — also generates compile_commands.json for clangd
-cmake --preset default
-cmake --build --preset test
-ctest --test-dir build -L default --output-on-failure
+**Linux / macOS** — configure and build the release plugin:
 
-# Plugin (Release) — required on Windows for VST3 / Standalone
+```bash
 cmake --preset release
 cmake --build --preset release
 ```
 
-See [test/README.md](test/README.md) for the full test layout, sanitizer presets, and calibration probes.
+**Windows** — MSVC 14.51 ([Windows build notes](docs/maintainer/windows-build.md)):
 
-**CI:** Pull requests to `develop` require [Build & Test](.github/workflows/build-and-test.yml) and [Sanitizers](.github/workflows/sanitizers.yml) (`sanitizers-required`: Linux/macOS ASan+UBSan, Linux/macOS TSan). Advisory sanitizer jobs are non-blocking — see [Sanitizers (advisory)](.github/workflows/sanitizers-advisory.yml) and [TESTING_SANITIZERS.md](docs/maintainer/TESTING_SANITIZERS.md). Pushes to `develop` run the same validation (no downloadable artifacts). To release signed builds, push a version tag — see [Release process](docs/maintainer/release.md).
+```powershell
+.\cmake\windows\ensure-msvc.ps1
+cmake --preset release
+cmake --build --preset release
+```
 
-**Notes:**
-- The onnx library is now linked statically. No more need to download the onnx library via homebrew or via the github repository. macOS distribution builds are code-signed with Developer ID and notarized in CI.
-- On Windows, **Release** is required for the plugin; the **`default`** preset (Debug) is for tests and IDE tooling.
-- On macOS, set `CMAKE_OSX_ARCHITECTURES` (`arm64` or `x86_64`) in a local, gitignored [`CMakeUserPresets.json`](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html#additional-vendors) if needed.
-- The AU plugin has not been tested with Logic yet. Logic support will come in futher updates.
+Run [`ensure-msvc.ps1`](cmake/windows/ensure-msvc.ps1) once after clone (or after a VS update); use `cmake --preset` / `cmake --build --preset` for everything else.
+
+The first configure automatically downloads and statically links ONNX Runtime from [anira-project/backends](https://github.com/anira-project/backends).
+
+Built plugins are under `build-release/Scyclone_artefacts/Release/` (VST3 and Standalone; AU on macOS).
+
+**macOS:** Optional gitignored `CMakeUserPresets.json` at the repo root with `"CMAKE_OSX_ARCHITECTURES": "arm64"` or `"x86_64"` in the release preset’s `cacheVariables`. AU has not been tested with Logic yet.
 
 ## References
 

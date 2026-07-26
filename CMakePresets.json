@@ -7,10 +7,23 @@
       "generator": "Ninja"
     },
     {
+      "name": "windows-msvc",
+      "hidden": true,
+      "toolchainFile": "${sourceDir}/cmake/windows/msvc.toolchain.cmake",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
       "name": "default",
       "displayName": "Debug (tests + IDE)",
       "description": "Daily dev: Test target and compile_commands.json for clangd",
-      "inherits": "ninja",
+      "inherits": [
+        "ninja",
+        "windows-msvc"
+      ],
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
@@ -19,8 +32,11 @@
     {
       "name": "release",
       "displayName": "Release (plugin)",
-      "description": "VST3 / Standalone plugin build (required on Windows)",
-      "inherits": "ninja",
+      "description": "VST3 / Standalone plugin build",
+      "inherits": [
+        "ninja",
+        "windows-msvc"
+      ],
       "binaryDir": "${sourceDir}/build-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
@@ -53,7 +69,10 @@
       "name": "asan",
       "displayName": "ASan MSVC (Test)",
       "description": "Windows MSVC sanitizer build — Test target only (UBSan not supported)",
-      "inherits": "sanitize-base",
+      "inherits": [
+        "sanitize-base",
+        "windows-msvc"
+      ],
       "binaryDir": "${sourceDir}/build-asan",
       "cacheVariables": {
         "SCYCLONE_SANITIZERS": "ASAN"
@@ -96,12 +115,16 @@
     {
       "name": "test",
       "configurePreset": "default",
-      "targets": ["Test"]
+      "targets": [
+        "Test"
+      ]
     },
     {
       "name": "asan-ubsan",
       "configurePreset": "asan-ubsan",
-      "targets": ["Test"],
+      "targets": [
+        "Test"
+      ],
       "condition": {
         "type": "notEquals",
         "lhs": "${hostSystemName}",
@@ -111,7 +134,9 @@
     {
       "name": "asan",
       "configurePreset": "asan",
-      "targets": ["Test"],
+      "targets": [
+        "Test"
+      ],
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -121,7 +146,9 @@
     {
       "name": "tsan",
       "configurePreset": "tsan",
-      "targets": ["Test"],
+      "targets": [
+        "Test"
+      ],
       "condition": {
         "type": "notEquals",
         "lhs": "${hostSystemName}",
