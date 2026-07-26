@@ -59,13 +59,13 @@ Before moving an advisory job into `sanitizers.yml` and requiring it in branch p
 
 **MSan requires full link instrumentation** — every object in the link must be MSan-instrumented (including FetchContent **gtest**; see [`setup_tests_and_benchmarks.cmake`](../../cmake/setup_tests_and_benchmarks.cmake)). This does **not** apply to standalone LSan (`LEAK` preset) or to macOS `detect_leaks` via ASan.
 
-**MSan + ONNX stub** — prebuilt ORT is not MSan-instrumented. `MEMORY` forces stub ([`InferenceThreadStub.cpp`](../../source/dsp/onnx/InferenceThreadStub.cpp)); `PluginIntegrationTest` skips under `SCYCLONE_ONNX_STUB`.
+**MSan + inference stub** — prebuilt ORT is not MSan-instrumented. `MEMORY` forces `SCYCLONE_INFERENCE_STUB` and links [`SanitizerInferenceBackend`](../../source/dsp/onnx/SanitizerInferenceBackend.cpp) instead of Anira/ORT. `PluginIntegrationTest` runs with simulated latency; only `AniraModelValidationTest` skips. FetchContent **gtest** links `scyclone_sanitizer_flags` for MSan (see [`setup_tests_and_benchmarks.cmake`](../../cmake/setup_tests_and_benchmarks.cmake)).
 
 **Linux ASAN_UBSAN + PluginIntegrationTest** — prebuilt ORT + Linux UBSan hits invalid-vptr in ORT during model load; `PluginIntegrationTest` skips (`SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST`). macOS Apple-Clang ASan still runs it.
 
-**Windows MSVC ASan** — `ASAN` forces the same ONNX stub (LNK2038/LNK1319 without it); DSP/resampling tests run, `PluginIntegrationTest` skips.
+**Windows MSVC ASan** — `ASAN` forces the same inference stub (LNK2038/LNK1319 without it); DSP/resampling tests run, `PluginIntegrationTest` runs with `SanitizerInferenceBackend`.
 
-**Homebrew Clang jobs** — pin **`llvm@18`** (unpinned `llvm` 22 breaks JUCE 7.0.5). ONNX stub is **automatic** when `CMAKE_CXX_COMPILER_ID` is `Clang` (not `AppleClang`) on macOS with `ASAN` or `ASAN_UBSAN` — prebuilt ORT does not link with Homebrew Clang.
+**Homebrew Clang jobs** — pin **`llvm@18`** (unpinned `llvm` 22 breaks JUCE 7.0.5). Inference stub is **automatic** when `CMAKE_CXX_COMPILER_ID` is `Clang` (not `AppleClang`) on macOS with `ASAN` or `ASAN_UBSAN` — prebuilt ORT does not link with Homebrew Clang.
 
 **SNR floors** — Linux/macOS ASan jobs run `PrintSnrMeasurements` (`continue-on-error`) to calibrate per-OS floors in [`ResamplingSignalUtils.h`](../../test/scyclone/resampling/ResamplingSignalUtils.h). Procedure: [test/scyclone/calibration/README.md](../../test/scyclone/calibration/README.md).
 

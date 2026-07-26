@@ -5,7 +5,7 @@
 Run when:
 
 - The libsamplerate / resampler configuration changes
-- `SimulatedOnnxProcessor` or `InferenceThread` model latency changes
+- `SimulatedOnnxProcessor` or Anira ONNX latency (`kOnnxInferenceLatencySamples` in `OnnxInferenceLatency.h`) changes
 - Production chain tests fail and you need to distinguish measurement drift from real regressions
 
 Configure first with `cmake --preset default` and `cmake --build --preset test` (see [test/README.md](../README.md)).
