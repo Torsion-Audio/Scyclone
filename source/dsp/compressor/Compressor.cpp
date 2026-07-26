@@ -25,7 +25,7 @@ void Compressor::prepare(const juce::dsp::ProcessSpec &spec) {
 void Compressor::processBlock(juce::AudioBuffer<float> &buffer){
     envelope.processBlock(buffer);
     
-    if (parameter.autoMakeUpGain){
+    if ((parameter).isAutoMakeUpGainEnabled){
         copyAutoMakeUpBuffer(autoMakeUpGain.inputBuffer, buffer, true);
         autoMakeUpGain.inputGain = autoMakeUpGain.inputBuffer.getRMSLevel(0, 0, autoMakeUpGain.inputBuffer.getNumSamples());
     }
@@ -37,18 +37,18 @@ void Compressor::processBlock(juce::AudioBuffer<float> &buffer){
                     float controlVoltage;
                     controlVoltage = (1/parameter.ratio-1)*(utils::amp2dB(envelope.getSample((unsigned long) j))-parameter.threshold);
                     controlVoltage = std::max(controlVoltage, (-parameter.range));
-                    if (! parameter.autoMakeUpGain) buffer.setSample(i, j, utils::dB2amp(controlVoltage + parameter.makeUpGain)*buffer.getSample(i, j));
+                    if (! (parameter).isAutoMakeUpGainEnabled) buffer.setSample(i, j, utils::dB2amp(controlVoltage + parameter.makeUpGain)*buffer.getSample(i, j));
                     else buffer.setSample(i, j, utils::dB2amp(controlVoltage)*buffer.getSample(i, j));
                 }
                 else if (2*std::abs(utils::amp2dB(envelope.getSample((unsigned long) j)) - parameter.threshold) <= parameter.knee){
                     float controlVoltage;
                     controlVoltage = ((1/parameter.ratio)-1) * (std::pow(utils::amp2dB(envelope.getSample((unsigned long) j)) - parameter.threshold + parameter.knee/2.f, 2.f)) / (2.f*parameter.knee);
                     controlVoltage = std::max(controlVoltage, (-parameter.range));
-                    if (! parameter.autoMakeUpGain) buffer.setSample(i, j, utils::dB2amp(controlVoltage + parameter.makeUpGain)*buffer.getSample(i, j));
+                    if (! (parameter).isAutoMakeUpGainEnabled) buffer.setSample(i, j, utils::dB2amp(controlVoltage + parameter.makeUpGain)*buffer.getSample(i, j));
                     else buffer.setSample(i, j, utils::dB2amp(controlVoltage)*buffer.getSample(i, j));
                 }
                 else{
-                    if (! parameter.autoMakeUpGain) buffer.setSample(i, j, utils::dB2amp(parameter.makeUpGain)*buffer.getSample(i, j));
+                    if (! (parameter).isAutoMakeUpGainEnabled) buffer.setSample(i, j, utils::dB2amp(parameter.makeUpGain)*buffer.getSample(i, j));
                 }
             }
             else if (parameter.compType == CompressorType::Expander){
@@ -56,24 +56,24 @@ void Compressor::processBlock(juce::AudioBuffer<float> &buffer){
                     float controlVoltage;
                     controlVoltage = (1/parameter.ratio-1)*(parameter.threshold - utils::amp2dB(envelope.getSample((unsigned long) j)));
                     controlVoltage = std::max(controlVoltage, (-parameter.range));
-                    if (! parameter.autoMakeUpGain) buffer.setSample(i, j, utils::dB2amp(controlVoltage + parameter.makeUpGain)*buffer.getSample(i, j));
+                    if (! (parameter).isAutoMakeUpGainEnabled) buffer.setSample(i, j, utils::dB2amp(controlVoltage + parameter.makeUpGain)*buffer.getSample(i, j));
                     else buffer.setSample(i, j, utils::dB2amp(controlVoltage)*buffer.getSample(i, j));
                 }
                 else if (2*std::abs(utils::amp2dB(envelope.getSample((unsigned long) j)) - parameter.threshold) <= parameter.knee){
                     float controlVoltage;
                     controlVoltage = ((1/parameter.ratio)-1) * (std::pow(parameter.threshold - utils::amp2dB(envelope.getSample((unsigned long) j)) + parameter.knee/2.f, 2.f)) / (2.f*parameter.knee);
                     controlVoltage = std::max(controlVoltage, (-parameter.range));
-                    if (! parameter.autoMakeUpGain) buffer.setSample(i, j, utils::dB2amp(controlVoltage + parameter.makeUpGain)*buffer.getSample(i, j));
+                    if (! (parameter).isAutoMakeUpGainEnabled) buffer.setSample(i, j, utils::dB2amp(controlVoltage + parameter.makeUpGain)*buffer.getSample(i, j));
                     else buffer.setSample(i, j, utils::dB2amp(controlVoltage)*buffer.getSample(i, j));
                 }
                 else{
-                    if (! parameter.autoMakeUpGain) buffer.setSample(i, j, utils::dB2amp(parameter.makeUpGain)*buffer.getSample(i, j));
+                    if (! (parameter).isAutoMakeUpGainEnabled) buffer.setSample(i, j, utils::dB2amp(parameter.makeUpGain)*buffer.getSample(i, j));
                 }
             }
         }
     }
     
-    if (parameter.autoMakeUpGain){
+    if ((parameter).isAutoMakeUpGainEnabled){
         copyAutoMakeUpBuffer(autoMakeUpGain.outputBuffer, buffer, false);
         autoMakeUpGain.outputGain = autoMakeUpGain.outputBuffer.getRMSLevel(0, 0, autoMakeUpGain.outputBuffer.getNumSamples());
 
@@ -147,11 +147,11 @@ float Compressor::getReleaseTime() const {
 }
 
 void Compressor::setAutoMakeUpGain(bool newBool) {
-    parameter.autoMakeUpGain = newBool;
+    (parameter).isAutoMakeUpGainEnabled = newBool;
 }
 
 bool Compressor::getAutoMakeUpGain() const{
-    return parameter.autoMakeUpGain;
+    return (parameter).isAutoMakeUpGainEnabled;
 }
 
 void Compressor::setCompressionTypeIndex(int newCompressionTypeIndex) {
@@ -168,11 +168,11 @@ int Compressor::getCompressionTypeIndex() const {
         return 0;
 }
 
-void Compressor::copyAutoMakeUpBuffer(juce::AudioBuffer<float>& target, juce::AudioBuffer<float>& source, bool input) {
+void Compressor::copyAutoMakeUpBuffer(juce::AudioBuffer<float>& target, juce::AudioBuffer<float>& source, bool isInput) {
     auto writePointer = target.getWritePointer(0);
     for (int channel = 0; channel < source.getNumChannels(); channel++){
         auto readPointer = source.getReadPointer(channel);
-        if (input){
+        if (isInput){
             for (int sample = 0; sample < source.getNumSamples(); sample++){
                 writePointer[autoMakeUpGain.inputBufferIndex] = readPointer[sample];
                 autoMakeUpGain.inputBufferIndex++;

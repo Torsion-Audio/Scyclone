@@ -269,4 +269,4 @@ CMake include roots for the `Test` target: `test/torsion`, `test/torsion/audio`,
 ## Targets
 
 - **Test** — gtest behavioral contracts (this document)
-- **Benchmark** — construction benchmarks; not run by `ctest`
+- **Benchmark** — plugin prepare/process/editor + runner sentinels (`test/benchmark/benchmark.cpp`); not run by `ctest`. See [docs/maintainer/benchmarks.md](../docs/maintainer/benchmarks.md).
