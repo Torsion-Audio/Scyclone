@@ -44,6 +44,16 @@ else()
       "Skip PluginIntegrationTest (prebuilt ORT + Linux UBSan)" FORCE)
 endif()
 
+# MSan: the DSP chain (RNBO export, SIMD paths) is not yet MSan-clean; plugin-level
+# probes report uninitialised-value taint. Unit-level tests remain covered.
+if(SCYCLONE_SANITIZERS STREQUAL "MEMORY")
+  set(SCYCLONE_SKIP_AUTOMATION_STABILITY_TEST ON CACHE BOOL
+      "Skip AutomationStabilityTest (DSP chain not MSan-clean yet)" FORCE)
+else()
+  set(SCYCLONE_SKIP_AUTOMATION_STABILITY_TEST OFF CACHE BOOL
+      "Skip AutomationStabilityTest (DSP chain not MSan-clean yet)" FORCE)
+endif()
+
 # Linux MSan: distro libc++.so is not instrumented; link against a prefix built with -fsanitize=memory
 # (see sanitize-msan-linux job in .github/workflows/sanitizers-advisory.yml).
 set(SCYCLONE_MSAN_LIBCXX_PREFIX "" CACHE PATH

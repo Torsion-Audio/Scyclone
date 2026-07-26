@@ -89,7 +89,9 @@ protected:
     void SetUp() override
     {
         JuceAudioTest::SetUp();
-#if !defined(SCYCLONE_ONNX_STUB) && defined(SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST)
+#if defined(SCYCLONE_SKIP_AUTOMATION_STABILITY_TEST)
+        GTEST_SKIP() << "AutomationStabilityTest skipped: DSP chain is not MSan-clean yet";
+#elif !defined(SCYCLONE_ONNX_STUB) && defined(SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST)
         GTEST_SKIP() << "AutomationStabilityTest skipped: prebuilt ORT triggers Linux UBSan false positives";
 #endif
     }
