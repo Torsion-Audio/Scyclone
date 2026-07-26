@@ -5,15 +5,15 @@
 #include "InferenceThread.h"
 
 InferenceThread::InferenceThread(RaveModel raveModel) : juce::Thread("OnnxInference"), session(nullptr), currentLevel(raveModel){
+    sessionOptions.SetIntraOpNumThreads(1);
+    sessionOptions.SetInterOpNumThreads(1);
+
     modelInputSizeChanged(modelInputSize);
     setInternalModel();
 }
 
 InferenceThread::~InferenceThread() {
-    stopThread(100);
-    while (isThreadRunning()) {
-        juce::Thread::sleep(1);
-    } 
+    stopInferenceThreadAndWait();
     session.release();
 }
 

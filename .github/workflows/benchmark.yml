@@ -64,7 +64,6 @@ jobs:
       - name: run benchmarks
         run: |
           ./build/Benchmark \
-            --benchmark_format=json \
             --benchmark_out=benchmark_result.json \
             --benchmark_out_format=json \
             --benchmark_repetitions=5 \
@@ -177,7 +176,6 @@ jobs:
       - name: run benchmarks
         run: |
           ./build/Benchmark \
-            --benchmark_format=json \
             --benchmark_out=benchmark_result.json \
             --benchmark_out_format=json \
             --benchmark_repetitions=5 \

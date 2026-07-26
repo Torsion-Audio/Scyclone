@@ -240,7 +240,12 @@ void AudioPluginAudioProcessor::prepareDownsampler(const juce::dsp::ProcessSpec 
 
 void AudioPluginAudioProcessor::releaseResources()
 {
-    // Free resources when playback stops.
+    upsamplerOne.reset();
+    upsamplerTwo.reset();
+    downsamplerOne.reset();
+    downsamplerTwo.reset();
+    resample = false;
+
     measurer.reset();
 }
 

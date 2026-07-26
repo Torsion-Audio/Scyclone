@@ -9,6 +9,7 @@ namespace
 {
 constexpr double kSampleRate = 44100.0;
 constexpr int kBlockSize = 512;
+constexpr int kPreRollBlocks = 4;
 
 static void BM_reference_cpu(benchmark::State &state)
 {
@@ -51,6 +52,9 @@ public:
 
     void TearDown(const benchmark::State &) override
     {
+        if (processor != nullptr)
+            processor->releaseResources();
+
         processor.reset();
         gui.reset();
     }
@@ -79,6 +83,11 @@ public:
         processor->prepareToPlay(kSampleRate, kBlockSize);
         buffer.setSize(processor->getTotalNumOutputChannels(), kBlockSize);
         buffer.clear();
+
+        // Warm ONNX inference threads before timing (matches PluginIntegrationTest).
+        juce::MidiBuffer midi;
+        for (int block = 0; block < kPreRollBlocks; ++block)
+            processor->processBlock(buffer, midi);
     }
 
 protected:
