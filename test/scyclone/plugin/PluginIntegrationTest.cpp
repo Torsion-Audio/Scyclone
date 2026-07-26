@@ -29,13 +29,28 @@ TEST_F(PluginIntegrationTest, ReportedLatency_IsPositiveAndIdempotent) {
     proc.releaseResources();
 }
 
+// Why: anira derives ONNX latency from the HostConfig, so a larger host block absorbs more of
+// the block-alignment delay. Ordering property, not a magic number — the measured 48 kHz curve
+// runs 6112 samples at block 32 down to 4096 at block 2048 (see OnnxInferenceLatency.h).
+// Stub-excluded: SanitizerInferenceBackend reports a fixed latency by design.
 #if !defined(SCYCLONE_INFERENCE_STUB)
-TEST_F(PluginIntegrationTest, ReportedLatency_IsBelowLegacyAt48k) {
+TEST_F(PluginIntegrationTest, ReportedLatency_IsMonotonicDecreasingWithHostBlockAt48k) {
     AudioPluginAudioProcessor proc;
-    proc.prepareToPlay(48000.0, 512);
-    EXPECT_GT(proc.getLatencySamples(), 0);
-    EXPECT_LT(proc.getLatencySamples(), 20480);
+
+    proc.prepareToPlay(48000.0, 32);
+    const int latency32 = proc.getLatencySamples();
     proc.releaseResources();
+
+    proc.prepareToPlay(48000.0, 512);
+    const int latency512 = proc.getLatencySamples();
+    proc.releaseResources();
+
+    proc.prepareToPlay(48000.0, 2048);
+    const int latency2048 = proc.getLatencySamples();
+    proc.releaseResources();
+
+    EXPECT_GT(latency32, latency512) << "larger host blocks should reduce block-aligned ONNX delay";
+    EXPECT_GT(latency512, latency2048) << "larger host blocks should reduce block-aligned ONNX delay";
 }
 #endif
 
