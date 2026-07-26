@@ -8,12 +8,20 @@ endif()
 
 include(cmake/setup_onnx_static_ort.cmake)
 
-# Point Anira at Scyclone's downloaded ORT package — skip Anira's own download.
-set(ONNXRUNTIME_ROOTDIR "${SCYCLONE_ONNXRUNTIME_PACKAGE_DIR}" CACHE PATH "" FORCE)
+# Bring-your-own backend: hand Anira the ORT package Scyclone already downloaded (a tree with
+# include/ + lib/) so it skips its own fetch. Anira resolves linkage from ANIRA_<ID>_LINKAGE,
+# falling back to BUILD_SHARED_LIBS; pin it explicitly since Scyclone needs the static ORT.
+set(ANIRA_ONNXRUNTIME_ROOTDIR "${SCYCLONE_ONNXRUNTIME_PACKAGE_DIR}" CACHE PATH "" FORCE)
+set(ANIRA_ONNXRUNTIME_LINKAGE "static" CACHE STRING "" FORCE)
 
+# ONNX Runtime is the only backend Scyclone uses. LiteRT and ExecuTorch default to ON upstream
+# and would pull down further prebuilt archives at configure time.
+set(ANIRA_WITH_ONNXRUNTIME ON CACHE BOOL "" FORCE)
 set(ANIRA_WITH_LIBTORCH OFF CACHE BOOL "" FORCE)
 set(ANIRA_WITH_TFLITE OFF CACHE BOOL "" FORCE)
-set(ANIRA_WITH_ONNXRUNTIME ON CACHE BOOL "" FORCE)
+set(ANIRA_WITH_LITERT OFF CACHE BOOL "" FORCE)
+set(ANIRA_WITH_EXECUTORCH OFF CACHE BOOL "" FORCE)
+
 set(ANIRA_WITH_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(ANIRA_WITH_TESTS OFF CACHE BOOL "" FORCE)
 set(ANIRA_WITH_BENCHMARK OFF CACHE BOOL "" FORCE)
@@ -28,14 +36,11 @@ set(BUILD_SHARED_LIBS ${_scyclone_bsl} CACHE BOOL "" FORCE)
 
 # PUBLIC, not PRIVATE: the Test target links ${TARGET_NAME} and compiles sources that include
 # <anira/anira.h>, so it needs the transitive link and include interface.
+#
+# No ANIRA_EXPORTS needed: anira defines ANIRA_STATIC_DEFINE PUBLIC for static builds
+# (cmake/msvc-support.cmake), which suppresses the dllimport decoration in AniraWinExports.h.
 target_link_libraries(${TARGET_NAME} PUBLIC anira::anira)
 
 if(WIN32)
-    # anira/system/AniraWinExports.h has no static-library branch: without ANIRA_EXPORTS it
-    # declares ANIRA_API as __declspec(dllimport), which is wrong for the static anira we build
-    # above (LNK4217 / inconsistent dll linkage). Defining it here makes the consumer agree with
-    # anira's own translation units. Side effect: anira's symbols are re-exported from the VST3.
-    # Remove once upstream gains an ANIRA_STATIC guard.
-    target_compile_definitions(${TARGET_NAME} PRIVATE ANIRA_EXPORTS)
     set_target_properties(anira PROPERTIES POSITION_INDEPENDENT_CODE OFF)
 endif()
