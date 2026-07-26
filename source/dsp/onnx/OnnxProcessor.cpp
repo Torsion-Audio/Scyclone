@@ -21,6 +21,10 @@ OnnxProcessor::OnnxProcessor(juce::AudioProcessorValueTreeState &apvts, int no, 
     };
 }
 
+OnnxProcessor::~OnnxProcessor() {
+    inferenceThread.stopThread(-1);
+}
+
 void OnnxProcessor::parameterChanged(const juce::String &parameterID, float newValue) {
     if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && number == 1) {
         auto newValueBool = (bool) newValue;

@@ -5,17 +5,14 @@
 #include "ParameterControl.h"
 
 ParameterControl::ParameterControl(juce::AudioProcessorValueTreeState &parameters) : parameters(parameters) {
-    addAndMakeVisible(fadeSlider);
     fadeSlider.setCustomColour(CustomSliderColourID::gradientColourTopId, juce::Colour {0xff004E92});
     fadeSlider.setCustomColour(CustomSliderColourID::gradientColourBottomId, juce::Colour {0xffEB1E79} );
     fadeSlider.addSliderAttachment(parameters, PluginParameters::FADE_ID.getParamID());
     fadeSlider.setDoubleClickReturnValue(0.0);
 
-    addAndMakeVisible(dynamicSlider);
     dynamicSlider.addSliderAttachment(parameters, PluginParameters::COMP_DRY_WET_ID.getParamID());
     dynamicSlider.setDoubleClickReturnValue(0.0);
 
-    addAndMakeVisible(mixSlider);
     mixSlider.addSliderAttachment(parameters, PluginParameters::DRY_WET_ID.getParamID());
     mixSlider.setDoubleClickReturnValue(10.0);
 
@@ -36,11 +33,11 @@ ParameterControl::ParameterControl(juce::AudioProcessorValueTreeState &parameter
 
 }
 
-void ParameterControl::resized() {
+void ParameterControl::defineLayout() {
     //~700x700
-    fadeSlider.setBounds(105, 50, 120, 500);
-    dynamicSlider.setBounds(255, 95, 120, 500);
-    mixSlider.setBounds(405, 40, 120, 500);
+    layout.add(fadeSlider, 105, 50, 120, 500);
+    layout.add(dynamicSlider, 255, 95, 120, 500);
+    layout.add(mixSlider, 405, 40, 120, 500);
 }
 
 void ParameterControl::paint(juce::Graphics &) {

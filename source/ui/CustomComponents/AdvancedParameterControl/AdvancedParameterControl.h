@@ -7,17 +7,18 @@
 
 #include "JuceHeader.h"
 #include "../ParameterControl/Slider/CustomSliderComponent.h"
+#include "../../Core/BaseComponent.h"
 #include "../../../utils/colors.h"
 #include "../../../PluginParameters.h"
 
 
-class AdvancedParameterControl : public juce::Component
+class AdvancedParameterControl : public BaseComponent
 {
 public:
     explicit AdvancedParameterControl(juce::AudioProcessorValueTreeState& parameters);
     ~AdvancedParameterControl() override;
 
-    void resized() override;
+    void defineLayout() override;
     void paint(juce::Graphics &g) override;
 
     juce::Component** getTooltipPointers() {    return componentArray; };
@@ -67,6 +68,9 @@ private:
     const int sliderWidth = 73;
     const int sliderHeight = 250;
     const int sliderDistance = 2;
+    const int slidersPerRow = 8;
+    const float topRowY = 50.f;
+    const float rowGap = 50.f;
 
 
     float yLineTop = 47.f;

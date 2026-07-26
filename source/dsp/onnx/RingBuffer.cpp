@@ -7,22 +7,19 @@
 RingBuffer::RingBuffer() = default;
 
 void RingBuffer::initialise(int numChannels, int numSamples) {
-    readPos.resize(numChannels);
-    writePos.resize(numChannels);
-
-    for (int i = 0; i < readPos.size(); i++) {
-        readPos[i] = 0;
-        writePos[i] = 0;
-    }
+    readPos = std::make_unique<std::atomic<int>[]>((size_t) numChannels);
+    writePos = std::make_unique<std::atomic<int>[]>((size_t) numChannels);
+    numChannelsAllocated = numChannels;
 
     buffer.setSize(numChannels, numSamples);
+    buffer.clear();
 }
 
 void RingBuffer::reset() {
     buffer.clear();
-    for (int i = 0; i < readPos.size(); i++) {
-        readPos[i] = 0;
-        writePos[i] = 0;
+    for (int i = 0; i < numChannelsAllocated; i++) {
+        readPos[(size_t) i].store(0, std::memory_order_relaxed);
+        writePos[(size_t) i].store(0, std::memory_order_relaxed);
     }
 }
 
@@ -31,23 +28,26 @@ void RingBuffer::pushSample(float sample, int channel) {
         sample = 0.f;
 //        std::cout << "Sample is nan! push" << std::endl; //DBG
     }
-    buffer.setSample(channel, writePos[channel], sample);
+    const int pos = writePos[(size_t) channel].load(std::memory_order_relaxed);
+    buffer.setSample(channel, pos, sample);
 
-    ++writePos[channel];
-
-    if (writePos[channel] >= buffer.getNumSamples()) {
-        writePos[channel] = 0;
+    int next = pos + 1;
+    if (next >= buffer.getNumSamples()) {
+        next = 0;
     }
+    writePos[(size_t) channel].store(next, std::memory_order_release);
 }
 
 float RingBuffer::popSample(int channel) {
-    auto sample = buffer.getSample(channel, readPos[channel]);
+    const int pos = readPos[(size_t) channel].load(std::memory_order_relaxed);
+    auto sample = buffer.getSample(channel, pos);
 
-    ++readPos[channel];
-
-    if (readPos[channel] >= buffer.getNumSamples()) {
-        readPos[channel] = 0;
+    int next = pos + 1;
+    if (next >= buffer.getNumSamples()) {
+        next = 0;
     }
+    readPos[(size_t) channel].store(next, std::memory_order_release);
+
     if (std::isnan(sample)){
 //        std::cout << "Sample is nan! pop" << std::endl; //DBG
         return 0.f;
@@ -57,13 +57,12 @@ float RingBuffer::popSample(int channel) {
 
 int RingBuffer::getAvailableSamples(int channel, bool debug) {
     juce::ignoreUnused(debug);
-    int returnValue;
+    const int read = readPos[(size_t) channel].load(std::memory_order_acquire);
+    const int write = writePos[(size_t) channel].load(std::memory_order_acquire);
 
-    if (readPos[channel] <= writePos[channel]) {
-        returnValue = writePos[channel] - readPos[channel];
-    } else {
-        returnValue = writePos[channel] + buffer.getNumSamples() - readPos[channel];
+    if (read <= write) {
+        return write - read;
     }
 
-    return returnValue;
+    return write + buffer.getNumSamples() - read;
 }

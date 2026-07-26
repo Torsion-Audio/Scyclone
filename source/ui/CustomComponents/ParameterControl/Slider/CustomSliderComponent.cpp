@@ -9,7 +9,7 @@ CustomSliderComponent::CustomSliderComponent(juce::String sliderName, CustomSlid
     setName("Custom Slider Component");
 
     titleLabel.setJustificationType(juce::Justification::centred);
-    titleLabel.setFont(CustomFontLookAndFeel::getCustomFont());
+    titleLabel.setFont(FontStore::get(FontType::regular, 15.f));
     titleLabel.setText(sliderName, juce::dontSendNotification);
     titleLabel.setColour(juce::Label::ColourIds::textColourId, textColour);
     addAndMakeVisible(titleLabel);
@@ -89,19 +89,23 @@ void CustomSliderComponent::updateValueLabel() {
 void CustomSliderComponent::resized() {
     auto area = getLocalBounds();
 
-    float fontSize = (getHeight() < 450) ? 13.5f : 16.5f;
-    float fontSizeLabel = (getHeight() < 450) ? 13.5f : 16.5f;
+    const float scale = CustomFontLookAndFeel::getScale();
+    const float baseHeight = (float) getHeight() / scale;
 
-    const int headerHeight = getHeight() / (int) fontSize + 10;
+    const float baseFontSize = (baseHeight < 450.f) ? 13.5f : 16.5f;
+    const float fontSize = CustomFontLookAndFeel::scaled(baseFontSize);
+    const float fontSizeLabel = fontSize;
 
-    valueLabel.setFont(valueLabel.getFont().withHeight(fontSizeLabel));
-    titleLabel.setFont(titleLabel.getFont().withHeight(fontSize));
+    const int headerHeight = CustomFontLookAndFeel::scaledInt(baseHeight / (float) (int) baseFontSize + 10.f);
+
+    valueLabel.setFont(FontStore::get(FontType::regular, fontSizeLabel));
+    titleLabel.setFont(FontStore::get(FontType::regular, fontSize));
 
     const auto areaTitleLabel = area.removeFromTop(headerHeight);
 
     auto sliderArea = area;
-    sliderArea.removeFromLeft(10);
-    sliderArea.removeFromRight(10);
+    sliderArea.removeFromLeft(CustomFontLookAndFeel::scaledInt(10.f));
+    sliderArea.removeFromRight(CustomFontLookAndFeel::scaledInt(10.f));
     const auto areaSlider = sliderArea;
     const auto areaValueLabel = sliderArea.removeFromBottom(headerHeight);
 

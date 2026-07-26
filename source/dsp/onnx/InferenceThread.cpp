@@ -10,10 +10,7 @@ InferenceThread::InferenceThread(RaveModel raveModel) : juce::Thread("OnnxInfere
 }
 
 InferenceThread::~InferenceThread() {
-    stopThread(100);
-    while (isThreadRunning()) {
-        juce::Thread::sleep(1);
-    } 
+    stopThread(-1);
     session.release();
 }
 
@@ -113,20 +110,12 @@ bool InferenceThread::stopInferenceThreadAndWait()
     if (! isThreadRunning())
         return true;
 
-    stopThread(10000);
+    signalThreadShouldExit();
 
-    constexpr int maxWaitMs = 10000;
-    const auto deadline = juce::Time::getMillisecondCounter() + (uint32_t) maxWaitMs;
-
-    while (isThreadRunning())
+    if (! waitForThreadToExit(10000))
     {
-        if (juce::Time::getMillisecondCounter() >= deadline)
-        {
-            juce::Logger::writeToLog("InferenceThread: timed out waiting for inference thread to stop");
-            return false;
-        }
-
-        juce::Thread::sleep(1);
+        juce::Logger::writeToLog("InferenceThread: timed out waiting for inference thread to stop");
+        return false;
     }
 
     return true;

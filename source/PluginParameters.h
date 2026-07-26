@@ -92,7 +92,8 @@ public:
             // not automatable parameters
             ADVANCED_PARAMETER_CONTROL_VISIBLE_NAME = "advanced_parameter_control_visible",
             NETWORK1_NAME_NAME = "network1_name",
-            NETWORK2_NAME_NAME = "network2_name"
+            NETWORK2_NAME_NAME = "network2_name",
+            WINDOW_SCALE_NAME = "window_scale"
             ;
 
     static juce::StringArray getPluginParameterList();

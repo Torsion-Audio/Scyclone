@@ -176,6 +176,7 @@ juce::ValueTree PluginParameters::createNotAutomatableValueTree()
     notAutomatableParameters.setProperty(ADVANCED_PARAMETER_CONTROL_VISIBLE_NAME, juce::var(false), nullptr);
     notAutomatableParameters.setProperty(NETWORK1_NAME_NAME, juce::var("Funk"), nullptr);
     notAutomatableParameters.setProperty(NETWORK2_NAME_NAME, juce::var("Djembe"), nullptr);
+    notAutomatableParameters.setProperty(WINDOW_SCALE_NAME, juce::var(1.0f), nullptr);
     return notAutomatableParameters;
 }
 
@@ -183,6 +184,7 @@ void PluginParameters::clearNotAutomatableValueTree(juce::ValueTree notAutomatab
     notAutomatableParameters.removeProperty(ADVANCED_PARAMETER_CONTROL_VISIBLE_NAME, nullptr);
     notAutomatableParameters.removeProperty(NETWORK1_NAME_NAME, nullptr);
     notAutomatableParameters.removeProperty(NETWORK2_NAME_NAME, nullptr);
+    notAutomatableParameters.removeProperty(WINDOW_SCALE_NAME, nullptr);
 }
 
 juce::StringArray PluginParameters::getPluginParameterList() {

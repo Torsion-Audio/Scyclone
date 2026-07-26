@@ -34,13 +34,8 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
         }
     };
 
-    addAndMakeVisible(headerComponent);
-    addAndMakeVisible(*openGLBackground);
-    addAndMakeVisible(advancedParameterControl);
-    addAndMakeVisible(parameterControl);
-    addAndMakeVisible(transientViewer);
-    addAndMakeVisible(textureComponent);
-    addAndMakeVisible(footerComponent);
+    layout.setParent(this);
+    defineLayout();
     bool state = processorRef.advancedParameterControlVisible.getValue();
 
     headerComponent.detailButton.setToggleState(state, juce::sendNotification);
@@ -54,14 +49,26 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
 
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize(1400, 700);
+    setResizable(true, true);
+    setResizeLimits(CustomFontLookAndFeel::originalWidth / 2,
+                    CustomFontLookAndFeel::originalHeight / 2,
+                    CustomFontLookAndFeel::originalWidth * 2,
+                    CustomFontLookAndFeel::originalHeight * 2);
+    getConstrainer()->setFixedAspectRatio(static_cast<double>(CustomFontLookAndFeel::originalWidth)
+                                          / static_cast<double>(CustomFontLookAndFeel::originalHeight));
+
+    auto storedScale = static_cast<float>(processorRef.windowScale.getValue());
+    if (storedScale <= 0.0f)
+        storedScale = 1.0f;
+    storedScale = juce::jlimit(0.5f, 2.0f, storedScale);
+    setSize(juce::roundToInt(CustomFontLookAndFeel::originalWidth * storedScale),
+            juce::roundToInt(CustomFontLookAndFeel::originalHeight * storedScale));
 
     processorRef.setExternalModelName = [this](int modelID, juce::String &modelName)
     {
         openGLBackground->externalModelLoaded(modelID, modelName);
     };
 
-    setResizable(false, false);
     // dirty work around to make the blobs appear correctly from the beginning
     auto fadeParam = parameters.getParameter(PluginParameters::FADE_ID.getParamID());
     auto fadeStatus = fadeParam->getValue();
@@ -129,43 +136,30 @@ void AudioPluginAudioProcessorEditor::paint(juce::Graphics &g)
     g.fillAll(juce::Colour::fromString(ColorPallete::BG));
 }
 
+void AudioPluginAudioProcessorEditor::defineLayout()
+{
+    layout.add(headerComponent, 0, 0, 1400, 700);
+    layout.add(*openGLBackground, 0, 52, 700, 613);
+    layout.add(advancedParameterControl, 765, 60, 600, 600);
+    layout.add(parameterControl, 840, 40, 560, 660);
+    layout.add(transientViewer, 710, 450, 163, 163);
+    layout.add(textureComponent, 0, 0, 1400, 700);
+    layout.add(footerComponent, 0, 665, 1400, 35);
+}
+
 void AudioPluginAudioProcessorEditor::resized()
 {
-    auto r = getLocalBounds();
-    r.removeFromTop(20);
+    if (getWidth() <= 0 || getHeight() <= 0)
+        return;
 
-    auto logoSection = juce::Rectangle<int>{getWidth() / 2 - 20, 20, 40, 20};
-    auto headerSection = r.removeFromTop(32);
-    auto padSection = r.removeFromLeft(700);
-    padSection.removeFromBottom(35);
-    auto miniMapSection = r.removeFromLeft(176);
-    r.removeFromLeft(45);
-    auto sliderSection = r;
+    const float scale = static_cast<float>(getWidth()) / static_cast<float>(CustomFontLookAndFeel::originalWidth);
+    customFontLookAndFeel.setScale(scale);
+    processorRef.windowScale = scale;
 
-    juce::ignoreUnused(headerSection, miniMapSection, sliderSection);
+    layout.apply(scale);
 
     if (openGLBackground->isSignalFlowChartVisible())
-    {
-        auto window = getLocalBounds();
-        window.removeFromTop(headerSection.getHeight() + 20);
-        window.removeFromBottom(footerComponent.getHeight() + 20);
-        openGLBackground->setBounds(window);
-    }
-    else
-        openGLBackground->setBounds(padSection);
-
-    transientViewer.setBounds(710, 450, 163, 163);
-    advancedParameterControl.setBounds(765, 60, 600, 600);
-
-    auto areaParameter = getLocalBounds().removeFromRight(static_cast<int>((float)getWidth() * 0.4f));
-    areaParameter.removeFromTop(40);
-    parameterControl.setBounds(areaParameter);
-
-    headerComponent.setBounds(getLocalBounds());
-
-    textureComponent.setBounds(getLocalBounds());
-
-    footerComponent.setBounds(getLocalBounds().removeFromBottom(35));
+        openGLBackground->setBounds((juce::Rectangle<float>(0, 52, 1400, 593) * scale).toNearestInt());
 
     processorRef.onNetwork1NameChange(processorRef.network1Name.toString());
     processorRef.onNetwork2NameChange(processorRef.network2Name.toString());

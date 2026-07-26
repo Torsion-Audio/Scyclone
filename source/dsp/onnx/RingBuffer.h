@@ -6,6 +6,8 @@
 #define VAESYNTH_RINGBUFFER_H
 
 #include "JuceHeader.h"
+#include <atomic>
+#include <memory>
 
 class RingBuffer
 {
@@ -20,7 +22,8 @@ public:
 
 private:
     juce::AudioBuffer<float> buffer;
-    std::vector<int> readPos, writePos;
+    std::unique_ptr<std::atomic<int>[]> readPos, writePos;
+    int numChannelsAllocated = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RingBuffer)
 };

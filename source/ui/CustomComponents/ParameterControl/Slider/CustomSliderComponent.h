@@ -8,6 +8,7 @@
 #include "JuceHeader.h"
 #include "CustomComponents/CustomSlider.h"
 #include "CustomComponents/CustomLabel.h"
+#include "../../../Core/FontStore.h"
 #include "../../../LookAndFeel/SliderLookAndFeel.h"
 #include "../../../LookAndFeel/CustomFontLookAndFeel.h"
 

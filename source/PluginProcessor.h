@@ -12,6 +12,7 @@
 #include "dsp/Filter/IIRCutoffFilter.h"
 #include "dsp/grainDelay/GrainDelay.h"
 #include "dsp/utils/utils.h"
+#include "dsp/utils/AudioRingFifo.h"
 
 #include "ResamplingProcessor.h"
 //#include <audio_basics/buffers/juce_AudioProcessLoadMeasurer.h>
@@ -60,6 +61,7 @@ public:
     juce::Value advancedParameterControlVisible;
     juce::Value network1Name;
     juce::Value network2Name;
+    juce::Value windowScale;
 
     std::function<void(juce::String newName)>onNetwork1NameChange;
     std::function<void(juce::String newName)>onNetwork2NameChange;
@@ -99,6 +101,12 @@ private:
     juce::AudioBuffer<float> grain1DryBuffer;
     juce::AudioBuffer<float> grain2DryBuffer;
     juce::AudioBuffer<float> monoBuffer;
+
+    void processFixedBlock(juce::AudioBuffer<float>& buffer);
+    AudioRingFifo inputFifo;
+    AudioRingFifo outputFifo;
+    juce::AudioBuffer<float> fixedBlockBuffer;
+    int internalBlockSize = 0;
 
 
     DryWetMixer dryWetMixer;

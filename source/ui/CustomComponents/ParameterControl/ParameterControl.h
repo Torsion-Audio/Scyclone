@@ -8,12 +8,13 @@
 
 #include "JuceHeader.h"
 #include "Slider/CustomSliderComponent.h"
+#include "../../Core/BaseComponent.h"
 #include "../../../PluginParameters.h"
 #include "../../LookAndFeel/CustomLabelLookAndFeel.h"
-class ParameterControl : public juce::Component {
+class ParameterControl : public BaseComponent {
 public:
     explicit ParameterControl(juce::AudioProcessorValueTreeState& parameters);
-    void resized() override;
+    void defineLayout() override;
     void paint (juce::Graphics&) override;
     void parameterChanged(const juce::String &parameterID, float newValue);
     void handleNetworkEnablementChange();

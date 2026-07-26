@@ -68,8 +68,8 @@ private:
     int modelInputSize = 16384;
     RingBuffer receiveRingBuffer;
 
-    bool loadingModel = false;
-    bool muted = false;
+    std::atomic<bool> loadingModel { false };
+    std::atomic<bool> muted { false };
 
 };
 #endif //VAESYNTH_INFERENCETHREAD_H

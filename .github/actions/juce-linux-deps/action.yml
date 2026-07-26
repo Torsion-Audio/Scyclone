@@ -11,6 +11,7 @@ runs:
         sudo apt-get install -y \
           libasound2-dev \
           libfreetype6-dev \
+          libfontconfig1-dev \
           libx11-dev \
           libxcomposite-dev \
           libxcursor-dev \

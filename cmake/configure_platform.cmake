@@ -9,6 +9,19 @@ if(APPLE)
     endif()
 
     set(FORMATS_TO_BUILD AU VST3 Standalone)
+
+    # Open-source Clang (Homebrew llvm, e.g. sanitizer CI jobs) compiles against its
+    # bundled libc++ headers, whose ABI symbols (__cxa_init_primary_exception etc.)
+    # the SDK's system libc++ tbd does not export. Link LLVM's own libc++ instead.
+    # The LDFLAGS env propagates the same fix into JUCE's nested juceaide configure.
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        get_filename_component(_scyclone_llvm_bin "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        get_filename_component(_scyclone_llvm_root "${_scyclone_llvm_bin}" DIRECTORY)
+        if(EXISTS "${_scyclone_llvm_root}/lib/c++")
+            add_link_options("-L${_scyclone_llvm_root}/lib/c++" "-Wl,-rpath,${_scyclone_llvm_root}/lib/c++")
+            set(ENV{LDFLAGS} "-L${_scyclone_llvm_root}/lib/c++ -Wl,-rpath,${_scyclone_llvm_root}/lib/c++ $ENV{LDFLAGS}")
+        endif()
+    endif()
 else()
     set(FORMATS_TO_BUILD VST3 Standalone)
 endif()
