@@ -89,9 +89,7 @@ protected:
     void SetUp() override
     {
         JuceAudioTest::SetUp();
-#if defined(SCYCLONE_ONNX_STUB)
-        GTEST_SKIP() << "AutomationStabilityTest requires ONNX Runtime (disabled under sanitizer stub build)";
-#elif defined(SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST)
+#if !defined(SCYCLONE_ONNX_STUB) && defined(SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST)
         GTEST_SKIP() << "AutomationStabilityTest skipped: prebuilt ORT triggers Linux UBSan false positives";
 #endif
     }

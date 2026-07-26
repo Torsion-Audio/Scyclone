@@ -13,9 +13,12 @@ option(SCYCLONE_SANITIZER_STUB_ONNX
 
 # Prebuilt ONNX is not MSan-instrumented; MSVC ASan needs matching STL annotations;
 # open-source Clang on macOS cannot link prebuilt ORT (Homebrew CI / LEAK preset).
+# TSan requires every thread's code to be instrumented — the uninstrumented ORT
+# threadpool produces guaranteed false positives once inference runs.
 set(_scyclone_stub_onnx_required OFF)
 if(SCYCLONE_SANITIZERS STREQUAL "MEMORY"
     OR SCYCLONE_SANITIZERS STREQUAL "LEAK"
+    OR SCYCLONE_SANITIZERS STREQUAL "THREAD"
     OR (SCYCLONE_SANITIZERS STREQUAL "ASAN" AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"))
   set(_scyclone_stub_onnx_required ON)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin"
