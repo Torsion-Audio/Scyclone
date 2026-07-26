@@ -110,3 +110,11 @@ set_tests_properties(ScycloneTests PROPERTIES LABELS "default")
 # Extended host matrix — release tags and manual: ctest -L extended-matrix
 add_test(NAME ScycloneTestsExtendedMatrix COMMAND Test --gtest_filter=*ExtendedHostMatrix*)
 set_tests_properties(ScycloneTestsExtendedMatrix PROPERTIES LABELS "extended-matrix")
+
+# Prebuilt ONNX Runtime is not ASan-instrumented; passing annotated libc++ containers
+# into it produces container-overflow false positives (see AddressSanitizerContainerOverflow wiki).
+if((SCYCLONE_SANITIZERS STREQUAL "ASAN" OR SCYCLONE_SANITIZERS STREQUAL "ASAN_UBSAN")
+    AND NOT SCYCLONE_SANITIZER_STUB_ONNX)
+  set_property(TEST ScycloneTests ScycloneTestsExtendedMatrix APPEND PROPERTY
+      ENVIRONMENT_MODIFICATION "ASAN_OPTIONS=string_append::detect_container_overflow=0")
+endif()
