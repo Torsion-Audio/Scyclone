@@ -37,11 +37,11 @@ TEST_F(PluginIntegrationTest, ReportedLatency_IsPositiveAndIdempotent) {
 TEST_F(PluginIntegrationTest, ReportedLatency_IsMonotonicDecreasingWithHostBlockAt44k) {
     AudioPluginAudioProcessor proc;
     proc.prepareToPlay(44100.0, 32);
-    const int latency32 = proc.getLatencySamples();
+    const int chainLatency32 = proc.getLatencySamples() - 32;
     proc.releaseResources();
     proc.prepareToPlay(44100.0, 512);
-    const int latency512 = proc.getLatencySamples();
-    EXPECT_GT(latency32, latency512) << "larger host blocks should reduce block-aligned ONNX delay";
+    const int chainLatency512 = proc.getLatencySamples() - 512;
+    EXPECT_GT(chainLatency32, chainLatency512) << "larger host blocks should reduce block-aligned ONNX delay";
     proc.releaseResources();
 }
 

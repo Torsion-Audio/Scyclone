@@ -17,7 +17,9 @@ void Compressor::prepare(const juce::dsp::ProcessSpec &spec) {
     envelope.prepare(spec);
     autoMakeUpGain.BufferSize = (int) ((unsigned int) (spec.sampleRate/spec.maximumBlockSize) * spec.maximumBlockSize);
     autoMakeUpGain.inputBuffer.setSize(1, autoMakeUpGain.BufferSize);
+    autoMakeUpGain.inputBuffer.clear();
     autoMakeUpGain.outputBuffer.setSize(1, autoMakeUpGain.BufferSize);
+    autoMakeUpGain.outputBuffer.clear();
     autoMakeUpGain.inputBufferIndex = 0;
     autoMakeUpGain.outputBufferIndex = 0;
 }

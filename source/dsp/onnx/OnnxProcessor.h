@@ -15,6 +15,7 @@
 class OnnxProcessor : public IProcessor {
 public:
     OnnxProcessor(juce::AudioProcessorValueTreeState &apvts, int no, RaveModel raveModel);
+    ~OnnxProcessor() override;
 
     void parameterChanged(const juce::String &parameterID, float newValue);
     void prepare(const juce::dsp::ProcessSpec& spec) override;

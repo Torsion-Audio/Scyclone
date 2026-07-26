@@ -14,19 +14,20 @@ Arrow::~Arrow()
 void Arrow::paint(juce::Graphics& g)
 {
 	// paint the arrow depending on its orientation which depends on its position
+	const auto area = getLocalBounds().toFloat();
 	switch (orientation)
 	{
 		case orientations::upLeft:
-			arrowUpLeft->draw(g, 0.6f);
+			arrowUpLeft->drawWithin(g, area, juce::RectanglePlacement::stretchToFit, 0.6f);
 			break;
 		case orientations::upRight:
-			arrowUpRight->draw(g, 0.6f);
+			arrowUpRight->drawWithin(g, area, juce::RectanglePlacement::stretchToFit, 0.6f);
 			break;
 		case orientations::downLeft:
-			arrowDownLeft->draw(g, 0.6f);
+			arrowDownLeft->drawWithin(g, area, juce::RectanglePlacement::stretchToFit, 0.6f);
 			break;
 		case orientations::downRight:
-			arrowDownRight->draw(g, 0.6f);
+			arrowDownRight->drawWithin(g, area, juce::RectanglePlacement::stretchToFit, 0.6f);
 			break;
 		default:
 			break;

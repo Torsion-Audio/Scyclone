@@ -7,17 +7,18 @@
 
 #include "JuceHeader.h"
 #include "../ParameterControl/Slider/CustomSliderComponent.h"
+#include "../../Core/BaseComponent.h"
 #include "../../../utils/colors.h"
 #include "../../../PluginParameters.h"
 
 
-class AdvancedParameterControl : public juce::Component
+class AdvancedParameterControl : public BaseComponent
 {
 public:
     explicit AdvancedParameterControl(juce::AudioProcessorValueTreeState& parameters);
     ~AdvancedParameterControl() override;
 
-    void resized() override;
+    void defineLayout() override;
     void paint(juce::Graphics &g) override;
 
     juce::Component** getTooltipPointers() {    return componentArray; };

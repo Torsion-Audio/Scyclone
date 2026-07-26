@@ -11,7 +11,7 @@ XYKnob::XYKnob(const juce::AudioProcessorValueTreeState&, int idx, Arrow& a, Arr
 
 	nameLabel.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::KNOB_LABEL).withAlpha(0.75f));
 	nameLabel.setJustificationType(juce::Justification::centred);
-    nameLabel.setFont(CustomFontLookAndFeel::getCustomFontBold().withHeight(16));
+    nameLabel.setFont(FontStore::get(FontType::bold, 16.f));
 
 	if (idx == 1)
 		nameLabel.setComponentID("nameLabel1");
@@ -40,6 +40,7 @@ void XYKnob::resized()
 	auto labelHeight = nameLabel.getHeight();
     juce::ignoreUnused(labelWidth, labelHeight);
 
+    nameLabel.setFont(FontStore::get(FontType::bold, CustomFontLookAndFeel::scaled(16.f)));
 	nameLabel.setBounds(getLocalBounds());
 }
 

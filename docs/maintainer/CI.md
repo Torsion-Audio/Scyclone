@@ -22,7 +22,7 @@ Advisory sanitizer jobs run in parallel but use `continue-on-error` and must not
 | Action | Used for |
 |--------|----------|
 | [setup-linux-juce](../../.github/actions/setup-linux-juce/action.yml) | apt build tools + JUCE system deps |
-| [setup-macos-juce](../../.github/actions/setup-macos-juce/action.yml) | Homebrew ninja/osxutils + Xcode 15.4 pin (JUCE 7) |
+| [setup-macos-juce](../../.github/actions/setup-macos-juce/action.yml) | Homebrew ninja/osxutils |
 | [setup-msvc](../../.github/actions/setup-msvc/action.yml) | vswhere + vcvars64 env export |
 | [set-parallel-build-level](../../.github/actions/set-parallel-build-level/action.yml) | `CMAKE_BUILD_PARALLEL_LEVEL` from runner CPUs |
 | [sanitizer-job-summary](../../.github/actions/sanitizer-job-summary/action.yml) | `GITHUB_STEP_SUMMARY` for sanitizer jobs |

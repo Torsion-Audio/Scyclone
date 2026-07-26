@@ -3,6 +3,7 @@
 //
 
 #include "TransientGrid.h"
+#include "../../LookAndFeel/CustomFontLookAndFeel.h"
 
 TransientGrid::TransientGrid() = default;
 
@@ -10,11 +11,11 @@ void TransientGrid::paint(juce::Graphics &g) {
     g.setColour(juce::Colour::fromString(ColorPallete::OCTAGON));
 
     // draw rounded rectangle
-    float cornerWidth = 10.0f;
-    float lineWidth = 3.0f;
+    float cornerWidth = CustomFontLookAndFeel::scaled(10.0f);
+    float lineWidth = CustomFontLookAndFeel::scaled(3.0f);
     auto width = static_cast<float>(getWidth()) - 2*lineWidth;
     auto height = static_cast<float>(getHeight()) - 2*lineWidth;
-    g.drawRoundedRectangle(lineWidth, lineWidth, width - lineWidth, height - lineWidth, cornerWidth, 3.0f);
+    g.drawRoundedRectangle(lineWidth, lineWidth, width - lineWidth, height - lineWidth, cornerWidth, lineWidth);
 
     // horizontal lines
     g.drawLine(lineWidth+1, height / 4.f, width-1, height / 4.f, lineWidth);

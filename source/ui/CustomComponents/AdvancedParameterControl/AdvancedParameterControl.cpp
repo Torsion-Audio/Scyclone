@@ -24,10 +24,8 @@ AdvancedParameterControl::AdvancedParameterControl(juce::AudioProcessorValueTree
     grainDelay2Param3.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK2_PITCH_ID.getParamID());
     grainDelay2Param4.addSliderAttachment(parameters, PluginParameters::GRAIN_NETWORK2_MIX_ID.getParamID());
 
-    // make things visible
     for (int i = 0; i<numberOfSliders; i++)
     {
-        addAndMakeVisible(  sliders[i]);
         if (i == 0) {
             //transient 1
             sliders[i]->setCustomColour(CustomSliderColourID::gradientColourTopId, juce::Colour{0xffF02FC2});
@@ -79,45 +77,36 @@ AdvancedParameterControl::~AdvancedParameterControl()
     setLookAndFeel(nullptr);
 }
 
-void AdvancedParameterControl::resized()
+void AdvancedParameterControl::defineLayout()
 {
-    auto r = getLocalBounds();
-    r.removeFromTop(50);
-    auto upperSection = r.removeFromTop(sliderHeight);
-    r.removeFromTop(50);
-    auto lowerSection = r.removeFromBottom(sliderHeight);
-
     for (int i = 0; i < numberOfSliders; i++)
     {
-        if (i < 8)
-        {
-            sliders[i]->setBounds(upperSection.removeFromLeft(sliderWidth));
-            upperSection.removeFromLeft(sliderDistance);
-        }
-        else
-        {
-            sliders[i]->setBounds(lowerSection.removeFromLeft(sliderWidth));
-            lowerSection.removeFromLeft(sliderDistance);
-        }
+        const int column = (i < 8) ? i : i - 8;
+        const float x = (float) column * (float) (sliderWidth + sliderDistance);
+        const float y = (i < 8) ? 50.f : 350.f;
+
+        layout.add(*sliders[i], x, y, (float) sliderWidth, (float) sliderHeight);
     }
 }
 
 void AdvancedParameterControl::paint(juce::Graphics & g)
 {
-    g.setColour(juce::Colour {0xff181819});
-    g.fillRect(topLine1);
-    g.fillRect(topLine2);
-    g.fillRect(topLine3);
-    g.fillRect(topLine4);
-    g.fillRect(bottomLine1);
-    g.fillRect(bottomLine2);
+    const float scale = CustomFontLookAndFeel::getScale();
 
-    g.setFont(CustomFontLookAndFeel::getCustomFontBold().withHeight(12.f));
+    g.setColour(juce::Colour {0xff181819});
+    g.fillRect(topLine1 * scale);
+    g.fillRect(topLine2 * scale);
+    g.fillRect(topLine3 * scale);
+    g.fillRect(topLine4 * scale);
+    g.fillRect(bottomLine1 * scale);
+    g.fillRect(bottomLine2 * scale);
+
+    g.setFont(getFont(FontType::bold, CustomFontLookAndFeel::scaled(12.f)));
     g.setColour(juce::Colour {0xff757677});
-    g.drawText("Transient Control", topText1, juce::Justification::centred);
-    g.drawText("Blend 1 / 2", topText2, juce::Justification::centred);
-    g.drawText("Post Compressor", topText3, juce::Justification::centred);
-    g.drawText("Global", topText4, juce::Justification::centred);
-    g.drawText("Grain FX 1", bottomText1, juce::Justification::centred);
-    g.drawText("Grain FX 2", bottomText2, juce::Justification::centred);
+    g.drawText("Transient Control", topText1 * scale, juce::Justification::centred);
+    g.drawText("Blend 1 / 2", topText2 * scale, juce::Justification::centred);
+    g.drawText("Post Compressor", topText3 * scale, juce::Justification::centred);
+    g.drawText("Global", topText4 * scale, juce::Justification::centred);
+    g.drawText("Grain FX 1", bottomText1 * scale, juce::Justification::centred);
+    g.drawText("Grain FX 2", bottomText2 * scale, juce::Justification::centred);
 }

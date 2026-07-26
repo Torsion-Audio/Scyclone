@@ -14,11 +14,10 @@ FooterComponent::FooterComponent(AudioPluginAudioProcessor &p, juce::AudioProces
 
     // cpuLabel.setFont(font);
     statusLabel.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::TEXT2));
-    addAndMakeVisible(statusLabel);
+    statusLabel.setJustificationType(juce::Justification::right);
 
     // tooltipLabel.setFont(font);
     tooltipLabel.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(ColorPallete::TEXT2));
-    addAndMakeVisible(tooltipLabel);
 }
 
 FooterComponent::~FooterComponent()
@@ -27,20 +26,10 @@ FooterComponent::~FooterComponent()
     setLookAndFeel(nullptr);
 }
 
-void FooterComponent::resized()
+void FooterComponent::defineLayout()
 {
-    auto r = getLocalBounds();
-
-    r.removeFromRight(8);
-    r.removeFromLeft(8);
-    r.removeFromBottom(5);
-
-    r.removeFromLeft(35);
-    auto tooltipSection = r.removeFromLeft(500);
-    tooltipLabel.setBounds(tooltipSection);
-
-    statusLabel.setBounds(r);
-    statusLabel.setJustificationType(juce::Justification::right);
+    layout.add(tooltipLabel, 43, 0, 500, 30, FontType::regular, 14.f);
+    layout.add(statusLabel, 543, 0, 849, 30, FontType::regular, 14.f);
 }
 
 void FooterComponent::paint(juce::Graphics &)

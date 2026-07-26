@@ -109,8 +109,11 @@ void OpenGLBackground::renderOpenGL()
     // Select shader program
     shaderProgram->use();
 
+    displayScaleFactor_juce = static_cast<GLfloat>(renderingScale);
+
     // Setup the Uniforms for use in the Shader
     if (resolution) resolution->set(resolution_juce[0], resolution_juce[1]);
+    if (padOffset) padOffset->set(padOffsetX_juce, padOffsetY_juce);
     if (displayScaleFactor) displayScaleFactor->set(displayScaleFactor_juce);
     if (backgroundColor) backgroundColor->set(static_cast<GLfloat>(backgroundColor_juce.getFloatRed()), static_cast<GLfloat>(backgroundColor_juce.getFloatGreen()), static_cast<GLfloat>(backgroundColor_juce.getFloatBlue()));
     if (time){
@@ -146,21 +149,25 @@ void OpenGLBackground::paint (juce::Graphics& g)
         signalFlowChart->drawWithin(g, getLocalBounds().toFloat(), juce::RectanglePlacement::centred, 100);
 }
 
-void OpenGLBackground::resized ()
+void OpenGLBackground::defineLayout ()
 {
-    DBG(displayScaleFactor_juce);
-    // These bounds are not absolute but relativ to the patent component
-    auto xyPadBounds = juce::Rectangle<int>(120, 59, 500, 500);
+    layout.add(xyPad, 120, 59, 500, 500);
+    layout.add(labels.attack, 50, 300, 70, 19, FontType::regular, 19.f);
+    layout.add(labels.sharp, 347, 25, 70, 19, FontType::regular, 19.f);
+    layout.add(labels.sustain, 636, 300, 70, 19, FontType::regular, 19.f);
+    layout.add(labels.smooth, 340, 570, 70, 19, FontType::regular, 19.f);
+}
+
+void OpenGLBackground::scaleChanged (float)
+{
     openGlTextureComponent.setBounds(getLocalBounds());
-    xyPad.setBounds(xyPadBounds);
     openGLStatusLabel.setBounds (getLocalBounds().reduced (4).removeFromTop (75));
     backgroundColor_juce = juce::Colour::fromString(ColorPallete::BG);
-    displayScaleFactor_juce = static_cast<GLfloat>(juce::Desktop::getInstance().getDisplays().displays.getFirst().scale);
+
+    const auto xyPadBounds = xyPad.getBounds();
     resolution_juce = {static_cast<GLfloat>(xyPadBounds.getWidth()),static_cast<GLfloat>(xyPadBounds.getHeight())};
-    labels.attack.setBounds(50, 300, 70, 19);
-    labels.sharp.setBounds(347, 25, 70, 19);
-    labels.sustain.setBounds(636, 300, 70, 19);
-    labels.smooth.setBounds(340, 570, 70, 19);
+    padOffsetX_juce = static_cast<GLfloat>(xyPadBounds.getX());
+    padOffsetY_juce = static_cast<GLfloat>(getHeight() - xyPadBounds.getBottom());
 }
 
 void OpenGLBackground::handleAsyncUpdate()
@@ -189,6 +196,7 @@ void OpenGLBackground::compileOpenGLShaderProgram()
         audioLevel1.disconnectFromShaderProgram();
         audioLevel2.disconnectFromShaderProgram();
         fadeValue.disconnectFromShaderProgram();
+        padOffset.disconnectFromShaderProgram();
         shaderProgram.reset (shaderProgramAttempt.release());
         
         resolution.connectToShaderProgram (openGLContext, *shaderProgram);
@@ -201,6 +209,7 @@ void OpenGLBackground::compileOpenGLShaderProgram()
         audioLevel1.connectToShaderProgram(openGLContext, *shaderProgram);
         audioLevel2.connectToShaderProgram(openGLContext, *shaderProgram);
         fadeValue.connectToShaderProgram(openGLContext, *shaderProgram);
+        padOffset.connectToShaderProgram(openGLContext, *shaderProgram);
         
         openGLStatusText = "GLSL: v" + juce::String (juce::OpenGLShaderProgram::getLanguageVersion(), 2);
         
@@ -233,7 +242,7 @@ void OpenGLBackground::xyModelMixChanged(float newModelMix) {
 
 void  OpenGLBackground::SetJuceLabels()
 {
-    auto font = CustomFontLookAndFeel::getCustomFont().withHeight(19.0f);
+    auto font = getFont(FontType::regular, 19.0f);
 
     labels.sharp.setText("Sharp", juce::dontSendNotification);
     labels.sharp.setFont(font);

@@ -1,6 +1,7 @@
 #pragma once
 #include "JuceHeader.h"
 #include "../../../utils/colors.h"
+#include "../../Core/FontStore.h"
 #include "../../LookAndFeel/CustomFontLookAndFeel.h"
 #include "Arrow.h"
 #include "ArrowButton.h"

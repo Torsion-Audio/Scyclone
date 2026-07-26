@@ -12,6 +12,7 @@
 #include "OpenGLUtil/OpenGLUtil.h"
 #include "ShapeVertices.h"
 #include "../Texture/TextureComponent.h"
+#include "../../Core/BaseComponent.h"
 #include "../../LookAndFeel/CustomFontLookAndFeel.h"
 #include"../XYPad/XYPad.h"
 #include "../../../PluginProcessor.h"
@@ -27,7 +28,7 @@ struct KnobPos {
     of its view. If you were creating a spectrum visualizer, you might name this
     class SpectrumVisualizer.
  */
-class OpenGLBackground : public juce::Component,
+class OpenGLBackground : public BaseComponent,
 private juce::OpenGLRenderer,
 private juce::AsyncUpdater,
 public juce::Timer
@@ -44,7 +45,8 @@ public:
     
     // Component Callbacks =====================================================
     void paint (juce::Graphics& g) override;
-    void resized () override;
+    void defineLayout() override;
+    void scaleChanged(float scale) override;
     
     // AsyncUpdater Callback ===================================================
     /** If the OpenGLRenderer thread needs to update some form JUCE GUI object
@@ -93,6 +95,7 @@ private:
     OpenGLUtil::UniformWrapper audioLevel1 {"iAudioLevel1"};
     OpenGLUtil::UniformWrapper audioLevel2 {"iAudioLevel2"};
     OpenGLUtil::UniformWrapper fadeValue {"iFadeValue"};
+    OpenGLUtil::UniformWrapper padOffset {"iPadOffset"};
     // Fade aus ValueTreeState
     // On Off pro source
     
@@ -101,6 +104,8 @@ private:
     
     juce::Array<GLfloat> resolution_juce;
     GLfloat displayScaleFactor_juce;
+    GLfloat padOffsetX_juce = 0.f;
+    GLfloat padOffsetY_juce = 0.f;
     juce::Colour backgroundColor_juce;
     float audioLevel1_juce;
     float audioLevel2_juce;

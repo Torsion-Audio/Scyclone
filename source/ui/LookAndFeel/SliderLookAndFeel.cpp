@@ -30,6 +30,8 @@ void SliderLookAndFeel::drawLinearSlider(juce::Graphics &g, int x, int y, int wi
 
     juce::ignoreUnused(g, x, y, width, height, sliderPos, minSliderPos, maxSliderPos, slider);
 
+    const float cornerRadiusScaled = CustomFontLookAndFeel::scaled(cornerRadius);
+
     auto areaSlider = juce::Rectangle<float> {static_cast<float>(x), static_cast<float>(y), static_cast<float>(width), static_cast<float>(height)};
 
     // Fill Background
@@ -47,28 +49,28 @@ void SliderLookAndFeel::drawLinearSlider(juce::Graphics &g, int x, int y, int wi
                                      true
     };
     g.setGradientFill(fillColour);
-    g.fillRoundedRectangle(rectBackground, cornerRadius);
+    g.fillRoundedRectangle(rectBackground, cornerRadiusScaled);
 
 
     // Fill Slider
-    const float radius = 2 * cornerRadius;
+    const float radius = 2 * cornerRadiusScaled;
     const float xRectFill = areaSlider.getX() + 0.5f;
     const float yRectFill = sliderPos;
     const float wRectFill = areaSlider.getWidth() - 1.0f;
     const float hRectFill = areaSlider.getY() + ((float) areaSlider.getHeight() - sliderPos);
 
 
-    if (hRectBg - hRectFill < cornerRadius) {
+    if (hRectBg - hRectFill < cornerRadiusScaled) {
         auto rectFill = juce::Rectangle<float> (xRectFill, yRectFill, wRectFill, hRectFill);
         g.setColour (sliderFillColour);
         g.setOpacity(0.3f);
-        g.fillRoundedRectangle(rectFill, cornerRadius);
+        g.fillRoundedRectangle(rectFill, cornerRadiusScaled);
     }
-    else if (hRectBg - hRectFill > hRectBg - cornerRadius) {
-        auto rectFill = juce::Rectangle<float> (xRectFill + (cornerRadius / 4), yRectFill, wRectFill - (cornerRadius / 2), hRectFill);
+    else if (hRectBg - hRectFill > hRectBg - cornerRadiusScaled) {
+        auto rectFill = juce::Rectangle<float> (xRectFill + (cornerRadiusScaled / 4), yRectFill, wRectFill - (cornerRadiusScaled / 2), hRectFill);
         g.setColour (sliderFillColour);
         g.setOpacity(0.3f);
-        g.fillRoundedRectangle(rectFill, cornerRadius);
+        g.fillRoundedRectangle(rectFill, cornerRadiusScaled);
     } else {
         juce::Path p;
         p.startNewSubPath (xRectFill, yRectFill);
@@ -120,6 +122,8 @@ void CrossfadeSliderLookAndFeel::drawLinearSlider(juce::Graphics &g, int x, int 
 {
     juce::ignoreUnused(g, x, y, width, height, sliderPos, minSliderPos, maxSliderPos, slider);
 
+    const float cornerRadiusScaled = CustomFontLookAndFeel::scaled(cornerRadius);
+
     auto areaSlider = juce::Rectangle<float> {static_cast<float>(x), static_cast<float>(y), static_cast<float>(width), static_cast<float>(height)};
 
     // Fill Background
@@ -137,11 +141,11 @@ void CrossfadeSliderLookAndFeel::drawLinearSlider(juce::Graphics &g, int x, int 
                                      true
     };
     g.setGradientFill(fillColour);
-    g.fillRoundedRectangle(rectBackground, cornerRadius);
+    g.fillRoundedRectangle(rectBackground, cornerRadiusScaled);
 
 
     // Fill Slider
-    const float radius = cornerRadius;
+    const float radius = cornerRadiusScaled;
     const float xRectFill = areaSlider.getX() + 0.5f;
     const float yRectFill = sliderPos;
     const float wRectFill = areaSlider.getWidth() - 1.0f;

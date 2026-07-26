@@ -45,7 +45,17 @@ public:
             return getCustomFont().getTypefacePtr();
         }
     }
+
+    static constexpr int originalWidth = 1400;
+    static constexpr int originalHeight = 700;
+
+    static void setScale (float newScale) noexcept { uiScale = newScale; }
+    static float getScale() noexcept { return uiScale; }
+    static float scaled (float value) noexcept { return value * uiScale; }
+    static int scaledInt (float value) noexcept { return juce::roundToInt (value * uiScale); }
+
 private:
+    inline static float uiScale = 1.0f;
 };
 
 #endif //VAESYNTH_CUSTOMFONTLOOKANDFEEL_H

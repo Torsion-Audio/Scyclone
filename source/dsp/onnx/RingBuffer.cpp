@@ -16,6 +16,7 @@ void RingBuffer::initialise(int numChannels, int numSamples) {
     }
 
     buffer.setSize(numChannels, numSamples);
+    buffer.clear();
 }
 
 void RingBuffer::reset() {

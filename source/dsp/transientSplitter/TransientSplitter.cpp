@@ -27,7 +27,8 @@ void TransientSplitter::processBlock(juce::AudioBuffer<float> &buffer){
             float attack;
             float sustain;
             attack = std::abs(envelope1.getSample((unsigned long) j) - envelope2.getSample((unsigned long) j));
-            attack = std::min(attack/std::abs(detector.getSample((unsigned long) j)), 1.f);
+            const float detectorLevel = std::abs(detector.getSample((unsigned long) j));
+            attack = detectorLevel > 0.f ? std::min(attack/detectorLevel, 1.f) : 0.f;
             sustain = 1.f - attack;
             float signalAttack = attack * parameter.attack * buffer.getSample(i, j);
             float signalSustain = sustain * parameter.sustain * buffer.getSample(i, j);

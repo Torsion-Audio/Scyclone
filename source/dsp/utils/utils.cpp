@@ -8,12 +8,14 @@
 #include "utils.h"
 #include <cmath>
 
+static constexpr float kMinAmp = 1.0e-9f;
+
 float utils::amp2dB(float amp){
-    return 20*std::log10(amp);
+    return 20*std::log10(std::max(amp, kMinAmp));
 }
 
 float utils::amp2dB(float amp, float ampRef){
-    return 20*std::log10(amp/ampRef);
+    return 20*std::log10(std::max(amp/ampRef, kMinAmp));
 }
 
 float utils::dB2amp(float db){

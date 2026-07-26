@@ -6,17 +6,19 @@
 
 #include "JuceHeader.h"
 #include "../../../utils/colors.h"
+#include "../../Core/BaseComponent.h"
 #include "../../LookAndFeel/SliderLookAndFeel.h"
 #include "../../LookAndFeel/CustomFontLookAndFeel.h"
 #include "../../../PluginParameters.h"
 #include "../../../PluginProcessor.h"
 
-class HeaderComponent : public juce::Component{
+class HeaderComponent : public BaseComponent{
 public:
     HeaderComponent(AudioPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parameters);
     ~HeaderComponent();
 
-    void resized() override;
+    void defineLayout() override;
+    void scaleChanged(float scale) override;
     void paint(juce::Graphics& g) override;
 
     juce::DrawableButton detailButton;
