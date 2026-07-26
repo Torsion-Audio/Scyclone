@@ -22,7 +22,7 @@ namespace
     {
         auto inferenceConfig = makeScycloneInferenceConfig(model);
         anira::PrePostProcessor ppProcessor(inferenceConfig);
-        anira::ContextConfig contextConfig(2);
+        anira::ContextConfig contextConfig(2, anira::WaitStrategy::SpinBackoff, anira::LogLevel::Error);
         anira::InferenceHandler handler(ppProcessor, inferenceConfig, contextConfig);
 
         handler.prepare(anira::HostConfig{static_cast<float>(blockSize),

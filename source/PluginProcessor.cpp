@@ -14,6 +14,17 @@ namespace
         const unsigned int cores = std::thread::hardware_concurrency();
         return cores / 2 > 0 ? cores / 2 : 1u;
     }
+
+    anira::ContextConfig makeAniraContextConfig()
+    {
+        // anira's default log level is Info in debug builds, which it maps straight onto ORT's
+        // logger — a plugin has no console and should not flood the host's stdout, so pin Error
+        // regardless of build type. Wait strategy stays at anira's default; it is process-global
+        // (first context created wins), so there is nothing to gain from overriding it here.
+        return anira::ContextConfig(defaultInferenceThreadCount(),
+                                    anira::WaitStrategy::SpinBackoff,
+                                    anira::LogLevel::Error);
+    }
 }
 #endif
 
@@ -35,7 +46,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
 // Init-list order below mirrors the declaration order in PluginProcessor.h — keep them in sync
 // so aniraContextConfig is alive before the processors that hold a reference to it.
 #ifndef SCYCLONE_INFERENCE_STUB
-      aniraContextConfig(defaultInferenceThreadCount()),
+      aniraContextConfig(makeAniraContextConfig()),
       onnxProcessor1(parameters, 1, FunkDrum, aniraContextConfig),
       onnxProcessor2(parameters, 2, Djembe, aniraContextConfig),
 #else

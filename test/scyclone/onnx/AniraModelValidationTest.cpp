@@ -10,7 +10,7 @@ TEST(AniraModelValidation, FunkDrumEmbedded_RunsAt2048Hop)
 {
     auto inferenceConfig = makeScycloneInferenceConfig(FunkDrum);
     anira::PrePostProcessor ppProcessor(inferenceConfig);
-    anira::ContextConfig contextConfig(2);
+    anira::ContextConfig contextConfig(2, anira::WaitStrategy::SpinBackoff, anira::LogLevel::Error);
     anira::InferenceHandler handler(ppProcessor, inferenceConfig, contextConfig);
 
     anira::HostConfig hostConfig{512.0f, 48000.0f};

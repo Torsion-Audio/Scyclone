@@ -27,7 +27,7 @@ protected:
     }
 
 #ifndef SCYCLONE_INFERENCE_STUB
-    anira::ContextConfig contextConfig{2};
+    anira::ContextConfig contextConfig{2, anira::WaitStrategy::SpinBackoff, anira::LogLevel::Error};
 #endif
     std::unique_ptr<InferenceBackend> backend;
     std::vector<bool> initEvents;
