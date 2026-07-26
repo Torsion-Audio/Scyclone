@@ -81,9 +81,11 @@ void AdvancedParameterControl::defineLayout()
 {
     for (int i = 0; i < numberOfSliders; i++)
     {
-        const int column = (i < 8) ? i : i - 8;
-        const float x = (float) column * (float) (sliderWidth + sliderDistance);
-        const float y = (i < 8) ? 50.f : 350.f;
+        const int row = i / slidersPerRow;
+        const int column = i % slidersPerRow;
+
+        const float x = (float) (column * (sliderWidth + sliderDistance));
+        const float y = topRowY + (float) row * ((float) sliderHeight + rowGap);
 
         layout.add(*sliders[i], x, y, (float) sliderWidth, (float) sliderHeight);
     }

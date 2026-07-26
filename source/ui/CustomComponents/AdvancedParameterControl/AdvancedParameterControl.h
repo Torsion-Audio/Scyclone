@@ -68,6 +68,9 @@ private:
     const int sliderWidth = 73;
     const int sliderHeight = 250;
     const int sliderDistance = 2;
+    const int slidersPerRow = 8;
+    const float topRowY = 50.f;
+    const float rowGap = 50.f;
 
 
     float yLineTop = 47.f;
