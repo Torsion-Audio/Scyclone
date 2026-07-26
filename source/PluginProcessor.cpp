@@ -288,7 +288,7 @@ void AudioPluginAudioProcessor::refreshReportedLatency()
               lastHostSampleRate)
         : onnxDelay48k;
 
-    setLatencySamples(totalLatency);
+    setLatencySamples(totalLatency + internalBlockSize);
     dryWetMixer.setWetLatency(totalLatency);
 }
 

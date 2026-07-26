@@ -34,8 +34,9 @@ TEST_F(OnnxProcessorContractTest, ReportedLatency_MatchesCalibratedConstantAtRef
                        kOnnxInferenceLatencyReferenceBlockSize);
 
     // At the reference sample rate there is no resampling, so the plugin reports the raw
-    // ONNX-island latency.
-    EXPECT_EQ(proc.getLatencySamples(), kOnnxInferenceLatencySamples)
+    // ONNX-island latency plus one host block for the fixed-block FIFO.
+    EXPECT_EQ(proc.getLatencySamples() - kOnnxInferenceLatencyReferenceBlockSize,
+              kOnnxInferenceLatencySamples)
         << "kOnnxInferenceLatencySamples is stale — re-run OnnxLatencyProbeTest";
 
     proc.releaseResources();

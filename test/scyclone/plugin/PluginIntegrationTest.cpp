@@ -38,19 +38,19 @@ TEST_F(PluginIntegrationTest, ReportedLatency_IsMonotonicDecreasingWithHostBlock
     AudioPluginAudioProcessor proc;
 
     proc.prepareToPlay(48000.0, 32);
-    const int latency32 = proc.getLatencySamples();
+    const int chainLatency32 = proc.getLatencySamples() - 32;
     proc.releaseResources();
 
     proc.prepareToPlay(48000.0, 512);
-    const int latency512 = proc.getLatencySamples();
+    const int chainLatency512 = proc.getLatencySamples() - 512;
     proc.releaseResources();
 
     proc.prepareToPlay(48000.0, 2048);
-    const int latency2048 = proc.getLatencySamples();
+    const int chainLatency2048 = proc.getLatencySamples() - 2048;
     proc.releaseResources();
 
-    EXPECT_GT(latency32, latency512) << "larger host blocks should reduce block-aligned ONNX delay";
-    EXPECT_GT(latency512, latency2048) << "larger host blocks should reduce block-aligned ONNX delay";
+    EXPECT_GT(chainLatency32, chainLatency512) << "larger host blocks should reduce block-aligned ONNX delay";
+    EXPECT_GT(chainLatency512, chainLatency2048) << "larger host blocks should reduce block-aligned ONNX delay";
 }
 #endif
 
