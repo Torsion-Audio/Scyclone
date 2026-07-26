@@ -2,6 +2,7 @@
 #include "PluginEditor.h"
 #include "dsp/utils/utils.h"
 #include <chrono>
+#include <thread>
 using namespace std::chrono;
 
 //==============================================================================
@@ -19,11 +20,20 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
       processorTransientSplitter2(parameters, 2),
       iirCutoffFilter1(parameters, 1),
       iirCutoffFilter2(parameters, 2),
-      onnxProcessor1(parameters, 1, FunkDrum),
-      onnxProcessor2(parameters, 2, Djembe),
       grainDelay1(1),
       grainDelay2(2),
       processorCompressor(parameters)
+#ifndef SCYCLONE_INFERENCE_STUB
+      , aniraContextConfig(
+            std::thread::hardware_concurrency() / 2 > 0
+                ? static_cast<unsigned int>(std::thread::hardware_concurrency() / 2)
+                : 1u)
+      , onnxProcessor1(parameters, 1, FunkDrum, aniraContextConfig)
+      , onnxProcessor2(parameters, 2, Djembe, aniraContextConfig)
+#else
+      , onnxProcessor1(parameters, 1, FunkDrum)
+      , onnxProcessor2(parameters, 2, Djembe)
+#endif
 {
 
     network1Name = "Funk";
@@ -43,19 +53,21 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     onnxProcessor1.onOnnxModelLoad = [this](bool initLoading, juce::String modelName)
     {
         this->suspendProcessing(initLoading);
-        //        std::cout << "Onnx proc 1 suspend:" << initLoading << std::endl; //DBG
-        if (!initLoading && modelName != "")
+        if (!initLoading)
         {
-            setExternalModelName(1, modelName);
+            if (modelName != "")
+                setExternalModelName(1, modelName);
+            refreshReportedLatency();
         }
     };
     onnxProcessor2.onOnnxModelLoad = [this](bool initLoading, juce::String modelName)
     {
         this->suspendProcessing(initLoading);
-        //        std::cout << "Onnx proc 2 suspend:" << initLoading << std::endl; //DBG
-        if (!initLoading && modelName != "")
+        if (!initLoading)
         {
-            setExternalModelName(2, modelName);
+            if (modelName != "")
+                setExternalModelName(2, modelName);
+            refreshReportedLatency();
         }
     };
 
@@ -71,6 +83,9 @@ AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
     }
     PluginParameters::clearNotAutomatableValueTree(parameters.state.getChild(0));
     parameters.state.removeChild(0, nullptr);
+
+    onnxProcessor1.releaseResources();
+    onnxProcessor2.releaseResources();
 }
 
 //==============================================================================
@@ -141,6 +156,12 @@ void AudioPluginAudioProcessor::changeProgramName(int index, const juce::String 
 //==============================================================================
 void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+    lastHostSampleRate = sampleRate;
+    lastHostBlockSize = samplesPerBlock;
+
+    if (sampleRate != 48000.0)
+        warningWindow.showWarningWindow(SampleRateWarning);
+
     juce::dsp::ProcessSpec spec{sampleRate,
                                 static_cast<juce::uint32>(samplesPerBlock),
                                 static_cast<juce::uint32>(getTotalNumInputChannels())};
@@ -208,7 +229,7 @@ int AudioPluginAudioProcessor::prepareOnnx(const juce::dsp::ProcessSpec &inputSp
     onnxProcessor1.prepare(onnxSpec);
     onnxProcessor2.prepare(onnxSpec);
 
-    int onnxDelay48k = std::max(onnxProcessor1.getLatencyInSamples(), onnxProcessor2.getLatencyInSamples());
+    int onnxDelay48k = (std::max)(onnxProcessor1.getLatencyInSamples(), onnxProcessor2.getLatencyInSamples());
 
     if (!resample)
         return onnxDelay48k;
@@ -219,6 +240,24 @@ int AudioPluginAudioProcessor::prepareOnnx(const juce::dsp::ProcessSpec &inputSp
         downsamplerOne->getLatencyInSamples(),
         48000.0,
         inputSpec.sampleRate);
+}
+
+void AudioPluginAudioProcessor::refreshReportedLatency()
+{
+    const int onnxDelay48k = (std::max)(onnxProcessor1.getLatencyInSamples(),
+                                        onnxProcessor2.getLatencyInSamples());
+
+    const int totalLatency = resample
+        ? utils::computeTotalLatencyInSamples(
+              upsamplerOne->getLatencyInSamples(),
+              onnxDelay48k,
+              downsamplerOne->getLatencyInSamples(),
+              48000.0,
+              lastHostSampleRate)
+        : onnxDelay48k;
+
+    setLatencySamples(totalLatency);
+    dryWetMixer.setWetLatency(totalLatency);
 }
 
 int AudioPluginAudioProcessor::prepareUpsampler(const juce::dsp::ProcessSpec &inputSpec, const int targetSampleRate)
@@ -240,8 +279,19 @@ void AudioPluginAudioProcessor::prepareDownsampler(const juce::dsp::ProcessSpec 
 
 void AudioPluginAudioProcessor::releaseResources()
 {
-    // Free resources when playback stops.
+    onnxProcessor1.releaseResources();
+    onnxProcessor2.releaseResources();
+
+    upsamplerOne.reset();
+    upsamplerTwo.reset();
+    downsamplerOne.reset();
+    downsamplerTwo.reset();
+    resample = false;
+
     measurer.reset();
+#ifndef SCYCLONE_INFERENCE_STUB
+    anira::Context::release_instance();
+#endif
 }
 
 bool AudioPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const

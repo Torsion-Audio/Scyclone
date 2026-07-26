@@ -3,96 +3,71 @@
 //
 
 #include "OnnxProcessor.h"
-#include "../utils/utils.h"
 
-OnnxProcessor::OnnxProcessor(juce::AudioProcessorValueTreeState &apvts, int no, RaveModel raveModel) : inferenceThread(raveModel), number(no), parameters(apvts)
+#ifndef SCYCLONE_INFERENCE_STUB
+OnnxProcessor::OnnxProcessor(juce::AudioProcessorValueTreeState& apvts,
+                             int no,
+                             RaveModel raveModel,
+                             anira::ContextConfig& contextConfig)
+    : parameters(apvts), number(no)
 {
-    inferenceThread.onNewProcessedBuffer = [this] (juce::AudioBuffer<float> buffer) {
-        for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-            receiveRingBuffer.pushSample(buffer.getSample(0, sample), 0);
-        }
-        return 0;
+    backend = makeInferenceBackend(raveModel, contextConfig);
+#else
+OnnxProcessor::OnnxProcessor(juce::AudioProcessorValueTreeState& apvts, int no, RaveModel raveModel)
+    : parameters(apvts), number(no)
+{
+    backend = makeInferenceBackend(raveModel);
+#endif
+    backend->onModelLoad = [this](bool initLoading, juce::String modelName) {
+        if (onOnnxModelLoad)
+            onOnnxModelLoad(initLoading, modelName);
     };
-
-    inferenceThread.onModelLoaded = [this] (juce::String modelName) {
-        onOnnxModelLoad(false, modelName);
-        receiveRingBuffer.reset();
-        inferenceCounter = 0;
-    };
 }
 
-void OnnxProcessor::parameterChanged(const juce::String &parameterID, float newValue) {
-    if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && number == 1) {
-        auto newValueBool = (bool) newValue;
-        if (!newValueBool) {
-            onOnnxModelLoad(true, "");
-            inferenceThread.setInternalModel();
+void OnnxProcessor::parameterChanged(const juce::String& parameterID, float newValue)
+{
+    if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && number == 1)
+    {
+        if (!(bool) newValue)
+        {
+            backend->setInternalModel();
+            latencyInSamples = backend->getLatencyInSamples();
         }
-    } else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && number == 2) {
-        auto newValueBool = (bool) newValue;
-        if (!newValueBool) {
-            onOnnxModelLoad(true, "");
-            inferenceThread.setInternalModel();
-        }
-    } else if (parameterID == PluginParameters::ON_OFF_NETWORK1_ID.getParamID() && number == 1) {
-        inferenceThread.setMuted(!(bool) newValue);
-    } else if (parameterID == PluginParameters::ON_OFF_NETWORK2_ID.getParamID() && number == 2) {
-        inferenceThread.setMuted(!(bool) newValue);
     }
-}
-
-void OnnxProcessor::prepare(const juce::dsp::ProcessSpec &spec) {
-    receiveRingBuffer.initialise(1, (int) spec.sampleRate);
-    monoBuffer.setSize(1, (int) spec.maximumBlockSize);
-    inferenceThread.prepare(spec);
-    inferenceCounter = 0;
-    calculateLatency((int)spec.maximumBlockSize);
-
-    if (spec.sampleRate != 48000.0) {
-        warningWindow.showWarningWindow(SampleRateWarning);
-    }
-}
-
-void OnnxProcessor::processBlock(juce::AudioBuffer<float> &buffer) {
-    const int numSamples = buffer.getNumSamples();
-    inferenceThread.sendAudio(buffer);
-    processOutput(buffer, numSamples);
-}
-
-void OnnxProcessor::processOutput(juce::AudioBuffer<float> &buffer, const int numSamples) {
-    auto availableSamples = receiveRingBuffer.getAvailableSamples(0);
-    if (!inferenceThread.init){
-        if (availableSamples >= numSamples) {
-            if (inferenceCounter > 0) {
-                if (availableSamples >= 2 * numSamples) {
-                    for (int i = 0; i < numSamples; ++i) {
-                        receiveRingBuffer.popSample(0);
-                    }
-                    inferenceCounter--;
-                }
-            }
-            for (int sample = 0; sample < numSamples; ++sample) {
-                buffer.setSample(0, sample, receiveRingBuffer.popSample(0));
-            }
-        } else {
-            inferenceCounter++;
-            juce::ignoreUnused(inferenceCounter);
-            for (int sample = 0; sample < numSamples; ++sample) {
-                buffer.setSample(0, sample, 0.0f);
-            }
+    else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && number == 2)
+    {
+        if (!(bool) newValue)
+        {
+            backend->setInternalModel();
+            latencyInSamples = backend->getLatencyInSamples();
         }
     }
 }
 
-void OnnxProcessor::loadExternalModel(juce::File file) {
-    onOnnxModelLoad(true, file.getFileNameWithoutExtension());
-    inferenceThread.setExternalModel(file);
+void OnnxProcessor::prepare(const juce::dsp::ProcessSpec& spec)
+{
+    backend->prepare(spec);
+    latencyInSamples = backend->getLatencyInSamples();
 }
 
-void OnnxProcessor::calculateLatency(int maxSamplesPerBuffer) {
-    latencyInSamples = utils::computeOnnxLatencyInSamples(inferenceThread.getLatency(), maxSamplesPerBuffer);
+void OnnxProcessor::processBlock(juce::AudioBuffer<float>& buffer)
+{
+    backend->processBlock(buffer);
 }
 
-int OnnxProcessor::getLatencyInSamples() const {
+void OnnxProcessor::loadExternalModel(juce::File file)
+{
+    backend->loadExternalModel(file);
+    latencyInSamples = backend->getLatencyInSamples();
+}
+
+void OnnxProcessor::releaseResources()
+{
+    backend->releaseResources();
+    latencyInSamples = 0;
+}
+
+int OnnxProcessor::getLatencyInSamples() const
+{
     return latencyInSamples;
 }

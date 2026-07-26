@@ -8,6 +8,12 @@
 #include "dsp/analyser/AudioVisualiser.h"
 #include "dsp/analyser/LevelAnalyser.h"
 #include "dsp/onnx/OnnxProcessor.h"
+#include "dsp/onnx/OnnxModel.h"
+#include "dsp/onnx/WarningWindow.h"
+
+#ifndef SCYCLONE_INFERENCE_STUB
+#include <anira/scheduler/Context.h>
+#endif
 #include "dsp/gain/ProcessorGain.h"
 #include "dsp/Filter/IIRCutoffFilter.h"
 #include "dsp/grainDelay/GrainDelay.h"
@@ -118,6 +124,14 @@ private:
 
     OnnxProcessor onnxProcessor1;
     OnnxProcessor onnxProcessor2;
+
+#ifndef SCYCLONE_INFERENCE_STUB
+    anira::ContextConfig aniraContextConfig;
+#endif
+    WarningWindow warningWindow;
+    double lastHostSampleRate = 48000.0;
+    int lastHostBlockSize = 512;
+    void refreshReportedLatency();
 
 
     ProcessorCompressor processorCompressor;

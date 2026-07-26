@@ -218,7 +218,7 @@ void FileChooserManager::openFileChooserForNetwork(int networkID, juce::Componen
 
     openFileChooser("Choose a model file...",
                     juce::File::getSpecialLocation(juce::File::SpecialLocationType::userHomeDirectory),
-                    "*.ort",
+                    "*.ort;*.onnx",
                     onFileChosen,
                     parentComponent);
 }
