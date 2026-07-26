@@ -26,9 +26,16 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(modules/anira EXCLUDE_FROM_ALL)
 set(BUILD_SHARED_LIBS ${_scyclone_bsl} CACHE BOOL "" FORCE)
 
+# PUBLIC, not PRIVATE: the Test target links ${TARGET_NAME} and compiles sources that include
+# <anira/anira.h>, so it needs the transitive link and include interface.
 target_link_libraries(${TARGET_NAME} PUBLIC anira::anira)
 
 if(WIN32)
+    # anira/system/AniraWinExports.h has no static-library branch: without ANIRA_EXPORTS it
+    # declares ANIRA_API as __declspec(dllimport), which is wrong for the static anira we build
+    # above (LNK4217 / inconsistent dll linkage). Defining it here makes the consumer agree with
+    # anira's own translation units. Side effect: anira's symbols are re-exported from the VST3.
+    # Remove once upstream gains an ANIRA_STATIC guard.
     target_compile_definitions(${TARGET_NAME} PRIVATE ANIRA_EXPORTS)
     set_target_properties(anira PROPERTIES POSITION_INDEPENDENT_CODE OFF)
 endif()

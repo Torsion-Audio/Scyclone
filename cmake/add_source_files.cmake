@@ -4,11 +4,7 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/source/*.h
 )
 
-# Inference backend split: Anira (release) vs sanitizer passthrough stub.
-list(FILTER SOURCES EXCLUDE REGEX ".*/InferenceThread(Stub)?\\.cpp$")
-list(FILTER SOURCES EXCLUDE REGEX ".*/InferenceThread\\.h$")
-list(FILTER SOURCES EXCLUDE REGEX ".*/RingBuffer\\.(cpp|h)$")
-
+# Inference backend split: Anira (release) vs sanitizer delay-line stub.
 if(SCYCLONE_SANITIZER_STUB_ONNX)
     list(FILTER SOURCES EXCLUDE REGEX ".*/AniraInferenceBackend\\.(cpp|h)$")
     list(FILTER SOURCES EXCLUDE REGEX ".*/ScycloneModelConfig\\.(cpp|h)$")
