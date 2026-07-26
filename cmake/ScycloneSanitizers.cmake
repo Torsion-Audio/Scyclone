@@ -8,7 +8,7 @@ set_property(CACHE SCYCLONE_SANITIZERS PROPERTY STRINGS NONE ASAN ASAN_UBSAN THR
 option(SCYCLONE_MSAN_TRACK_ORIGINS "Add -fsanitize-memory-track-origins=2 for MSan (higher overhead)" OFF)
 
 option(SCYCLONE_SANITIZER_STUB_ONNX
-    "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (MSan / MSVC ASan / LEAK)"
+    "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_INFERENCE_STUB (MSan / MSVC ASan / LEAK)"
     OFF)
 
 # Prebuilt ONNX is not MSan-instrumented; MSVC ASan needs matching STL annotations;
@@ -26,10 +26,10 @@ endif()
 
 if(_scyclone_stub_onnx_required)
   set(SCYCLONE_SANITIZER_STUB_ONNX ON CACHE BOOL
-      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (MSan / MSVC ASan / LEAK)" FORCE)
+      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_INFERENCE_STUB (MSan / MSVC ASan / LEAK)" FORCE)
 else()
   set(SCYCLONE_SANITIZER_STUB_ONNX OFF CACHE BOOL
-      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (MSan / MSVC ASan / LEAK)" FORCE)
+      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_INFERENCE_STUB (MSan / MSVC ASan / LEAK)" FORCE)
 endif()
 
 # Linux ASAN_UBSAN: prebuilt ORT triggers UBSan vptr false positives in PluginIntegrationTest (macOS passes).

@@ -19,8 +19,8 @@ include(cmake/generate_build_info.cmake)
 
 
 # ONNX Runtime and libsamplerate
-include(cmake/setup_onnx_runtime.cmake)
 include(cmake/setup_libsamplerate.cmake)
+include(cmake/setup_anira.cmake)
 
 enable_testing()
 
