@@ -9,6 +9,7 @@
 #include "ui/CustomComponents/AdvancedParameterControl/AdvancedParameterControl.h"
 #include "ui/CustomComponents/Header/HeaderComponent.h"
 #include "ui/CustomComponents/Footer/FooterComponent.h"
+#include "ui/Core/Layout.h"
 #include "ui/LookAndFeel/CustomFontLookAndFeel.h"
 #include "ui/CustomComponents/Texture/TextureComponent.h"
 #include "FileChooserManager.h"
@@ -44,6 +45,9 @@ private:
     FooterComponent footerComponent;
 
     CustomFontLookAndFeel customFontLookAndFeel;
+
+    Layout layout;
+    void defineLayout();
 
     FileChooserManager fileChooserManager;
 

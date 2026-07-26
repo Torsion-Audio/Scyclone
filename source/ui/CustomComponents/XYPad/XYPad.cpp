@@ -88,7 +88,7 @@ XYPad::~XYPad() {
 void XYPad::paint(juce::Graphics& g)
 {
 	g.setColour(juce::Colour::fromString(ColorPallete::OCTAGON));
-    int lineWidth = 3;
+    int lineWidth = CustomFontLookAndFeel::scaledInt(3.f);
     octagon->drawWithin(g, getLocalBounds().reduced(lineWidth).toFloat(), juce::RectanglePlacement::centred, 1.0);
     // for calibration
 //    g.fillAll(juce::Colour::fromRGBA(200, 200, 10, 80));
@@ -266,7 +266,7 @@ void XYPad::timerCallback()
 
 void XYPad::moveButton(XYKnob* knob, int knobNumber)
 {
-    int knobButtonDiameter = knobButtonNeutralDiameter;
+    int knobButtonDiameter = CustomFontLookAndFeel::scaledInt((float) knobButtonNeutralDiameter);
 
     float x1Norm = *parameters.getRawParameterValue(PluginParameters::TRAN_SHAPER_NETWORK1_ID.getParamID());
 	float y1Norm = *parameters.getRawParameterValue(PluginParameters::FILTER_NETWORK1_ID.getParamID());
@@ -328,24 +328,27 @@ void XYPad::moveButton(XYKnob* knob, int knobNumber)
 
 void XYPad::moveArrow(Arrow* arrow, float xNorm, float yNorm, int xPixel, int yPixel, int knobButtonDiameter)
 {
+	const int arrowWidthScaled = CustomFontLookAndFeel::scaledInt((float) arrowWidth);
+	const int arrowHeightScaled = CustomFontLookAndFeel::scaledInt((float) arrowHeight);
+
 	int quadrant{};
 	int xOffset = (int)((double)knobButtonDiameter/2);
 	int yOffset = (int)((double)knobButtonDiameter/2);
     int newX = 0;
     int newY = 0;
 
-    int sloppyDecompensation = 4;
+    int sloppyDecompensation = CustomFontLookAndFeel::scaledInt(4.f);
 	if (xNorm > 0.5 && yNorm > 0.5)
 	{
 		quadrant = Quadrant::upRight;
         newX = xPixel + xOffset;
-        newY = yPixel - yOffset - arrowHeight + sloppyDecompensation;
+        newY = yPixel - yOffset - arrowHeightScaled + sloppyDecompensation;
 	}
 	else if (xNorm <= 0.5 && yNorm > 0.5)
 	{
 		quadrant = Quadrant::upLeft;
-        newX = xPixel - xOffset - arrowWidth;
-        newY = yPixel - yOffset - arrowHeight + sloppyDecompensation;
+        newX = xPixel - xOffset - arrowWidthScaled;
+        newY = yPixel - yOffset - arrowHeightScaled + sloppyDecompensation;
 	}
 	else if (xNorm > 0.5 && yNorm < 0.5)
 	{
@@ -356,31 +359,35 @@ void XYPad::moveArrow(Arrow* arrow, float xNorm, float yNorm, int xPixel, int yP
 	else if (xNorm <= 0.5 && yNorm <= 0.5)
 	{
 		quadrant = Quadrant::downLeft;
-        newX = xPixel - xOffset - arrowWidth;
+        newX = xPixel - xOffset - arrowWidthScaled;
         newY = yPixel + yOffset;
     }
 
     arrow->setOrientation(quadrant);
 
-    if (xPixel - xOffset - arrowWidth<= 0.001)
+    if (xPixel - xOffset - arrowWidthScaled<= 0.001)
         newX = 0;
-    else if (xPixel + xOffset + arrowWidth >= getWidth())
-        newX = getWidth() - arrowWidth;
+    else if (xPixel + xOffset + arrowWidthScaled >= getWidth())
+        newX = getWidth() - arrowWidthScaled;
 
-    if (yPixel - yOffset - arrowHeight<= 0.001)
+    if (yPixel - yOffset - arrowHeightScaled<= 0.001)
         newY =  0;
-    else if (yPixel + yOffset + arrowHeight> getHeight())
+    else if (yPixel + yOffset + arrowHeightScaled> getHeight())
         newY =  getHeight() - yOffset;
 
-    arrow->setBounds(newX, newY, arrowWidth, arrowHeight);
+    arrow->setBounds(newX, newY, arrowWidthScaled, arrowHeightScaled);
 }
 
 void XYPad::moveArrowButton(ArrowButtons* arrowButton, Arrow* arrow) const
 {
+	const auto scaledInt = [](float value) { return CustomFontLookAndFeel::scaledInt(value); };
+	const int arrowButtonDiameterScaled = scaledInt((float) arrowButtonDiameter);
+	const int arrowHeightScaled = scaledInt((float) arrowHeight);
+
 	int x = arrow->getX() + arrow->getWidth() / 3;
 	int y = arrow->getY() + arrow->getHeight();
-	int width = arrowButtonDiameter;
-	int height = arrowButtonDiameter;
+	int width = arrowButtonDiameterScaled;
+	int height = arrowButtonDiameterScaled;
 
 	int type = arrowButton->getType();
 	int xTilt = 0;
@@ -390,10 +397,10 @@ void XYPad::moveArrowButton(ArrowButtons* arrowButton, Arrow* arrow) const
 		xTilt = 0;
 		break;
 	case 2:
-		xTilt = arrowButtonDiameter + 15;
+		xTilt = arrowButtonDiameterScaled + scaledInt(15.f);
 		break;
 	case 3:
-		xTilt = 2 * arrowButtonDiameter + 2 * 15;
+		xTilt = 2 * arrowButtonDiameterScaled + 2 * scaledInt(15.f);
 		break;
     default:
         break;
@@ -401,23 +408,23 @@ void XYPad::moveArrowButton(ArrowButtons* arrowButton, Arrow* arrow) const
 
 	if (arrow->getOrientation() == Arrow::orientations::upLeft)
 	{
-		x = arrow->getX() + 10 + xTilt;
-		y = arrow->getY() + 8;
+		x = arrow->getX() + scaledInt(10.f) + xTilt;
+		y = arrow->getY() + scaledInt(8.f);
 	}
 	else if (arrow->getOrientation() == Arrow::orientations::upRight)
 	{
-		x = arrow->getX() + 76 + xTilt;
-        y = arrow->getY()  + 8;
+		x = arrow->getX() + scaledInt(76.f) + xTilt;
+        y = arrow->getY()  + scaledInt(8.f);
 	}
 	else if (arrow->getOrientation() == Arrow::orientations::downLeft)
 	{
-		x = arrow->getX() + 10 + xTilt;
-		y = arrow->getY() + arrowHeight - 8 - arrowButtonDiameter; //+ 75;
+		x = arrow->getX() + scaledInt(10.f) + xTilt;
+		y = arrow->getY() + arrowHeightScaled - scaledInt(8.f) - arrowButtonDiameterScaled; //+ 75;
 	}
 	else if (arrow->getOrientation() == Arrow::orientations::downRight)
 	{
-		x = arrow->getX() + 76 + xTilt;
-        y = arrow->getY() + arrowHeight - 8 - arrowButtonDiameter; //+ 75;
+		x = arrow->getX() + scaledInt(76.f) + xTilt;
+        y = arrow->getY() + arrowHeightScaled - scaledInt(8.f) - arrowButtonDiameterScaled; //+ 75;
 	}
 	arrowButton->setBounds(x, y, width, height);
 }
@@ -476,11 +483,11 @@ int XYPad::calcCurrentButtonDiameters(int buttonNumber) {
     float fadeValue = parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load();
 
     if (buttonNumber == 1)
-        return int((float)knobButtonNeutralDiameter + (fadeValue * 100 / 2));
+        return CustomFontLookAndFeel::scaledInt((float)knobButtonNeutralDiameter + (fadeValue * 100 / 2));
     else if (buttonNumber ==2)
-        return int((float)knobButtonNeutralDiameter - (fadeValue * 100 / 2));
+        return CustomFontLookAndFeel::scaledInt((float)knobButtonNeutralDiameter - (fadeValue * 100 / 2));
     else
-        return knobButtonNeutralDiameter;
+        return CustomFontLookAndFeel::scaledInt((float)knobButtonNeutralDiameter);
 }
 
 

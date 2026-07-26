@@ -3,6 +3,7 @@
 uniform vec2 iResolution;
 uniform vec3 iBackgroundColor;
 uniform float iDisplayScaleFactor;
+uniform vec2 iPadOffset;
 uniform vec2 iKnobPos1;
 uniform vec2 iKnobPos2;
 uniform float iTime;
@@ -133,7 +134,7 @@ void main()
     // Shift the coordinates, since the OpenGl component is bigger than the XY-Pad
     // make the zero point at the left/button corner of the XY-Pad (dont forget the displayScaleFactor!)
     // Also keep in mind Juce counts from the top left corner and openGL from buttom left
-    fragCoord = vec2(fragCoord.x - (120*displayScaleFactor), fragCoord.y - (54*displayScaleFactor));
+    fragCoord = vec2(fragCoord.x - (iPadOffset.x*displayScaleFactor), fragCoord.y - (iPadOffset.y*displayScaleFactor));
 
     // center origin point
     vec2 coord = fragCoord/resolution.xy * 2.f - 1.f;

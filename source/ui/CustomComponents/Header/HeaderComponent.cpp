@@ -24,31 +24,25 @@ HeaderComponent::HeaderComponent(AudioPluginAudioProcessor &p, juce::AudioProces
                15.f, ColorPallete::
                TEXT2,
                juce::Justification::centredRight);
-    addAndMakeVisible(labels.inputGainLabel);
 
     setupSlider(inputGainSlider,
                 PluginParameters::INPUT_GAIN_ID,
                 parameters,
                 inputGainAttachment);
-    addAndMakeVisible(inputGainSlider);
 
     setupLabel(labels.outputGainLabel,
                "Output Gain", 15.f,
                ColorPallete::TEXT2,
                juce::Justification::centredRight);
-    addAndMakeVisible(labels.outputGainLabel);
 
     setupSlider(outputGainSlider,
                 PluginParameters::OUTPUT_GAIN_ID,
                 parameters,
                 outputGainAttachment);
-    addAndMakeVisible(outputGainSlider);
 
     setupDetailButton();
-    addAndMakeVisible(detailButton);
 
     setupScycloneButton();
-    addAndMakeVisible(scycloneButton);
 
     this->setInterceptsMouseClicks(true, true);
 
@@ -69,7 +63,7 @@ void HeaderComponent::setupComponentArray() {
 
 void HeaderComponent::setupLabel(juce::Label& label, const juce::String& text, float fontSize, const juce::String& color, juce::Justification justification) {
     label.setText(text, juce::dontSendNotification);
-    label.setFont(CustomFontLookAndFeel::getCustomFontBold().withHeight(fontSize));
+    label.setFont(getFont(FontType::bold, fontSize));
     label.setJustificationType(justification);
     label.setColour(juce::Label::ColourIds::textColourId, juce::Colour::fromString(color));
 }
@@ -112,17 +106,23 @@ void HeaderComponent::setupScycloneButton() {
     };
 }
 
-void HeaderComponent::resized() {
-    labels.vaeSynth.setBounds(49, 21, 127, 30);
-    labels.neutralTransfer.setBounds(208, 29, 121, 19);
-    labels.inputGainLabel.setBounds(950, 21, 95, 24);
-    inputGainSlider.setBounds(1050, 21, 73, 24);
-    labels.outputGainLabel.setBounds(1125, 21, 95, 24);
-    outputGainSlider.setBounds(1225, 21, 73, 24);
-    detailButton.setBounds(getWidth() - 80, 24, 35, 19);
-    scycloneTypoSection.setBounds(49.f, 21.f, 127.f, 30.f);
-    neuralTransferTypoSection.setBounds(197.f, 21.f, 121.f, 30.f);
-    scycloneButton.setBounds(static_cast<int>(getWidth() / 2 - 72.5), 21, 145, 30);
+void HeaderComponent::defineLayout() {
+    layout.add(labels.vaeSynth, 49, 21, 127, 30, FontType::bold, 30.f);
+    layout.add(labels.neutralTransfer, 208, 29, 121, 19, FontType::bold, 19.f);
+    layout.add(labels.inputGainLabel, 950, 21, 95, 24, FontType::bold, 15.f);
+    layout.add(inputGainSlider, 1050, 21, 73, 24);
+    layout.add(labels.outputGainLabel, 1125, 21, 95, 24, FontType::bold, 15.f);
+    layout.add(outputGainSlider, 1225, 21, 73, 24);
+    layout.add(detailButton, 1320, 24, 35, 19);
+    layout.add(scycloneButton, 627.5f, 21, 145, 30);
+
+    labels.vaeSynth.setVisible(false);
+    labels.neutralTransfer.setVisible(false);
+}
+
+void HeaderComponent::scaleChanged(float scale) {
+    scycloneTypoSection.setBounds(49.f * scale, 21.f * scale, 127.f * scale, 30.f * scale);
+    neuralTransferTypoSection.setBounds(197.f * scale, 21.f * scale, 121.f * scale, 30.f * scale);
 }
 
 void HeaderComponent::paint(juce::Graphics &g) {

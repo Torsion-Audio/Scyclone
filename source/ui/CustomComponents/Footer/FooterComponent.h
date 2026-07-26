@@ -7,17 +7,18 @@
 
 #include "JuceHeader.h"
 #include "../../../utils/colors.h"
+#include "../../Core/BaseComponent.h"
 #include "../../../PluginParameters.h"
 #include "../../../PluginProcessor.h"
 #include "../../../ui/LookAndFeel/CustomFontLookAndFeel.h"
 
-class FooterComponent : public juce::Component, juce::Timer
+class FooterComponent : public BaseComponent, juce::Timer
 {
 public:
     FooterComponent(AudioPluginAudioProcessor &p, juce::AudioProcessorValueTreeState &parameters);
     ~FooterComponent();
 
-    void resized() override;
+    void defineLayout() override;
     void paint(juce::Graphics &g) override;
     void timerCallback() override;
 

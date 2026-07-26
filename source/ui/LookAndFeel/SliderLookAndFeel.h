@@ -6,6 +6,7 @@
 #define VAESYNTH_SLIDERLOOKANDFEEL_H
 
 #include "JuceHeader.h"
+#include "CustomFontLookAndFeel.h"
 
 enum CustomSliderColourID {
     ellipseColourId,
@@ -78,7 +79,11 @@ private:
         juce::ignoreUnused(x, y, width, height, sliderPos, minSliderPos, maxSliderPos, slider);
 
         g.setColour(backgroundColour);
-        g.fillRoundedRectangle(g.getClipBounds().toFloat(), cornerRadius);
+        g.fillRoundedRectangle(g.getClipBounds().toFloat(), CustomFontLookAndFeel::scaled(cornerRadius));
+    }
+
+    juce::Font getLabelFont(juce::Label&) override {
+        return CustomFontLookAndFeel::getCustomFont().withHeight(CustomFontLookAndFeel::scaled(14.0f));
     }
 
 private:

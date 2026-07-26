@@ -68,6 +68,9 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
 
     parameters.state.addChild(PluginParameters::createNotAutomatableValueTree(), 0, nullptr);
 
+    windowScale.referTo(parameters.state.getChildWithName("Settings")
+                            .getPropertyAsValue(PluginParameters::WINDOW_SCALE_NAME, nullptr));
+
     dryWetMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::DRY_WET_ID.getParamID())->load());
     compMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::COMP_DRY_WET_ID.getParamID())->load());
     fadeMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load());
@@ -213,8 +216,15 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
         resample = false;
     }
 
+    internalBlockSize = samplesPerBlock;
+    fixedBlockBuffer.setSize(2, internalBlockSize);
+    fixedBlockBuffer.clear();
+    inputFifo.prepare(2, 2 * internalBlockSize);
+    outputFifo.prepare(2, 4 * internalBlockSize);
+    outputFifo.pushZeros(internalBlockSize);
+
     int totalLatency = prepareOnnx(monoSpec, onnxSpec);
-    setLatencySamples(totalLatency);
+    setLatencySamples(totalLatency + internalBlockSize);
     dryWetMixer.setWetLatency(totalLatency);
 
     iirCutoffFilter1.prepare(monoSpec);
@@ -344,8 +354,31 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                              juce::MidiBuffer &)
 {
     juce::AudioProcessLoadMeasurer::ScopedTimer s(measurer, buffer.getNumSamples());
+
+    for (int offset = 0; offset < buffer.getNumSamples();)
     {
-        // ToDo check ScopedNoDenormals noDenormals;
+        const int chunk = juce::jmin(buffer.getNumSamples() - offset, internalBlockSize);
+
+        inputFifo.push(buffer, offset, chunk);
+
+        while (inputFifo.available() >= internalBlockSize)
+        {
+            inputFifo.pop(fixedBlockBuffer, 0, internalBlockSize);
+            processFixedBlock(fixedBlockBuffer);
+            outputFifo.push(fixedBlockBuffer, 0, internalBlockSize);
+        }
+
+        outputFifo.pop(buffer, offset, chunk);
+        offset += chunk;
+    }
+
+    cpuLoad = static_cast<float>(measurer.getLoadAsPercentage());
+}
+
+void AudioPluginAudioProcessor::processFixedBlock(juce::AudioBuffer<float> &buffer)
+{
+    {
+        juce::ScopedNoDenormals noDenormals;
 
         dryWetMixer.setDrySamples(buffer);
         utils::stereoToMono(monoBuffer, buffer);
@@ -362,7 +395,7 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         iirCutoffFilter2.processFilters(network2Buffer);
 
         audioVisualiser.updateFromAudioBuffer(network1Buffer, network2Buffer);
-        
+
         // Onnx inference with resampling if necessary
         if (!resample)
         {
@@ -409,7 +442,6 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         utils::monoToStereo(buffer, monoBuffer);
         dryWetMixer.setWetSamples(buffer);
     }
-    cpuLoad = static_cast<float>(measurer.getLoadAsPercentage());
 }
 
 juce::AudioVisualiserComponent &AudioPluginAudioProcessor::getAudioVisualiser1()
@@ -470,6 +502,8 @@ void AudioPluginAudioProcessor::setStateInformation(const void *data, int sizeIn
                                      .getPropertyAsValue(PluginParameters::NETWORK1_NAME_NAME, nullptr));
             network2Name.referTo(parameters.state.getChildWithName("Settings")
                                      .getPropertyAsValue(PluginParameters::NETWORK2_NAME_NAME, nullptr));
+            windowScale.referTo(parameters.state.getChildWithName("Settings")
+                                    .getPropertyAsValue(PluginParameters::WINDOW_SCALE_NAME, nullptr));
         }
 }
 
