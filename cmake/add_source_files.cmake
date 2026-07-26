@@ -4,14 +4,13 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/source/*.h
 )
 
-# Sanitizer stub: link InferenceThreadStub.cpp instead of InferenceThread.cpp (no prebuilt ORT).
+# Inference backend split: Anira (release) vs sanitizer delay-line stub.
 if(SCYCLONE_SANITIZER_STUB_ONNX)
-    list(FILTER SOURCES EXCLUDE REGEX ".*/InferenceThread\\.cpp$")
+    list(FILTER SOURCES EXCLUDE REGEX ".*/AniraInferenceBackend\\.(cpp|h)$")
+    list(FILTER SOURCES EXCLUDE REGEX ".*/ScycloneModelConfig\\.(cpp|h)$")
 else()
-    list(FILTER SOURCES EXCLUDE REGEX ".*/InferenceThreadStub\\.cpp$")
+    list(FILTER SOURCES EXCLUDE REGEX ".*/SanitizerInferenceBackend\\.(cpp|h)$")
 endif()
-
-# list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/source/ui/CustomComponents/OpenGLBackground/OpenGLUtil/OpenGLUtil.h)
 
 # Add all sources to target
 target_sources(${TARGET_NAME} PRIVATE ${SOURCES} ${RNBO_SOURCES})
@@ -22,7 +21,7 @@ file(GLOB_RECURSE SOURCE_DIRS LIST_DIRECTORIES true
 )
 list(APPEND SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/source)
 
-# Add include directories for all directories found in 'source'
+# Prefer include dir from downloaded ORT package (set by setup_onnx_static_ort.cmake).
 if(NOT SCYCLONE_ONNXRUNTIME_INCLUDE_DIR)
     set(SCYCLONE_ONNXRUNTIME_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modules/onnxruntime/include)
 endif()

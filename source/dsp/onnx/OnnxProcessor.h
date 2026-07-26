@@ -7,39 +7,40 @@
 
 #include "JuceHeader.h"
 #include "../IProcessor.h"
-#include "RingBuffer.h"
-#include "InferenceThread.h"
+#include "InferenceBackend.h"
+#include "OnnxModel.h"
 #include "../../PluginParameters.h"
-#include "WarningWindow.h"
+
+#ifndef SCYCLONE_INFERENCE_STUB
+namespace anira { struct ContextConfig; }
+#endif
 
 class OnnxProcessor : public IProcessor {
 public:
-    OnnxProcessor(juce::AudioProcessorValueTreeState &apvts, int no, RaveModel raveModel);
-    ~OnnxProcessor() override;
+#ifndef SCYCLONE_INFERENCE_STUB
+    OnnxProcessor(juce::AudioProcessorValueTreeState& apvts,
+                  int no,
+                  RaveModel raveModel,
+                  anira::ContextConfig& contextConfig);
+#else
+    OnnxProcessor(juce::AudioProcessorValueTreeState& apvts, int no, RaveModel raveModel);
+#endif
 
-    void parameterChanged(const juce::String &parameterID, float newValue);
+    void parameterChanged(const juce::String& parameterID, float newValue);
     void prepare(const juce::dsp::ProcessSpec& spec) override;
     void processBlock(juce::AudioBuffer<float>& buffer) override;
     int getLatencyInSamples() const override;
-    void loadExternalModel(juce::File path);
+    /// @return false if the file could not be loaded; the previous model stays active.
+    bool loadExternalModel(juce::File path);
+    void releaseResources();
 
     std::function<void(bool initLoading, juce::String modelName)> onOnnxModelLoad;
 
 private:
-    void processOutput(juce::AudioBuffer<float>& buffer, int numSamples);
-    void calculateLatency(int maxSamplesPerBuffer);
-
-private:
     juce::AudioProcessorValueTreeState& parameters;
-
-    InferenceThread inferenceThread;
+    std::unique_ptr<InferenceBackend> backend;
     int latencyInSamples = 0;
-    RingBuffer receiveRingBuffer;
-    juce::AudioBuffer<float> monoBuffer;
-    int inferenceCounter = 0;
-    std::unique_ptr<juce::FileChooser> fc;
-    WarningWindow warningWindow;
-    int number;
+    int number = 0;
 };
 
-#endif //VAESYNTH_ONNXPROCESSOR_H
+#endif // VAESYNTH_ONNXPROCESSOR_H

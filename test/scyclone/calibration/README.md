@@ -1,11 +1,11 @@
-# Resampling calibration probes
+# Calibration probes
 
-`ResamplingProbeTest.cpp` contains **DISABLED** gtest cases used to measure tolerances and latency — not part of normal CI.
+`ResamplingProbeTest.cpp` and `OnnxLatencyProbeTest.cpp` contain **DISABLED** gtest cases used to measure tolerances and latency — not part of normal CI.
 
 Run when:
 
 - The libsamplerate / resampler configuration changes
-- `SimulatedOnnxProcessor` or `InferenceThread` model latency changes
+- `ScycloneModelConfig`, anira, or the ONNX Runtime version changes — re-measure `kOnnxInferenceLatencySamples`
 - Production chain tests fail and you need to distinguish measurement drift from real regressions
 
 Configure first with `cmake --preset default` and `cmake --build --preset test` (see [test/README.md](../README.md)).
@@ -22,6 +22,13 @@ Configure first with `cmake --preset default` and `cmake --build --preset test` 
 
 # Swept-sine lag sweep (group delay vs productionChainTotalLatency)
 .\build\Test.exe --gtest_filter=*ProductionSineLagSweep* --gtest_also_run_disabled_tests
+
+# anira ONNX latency across host block sizes (update kOnnxInferenceLatencySamples in
+# source/dsp/onnx/OnnxInferenceLatency.h from the 48 kHz / 512 row)
+.\build\Test.exe --gtest_filter=*PrintOnnxLatencyMeasurements* --gtest_also_run_disabled_tests
 ```
+
+`OnnxProcessorContractTest.ReportedLatency_MatchesCalibratedConstantAtReferenceConfig` pins the
+constant against the live backend, so drift fails the build rather than going unnoticed.
 
 Policy: do **not** relax production swept-sine / impulse CI tests based on probe output alone. Production signal suites use `productionSignalContractConfigs()` (48 kHz only); see architecture doc for cross-rate group-delay issue. Probes track drift until product latency reporting is fixed.

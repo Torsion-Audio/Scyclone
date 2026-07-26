@@ -8,6 +8,12 @@
 #include "dsp/analyser/AudioVisualiser.h"
 #include "dsp/analyser/LevelAnalyser.h"
 #include "dsp/onnx/OnnxProcessor.h"
+#include "dsp/onnx/OnnxModel.h"
+#include "dsp/onnx/WarningWindow.h"
+
+#ifndef SCYCLONE_INFERENCE_STUB
+#include <anira/ContextConfig.h>
+#endif
 #include "dsp/gain/ProcessorGain.h"
 #include "dsp/Filter/IIRCutoffFilter.h"
 #include "dsp/grainDelay/GrainDelay.h"
@@ -74,9 +80,12 @@ public:
     std::function<void(int modelID, juce::String& modelName)> setExternalModelName;
     void setInitialMuteParameters();
     void initialiseRnbo();
-    void loadExternalModel(juce::File path, int id) {
-        if (id == 1) onnxProcessor1.loadExternalModel(path);
-        if (id == 2) onnxProcessor2.loadExternalModel(path);
+
+    /// @return false if the model could not be loaded; the previously loaded model stays active.
+    bool loadExternalModel(juce::File path, int id) {
+        if (id == 1) return onnxProcessor1.loadExternalModel(path);
+        if (id == 2) return onnxProcessor2.loadExternalModel(path);
+        return false;
     }
 
     float getCpuLoad();
@@ -124,8 +133,19 @@ private:
     void prepareDownsampler(const juce::dsp::ProcessSpec &inputSpec, const juce::dsp::ProcessSpec &onnxSpec);
     bool resample = false;
 
+#ifndef SCYCLONE_INFERENCE_STUB
+    // Must precede onnxProcessor1/2: they capture a reference to it, and members are
+    // initialised in declaration order regardless of the constructor's init-list order.
+    anira::ContextConfig aniraContextConfig;
+#endif
+
     OnnxProcessor onnxProcessor1;
     OnnxProcessor onnxProcessor2;
+
+    WarningWindow warningWindow;
+    double lastHostSampleRate = 48000.0;
+    void handleModelLoad(int modelID, bool initLoading, juce::String modelName);
+    void refreshReportedLatency();
 
 
     ProcessorCompressor processorCompressor;

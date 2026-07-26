@@ -2,7 +2,31 @@
 #include "PluginEditor.h"
 #include "dsp/utils/utils.h"
 #include <chrono>
+#include <thread>
 using namespace std::chrono;
+
+#ifndef SCYCLONE_INFERENCE_STUB
+namespace
+{
+    // Half the logical cores, at least one — matches anira's own default pool sizing.
+    unsigned int defaultInferenceThreadCount()
+    {
+        const unsigned int cores = std::thread::hardware_concurrency();
+        return cores / 2 > 0 ? cores / 2 : 1u;
+    }
+
+    anira::ContextConfig makeAniraContextConfig()
+    {
+        // anira's default log level is Info in debug builds, which it maps straight onto ORT's
+        // logger — a plugin has no console and should not flood the host's stdout, so pin Error
+        // regardless of build type. Wait strategy stays at anira's default; it is process-global
+        // (first context created wins), so there is nothing to gain from overriding it here.
+        return anira::ContextConfig(defaultInferenceThreadCount(),
+                                    anira::WaitStrategy::SpinBackoff,
+                                    anira::LogLevel::Error);
+    }
+}
+#endif
 
 //==============================================================================
 AudioPluginAudioProcessor::AudioPluginAudioProcessor()
@@ -19,11 +43,19 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
       processorTransientSplitter2(parameters, 2),
       iirCutoffFilter1(parameters, 1),
       iirCutoffFilter2(parameters, 2),
+// Init-list order below mirrors the declaration order in PluginProcessor.h — keep them in sync
+// so aniraContextConfig is alive before the processors that hold a reference to it.
+#ifndef SCYCLONE_INFERENCE_STUB
+      aniraContextConfig(makeAniraContextConfig()),
+      onnxProcessor1(parameters, 1, FunkDrum, aniraContextConfig),
+      onnxProcessor2(parameters, 2, Djembe, aniraContextConfig),
+#else
       onnxProcessor1(parameters, 1, FunkDrum),
       onnxProcessor2(parameters, 2, Djembe),
+#endif
+      processorCompressor(parameters),
       grainDelay1(1),
-      grainDelay2(2),
-      processorCompressor(parameters)
+      grainDelay2(2)
 {
 
     network1Name = "Funk";
@@ -44,23 +76,9 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     fadeMixer.setDryWetProportion(parameters.getRawParameterValue(PluginParameters::FADE_ID.getParamID())->load());
 
     onnxProcessor1.onOnnxModelLoad = [this](bool initLoading, juce::String modelName)
-    {
-        this->suspendProcessing(initLoading);
-        //        std::cout << "Onnx proc 1 suspend:" << initLoading << std::endl; //DBG
-        if (!initLoading && modelName != "")
-        {
-            setExternalModelName(1, modelName);
-        }
-    };
+    { handleModelLoad(1, initLoading, modelName); };
     onnxProcessor2.onOnnxModelLoad = [this](bool initLoading, juce::String modelName)
-    {
-        this->suspendProcessing(initLoading);
-        //        std::cout << "Onnx proc 2 suspend:" << initLoading << std::endl; //DBG
-        if (!initLoading && modelName != "")
-        {
-            setExternalModelName(2, modelName);
-        }
-    };
+    { handleModelLoad(2, initLoading, modelName); };
 
     setInitialMuteParameters();
     initialiseRnbo();
@@ -74,6 +92,9 @@ AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
     }
     PluginParameters::clearNotAutomatableValueTree(parameters.state.getChild(0));
     parameters.state.removeChild(0, nullptr);
+
+    onnxProcessor1.releaseResources();
+    onnxProcessor2.releaseResources();
 }
 
 //==============================================================================
@@ -144,6 +165,11 @@ void AudioPluginAudioProcessor::changeProgramName(int index, const juce::String 
 //==============================================================================
 void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+    lastHostSampleRate = sampleRate;
+
+    if (sampleRate != 48000.0)
+        warningWindow.showWarningWindow(SampleRateWarning);
+
     juce::dsp::ProcessSpec spec{sampleRate,
                                 static_cast<juce::uint32>(samplesPerBlock),
                                 static_cast<juce::uint32>(getTotalNumInputChannels())};
@@ -218,7 +244,7 @@ int AudioPluginAudioProcessor::prepareOnnx(const juce::dsp::ProcessSpec &inputSp
     onnxProcessor1.prepare(onnxSpec);
     onnxProcessor2.prepare(onnxSpec);
 
-    int onnxDelay48k = std::max(onnxProcessor1.getLatencyInSamples(), onnxProcessor2.getLatencyInSamples());
+    int onnxDelay48k = (std::max)(onnxProcessor1.getLatencyInSamples(), onnxProcessor2.getLatencyInSamples());
 
     if (!resample)
         return onnxDelay48k;
@@ -229,6 +255,41 @@ int AudioPluginAudioProcessor::prepareOnnx(const juce::dsp::ProcessSpec &inputSp
         downsamplerOne->getLatencyInSamples(),
         48000.0,
         inputSpec.sampleRate);
+}
+
+void AudioPluginAudioProcessor::handleModelLoad(int modelID, bool initLoading, juce::String modelName)
+{
+    if (initLoading)
+    {
+        suspendProcessing(true);
+        return;
+    }
+
+    if (modelName.isNotEmpty() && setExternalModelName)
+        setExternalModelName(modelID, modelName);
+
+    // Update reported latency and the dry-path delay *before* resuming: both are read by the
+    // audio callback, and setWetLatency writes the delay line non-atomically.
+    refreshReportedLatency();
+    suspendProcessing(false);
+}
+
+void AudioPluginAudioProcessor::refreshReportedLatency()
+{
+    const int onnxDelay48k = (std::max)(onnxProcessor1.getLatencyInSamples(),
+                                        onnxProcessor2.getLatencyInSamples());
+
+    const int totalLatency = resample
+        ? utils::computeTotalLatencyInSamples(
+              upsamplerOne->getLatencyInSamples(),
+              onnxDelay48k,
+              downsamplerOne->getLatencyInSamples(),
+              48000.0,
+              lastHostSampleRate)
+        : onnxDelay48k;
+
+    setLatencySamples(totalLatency + internalBlockSize);
+    dryWetMixer.setWetLatency(totalLatency);
 }
 
 int AudioPluginAudioProcessor::prepareUpsampler(const juce::dsp::ProcessSpec &inputSpec, const int targetSampleRate)
@@ -250,8 +311,20 @@ void AudioPluginAudioProcessor::prepareDownsampler(const juce::dsp::ProcessSpec 
 
 void AudioPluginAudioProcessor::releaseResources()
 {
-    // Free resources when playback stops.
+    onnxProcessor1.releaseResources();
+    onnxProcessor2.releaseResources();
+
+    upsamplerOne.reset();
+    upsamplerTwo.reset();
+    downsamplerOne.reset();
+    downsamplerTwo.reset();
+    resample = false;
+
     measurer.reset();
+    // Do not call anira::Context::release_instance() here: the context is a process-wide
+    // singleton shared by every plugin instance, and anira already tears it down in
+    // Context::release_session once the last session goes away. Releasing it manually
+    // destroys the thread pool out from under any other instance still playing.
 }
 
 bool AudioPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
