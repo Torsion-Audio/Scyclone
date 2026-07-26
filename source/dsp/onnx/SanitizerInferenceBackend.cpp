@@ -19,6 +19,15 @@ void SanitizerInferenceBackend::processBlock(juce::AudioBuffer<float>& buffer)
     if (fifoLength <= 0 || buffer.getNumChannels() < 1)
         return;
 
+    // Mirror AniraInferenceBackend: muting freezes the delay line rather than draining it,
+    // so the contract tests see the same mute/unmute behaviour as production.
+    if (muted.load(std::memory_order_relaxed))
+    {
+        buffer.clear();
+        filled = 0;
+        return;
+    }
+
     for (int i = 0; i < numSamples; ++i)
     {
         const float in = buffer.getSample(0, i);
@@ -43,21 +52,28 @@ int SanitizerInferenceBackend::getLatencyInSamples() const
     return latencyInSamples;
 }
 
-void SanitizerInferenceBackend::loadExternalModel(const juce::File& path)
+bool SanitizerInferenceBackend::loadExternalModel(const juce::File& path)
 {
     if (onModelLoad)
         onModelLoad(true, path.getFileNameWithoutExtension());
     if (onModelLoad)
         onModelLoad(false, path.getFileNameWithoutExtension());
+    return true;
 }
 
-void SanitizerInferenceBackend::setInternalModel()
+bool SanitizerInferenceBackend::setInternalModel()
 {
     juce::ignoreUnused(raveModel);
     if (onModelLoad)
         onModelLoad(true, "");
     if (onModelLoad)
         onModelLoad(false, "");
+    return true;
+}
+
+void SanitizerInferenceBackend::setMuted(bool shouldBeMuted)
+{
+    muted.store(shouldBeMuted, std::memory_order_relaxed);
 }
 
 void SanitizerInferenceBackend::releaseResources()

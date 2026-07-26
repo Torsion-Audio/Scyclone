@@ -211,14 +211,35 @@ void FileChooserManager::openFileChooserForNetwork(int networkID, juce::Componen
         return;
     }
 
+    static constexpr const char *modelFilePatterns = "*.ort;*.onnx";
+
     auto onFileChosen = [this, networkID](const juce::File &file)
     {
-        processorRef.loadExternalModel(file.getFullPathName(), networkID);
+        // The extension check upstream only proves the name looks right — the file still has to
+        // be a RAVE model of the expected shape. A load failure must not escape into JUCE's
+        // async chooser callback, where it would terminate the host.
+        bool loaded = false;
+
+        try
+        {
+            loaded = processorRef.loadExternalModel(file, networkID);
+        }
+        catch (const std::exception &e)
+        {
+            juce::Logger::writeToLog("Model load threw: " + juce::String(e.what()));
+        }
+        catch (...)
+        {
+            juce::Logger::writeToLog("Model load threw: unknown error");
+        }
+
+        if (!loaded)
+            warningWindow.showWarningWindow(UnsupportedFileType, modelFilePatterns);
     };
 
     openFileChooser("Choose a model file...",
                     juce::File::getSpecialLocation(juce::File::SpecialLocationType::userHomeDirectory),
-                    "*.ort;*.onnx",
+                    modelFilePatterns,
                     onFileChosen,
                     parentComponent);
 }

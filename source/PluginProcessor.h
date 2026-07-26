@@ -79,9 +79,11 @@ public:
     void setInitialMuteParameters();
     void initialiseRnbo();
 
-    void loadExternalModel(juce::File path, int id) {
-        if (id == 1) onnxProcessor1.loadExternalModel(path);
-        if (id == 2) onnxProcessor2.loadExternalModel(path);
+    /// @return false if the model could not be loaded; the previously loaded model stays active.
+    bool loadExternalModel(juce::File path, int id) {
+        if (id == 1) return onnxProcessor1.loadExternalModel(path);
+        if (id == 2) return onnxProcessor2.loadExternalModel(path);
+        return false;
     }
 
     float getCpuLoad();

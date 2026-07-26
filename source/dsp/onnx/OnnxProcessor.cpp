@@ -26,22 +26,25 @@ OnnxProcessor::OnnxProcessor(juce::AudioProcessorValueTreeState& apvts, int no, 
 
 void OnnxProcessor::parameterChanged(const juce::String& parameterID, float newValue)
 {
-    if (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && number == 1)
+    const bool selectNetwork = (parameterID == PluginParameters::SELECT_NETWORK1_ID.getParamID() && number == 1)
+                            || (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && number == 2);
+
+    if (selectNetwork)
     {
         if (!(bool) newValue)
         {
             backend->setInternalModel();
             latencyInSamples = backend->getLatencyInSamples();
         }
+        return;
     }
-    else if (parameterID == PluginParameters::SELECT_NETWORK2_ID.getParamID() && number == 2)
-    {
-        if (!(bool) newValue)
-        {
-            backend->setInternalModel();
-            latencyInSamples = backend->getLatencyInSamples();
-        }
-    }
+
+    // Network off: skip inference rather than running it and discarding the result.
+    const bool onOffNetwork = (parameterID == PluginParameters::ON_OFF_NETWORK1_ID.getParamID() && number == 1)
+                           || (parameterID == PluginParameters::ON_OFF_NETWORK2_ID.getParamID() && number == 2);
+
+    if (onOffNetwork)
+        backend->setMuted(!(bool) newValue);
 }
 
 void OnnxProcessor::prepare(const juce::dsp::ProcessSpec& spec)
@@ -55,10 +58,11 @@ void OnnxProcessor::processBlock(juce::AudioBuffer<float>& buffer)
     backend->processBlock(buffer);
 }
 
-void OnnxProcessor::loadExternalModel(juce::File file)
+bool OnnxProcessor::loadExternalModel(juce::File file)
 {
-    backend->loadExternalModel(file);
+    const bool loaded = backend->loadExternalModel(file);
     latencyInSamples = backend->getLatencyInSamples();
+    return loaded;
 }
 
 void OnnxProcessor::releaseResources()

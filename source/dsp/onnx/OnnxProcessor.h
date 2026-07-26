@@ -30,7 +30,8 @@ public:
     void prepare(const juce::dsp::ProcessSpec& spec) override;
     void processBlock(juce::AudioBuffer<float>& buffer) override;
     int getLatencyInSamples() const override;
-    void loadExternalModel(juce::File path);
+    /// @return false if the file could not be loaded; the previous model stays active.
+    bool loadExternalModel(juce::File path);
     void releaseResources();
 
     std::function<void(bool initLoading, juce::String modelName)> onOnnxModelLoad;
