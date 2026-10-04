@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Training and converting models
+    url: https://github.com/Torsion-Audio/Scyclone-AI
+    about: Training RAVE models and exporting them for Scyclone is covered in the Scyclone-AI repository.

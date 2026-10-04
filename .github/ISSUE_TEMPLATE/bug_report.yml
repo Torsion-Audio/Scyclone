@@ -1,0 +1,100 @@
+name: Bug report
+description: Report a problem with Scyclone.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before you file: check the [installation guide](https://github.com/Torsion-Audio/Scyclone#installation) if Scyclone does not show up in your DAW, and search [existing issues](https://github.com/Torsion-Audio/Scyclone/issues?q=is%3Aissue). Scyclone needs a stereo track.
+
+  - type: input
+    id: version
+    attributes:
+      label: Scyclone version
+      description: Release number and download file name, or for a build from source the commit hash shown in the plugin footer.
+      placeholder: "v0.0.3, Scyclone-v.0.0.3-osx-arm64.dmg"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build
+    attributes:
+      label: Which build are you using?
+      options:
+        - macOS release
+        - Windows release
+        - Scyclone Installer
+        - Built from source
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and CPU
+      placeholder: "macOS 14.4 on M2, Windows 11 23H2 on x64"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: format
+    attributes:
+      label: Plugin format
+      description: Select every format that you have encountered the problem with. AU exists on macOS only.
+      multiple: true
+      options:
+        - VST3
+        - AU
+        - Standalone
+    validations:
+      required: true
+
+  - type: input
+    id: host
+    attributes:
+      label: DAW and version
+      description: Leave empty if you only use the Standalone app.
+      placeholder: "Ableton Live 12.0.5, Logic Pro 10.8.1, Cubase Pro 13.0.40"
+    validations:
+      required: false
+
+  - type: input
+    id: audio-setup
+    attributes:
+      label: Track, sample rate, buffer size and model
+      placeholder: "Stereo track, 44.1 kHz, 512 samples, Funk Drums model"
+    validations:
+      required: false
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead? Copy any error message from the DAW word for word.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Does it happen every time? What did you already try (another DAW, the Standalone app, a plugin rescan)?
+      placeholder: |
+        1. Insert Scyclone on a stereo audio track
+        2. Load the Funk Drums model
+        3. Press play
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and crash reports
+      description: |
+        Drag files into this field to attach them.
+        - Crash on Windows: the `.dmp` file from your DAW's crash folder
+        - Crash on macOS: the `.ips` file from `~/Library/Logs/DiagnosticReports`
+        - Plugin missing or failing validation on macOS: the plugin's install path and the output of `auval -v aufx SCYC TORA`
+        - Build from source fails: compiler, CMake version and the full CMake/build output
+    validations:
+      required: false
