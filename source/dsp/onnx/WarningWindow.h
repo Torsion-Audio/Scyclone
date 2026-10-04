@@ -9,7 +9,6 @@
 
 enum WarningType
 {
-    SampleRateWarning,
     SystemTooSlow,
     UnsupportedFileType
 };
@@ -24,10 +23,6 @@ public:
 
         switch (type)
         {
-        case SampleRateWarning:
-            title = "Warning: unsupported sample rate";
-            errorMessage = "This plugin is still in alpha. At the moment only a sample rate of 48kHz is supported.";
-            break;
         case SystemTooSlow:
             title = "Warning: system load too high";
             errorMessage = "It seems that this system is not fast enough to process the audio data. Try to only use one network.";

@@ -167,9 +167,6 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
 {
     lastHostSampleRate = sampleRate;
 
-    if (sampleRate != 48000.0)
-        warningWindow.showWarningWindow(SampleRateWarning);
-
     juce::dsp::ProcessSpec spec{sampleRate,
                                 static_cast<juce::uint32>(samplesPerBlock),
                                 static_cast<juce::uint32>(getTotalNumInputChannels())};

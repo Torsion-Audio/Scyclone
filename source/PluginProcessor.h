@@ -9,7 +9,6 @@
 #include "dsp/analyser/LevelAnalyser.h"
 #include "dsp/onnx/OnnxProcessor.h"
 #include "dsp/onnx/OnnxModel.h"
-#include "dsp/onnx/WarningWindow.h"
 
 #ifndef SCYCLONE_INFERENCE_STUB
 #include <anira/ContextConfig.h>
@@ -147,7 +146,6 @@ private:
     OnnxProcessor onnxProcessor1;
     OnnxProcessor onnxProcessor2;
 
-    WarningWindow warningWindow;
     double lastHostSampleRate = 48000.0;
     void handleModelLoad(int modelID, bool initLoading, juce::String modelName);
     void refreshReportedLatency();
