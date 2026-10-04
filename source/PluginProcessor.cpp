@@ -547,7 +547,7 @@ void AudioPluginAudioProcessor::setInitialMuteParameters()
     auto onOffGrain2 = parameters.getRawParameterValue(PluginParameters::GRAIN_ON_OFF_NETWORK2_ID.getParamID())->load();
 
     auto onOffNetwork1 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load();
-    auto onOffNetwork2 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK1_ID.getParamID())->load();
+    auto onOffNetwork2 = parameters.getRawParameterValue(PluginParameters::ON_OFF_NETWORK2_ID.getParamID())->load();
 
     parameterChanged(PluginParameters::ON_OFF_NETWORK1_ID.getParamID(), onOffNetwork1);
     parameterChanged(PluginParameters::ON_OFF_NETWORK2_ID.getParamID(), onOffNetwork2);
