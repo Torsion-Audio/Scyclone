@@ -107,6 +107,6 @@ private:
 
     std::unique_ptr<juce::ComponentAnimator> componentAnimator;
 
-    juce::Component* componentArray[8];
+    juce::Component* componentArray[8]; // TooltipCounts::xyPad — order in TooltipManager::initializeTooltipMap
 };
 
