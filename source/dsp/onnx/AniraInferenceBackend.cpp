@@ -1,6 +1,17 @@
 #include "AniraInferenceBackend.h"
 #include "ScycloneModelConfig.h"
 
+namespace {
+
+/// anira's latency calculator throws std::invalid_argument for a non-positive block size or
+/// sample rate, so a spec has to pass this before it reaches InferenceHandler::prepare().
+bool isPreparable(const juce::dsp::ProcessSpec& spec)
+{
+    return spec.sampleRate > 0.0 && spec.maximumBlockSize > 0;
+}
+
+} // namespace
+
 AniraInferenceBackend::AniraInferenceBackend(RaveModel model, anira::ContextConfig& contextConfigIn)
     : raveModel(model),
       contextConfig(contextConfigIn),
@@ -22,7 +33,12 @@ void AniraInferenceBackend::rebuildPipeline()
     handler = std::make_unique<anira::InferenceHandler>(
         *prePostProcessor, inferenceConfig, contextConfig);
 
-    if (lastSpec.sampleRate > 0.0)
+    // Select the model explicitly. Before anira v2.3.0 a session started on the CUSTOM backend,
+    // whose default processor copies input to output, so without this the RAVE model was loaded
+    // but never run. v2.3.0 defaults to the first configured model; don't rely on either default.
+    handler->set_inference_backend(anira::InferenceBackend::ONNX);
+
+    if (isPreparable(lastSpec))
     {
         handler->prepare(makeHostConfig(lastSpec));
         latencyInSamples = static_cast<int>(handler->get_latency());
@@ -90,6 +106,9 @@ anira::HostConfig AniraInferenceBackend::makeHostConfig(const juce::dsp::Process
 
 void AniraInferenceBackend::prepare(const juce::dsp::ProcessSpec& spec)
 {
+    if (!isPreparable(spec))
+        return;
+
     lastSpec = spec;
 
     if (handler == nullptr)
@@ -133,6 +152,11 @@ void AniraInferenceBackend::processBlock(juce::AudioBuffer<float>& buffer)
 int AniraInferenceBackend::getLatencyInSamples() const
 {
     return latencyInSamples;
+}
+
+anira::InferenceBackend AniraInferenceBackend::activeAniraBackend() const
+{
+    return handler != nullptr ? handler->get_inference_backend() : anira::InferenceBackend::CUSTOM;
 }
 
 void AniraInferenceBackend::setMuted(bool shouldBeMuted)

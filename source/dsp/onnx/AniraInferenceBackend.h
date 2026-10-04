@@ -20,6 +20,9 @@ public:
     void setMuted(bool shouldBeMuted) override;
     void releaseResources() override;
 
+    /// The backend anira is currently running, or CUSTOM (passthrough) when no pipeline exists.
+    anira::InferenceBackend activeAniraBackend() const;
+
 private:
     void rebuildPipeline();
 

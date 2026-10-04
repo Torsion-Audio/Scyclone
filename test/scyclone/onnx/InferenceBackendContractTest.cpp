@@ -6,6 +6,7 @@
 
 #ifndef SCYCLONE_INFERENCE_STUB
 #include <anira/anira.h>
+#include "AniraInferenceBackend.h"
 #endif
 
 namespace {
@@ -85,6 +86,43 @@ TEST_F(InferenceBackendContractTest, Prepare_ReportsConsistentLatency)
     backend->prepare(spec);
     EXPECT_EQ(backend->getLatencyInSamples(), first);
 }
+
+// anira's latency calculator throws for a zero block size or sample rate. A host that briefly
+// reports one must not take the plugin down, and a later valid prepare must still work.
+TEST_F(InferenceBackendContractTest, Prepare_IgnoresUnusableSpec)
+{
+    EXPECT_NO_THROW(backend->prepare(juce::dsp::ProcessSpec{0.0, 0, 1}));
+    EXPECT_NO_THROW(backend->prepare(juce::dsp::ProcessSpec{48000.0, 0, 1}));
+
+    juce::AudioBuffer<float> buffer(1, 512);
+    buffer.clear();
+    EXPECT_NO_THROW(backend->processBlock(buffer));
+
+    backend->prepare(juce::dsp::ProcessSpec{48000.0, 512, 1});
+    EXPECT_GT(backend->getLatencyInSamples(), 0);
+}
+
+#ifndef SCYCLONE_INFERENCE_STUB
+// Regression: before anira v2.3.0 a session started on the CUSTOM backend, which copies input
+// to output, and nothing selected ONNX — the RAVE model was loaded but never run. Output-based
+// checks cannot catch that reliably (late inference also yields silence), so assert the
+// selected backend directly, both after the first build and after a model swap rebuilds it.
+TEST(AniraInferenceBackendTest, RunsTheOnnxModelNotPassthrough)
+{
+    anira::ContextConfig contextConfig{2, anira::WaitStrategy::SpinBackoff, anira::LogLevel::Error};
+    AniraInferenceBackend backend(FunkDrum, contextConfig);
+
+    EXPECT_EQ(backend.activeAniraBackend(), anira::InferenceBackend::CUSTOM)
+        << "no pipeline exists before prepare";
+
+    backend.prepare(juce::dsp::ProcessSpec{48000.0, 512, 1});
+    EXPECT_EQ(backend.activeAniraBackend(), anira::InferenceBackend::ONNX);
+
+    ASSERT_TRUE(backend.setInternalModel());
+    EXPECT_EQ(backend.activeAniraBackend(), anira::InferenceBackend::ONNX)
+        << "a rebuilt pipeline must select ONNX again";
+}
+#endif
 
 // The stub is a pure delay line, so it round-trips its input exactly. The real backend is a
 // generative model — it does not preserve the signal, so the assertable contract is that it
