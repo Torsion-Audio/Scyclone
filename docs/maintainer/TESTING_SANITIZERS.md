@@ -59,7 +59,9 @@ Before moving an advisory job into `sanitizers.yml` and requiring it in branch p
 
 **MSan requires full link instrumentation** — every object in the link must be MSan-instrumented (including FetchContent **gtest**; see [`setup_tests_and_benchmarks.cmake`](../../cmake/setup_tests_and_benchmarks.cmake)). This does **not** apply to standalone LSan (`LEAK` preset) or to macOS `detect_leaks` via ASan.
 
-**MSan + inference stub** — prebuilt ORT is not MSan-instrumented. `MEMORY` forces `SCYCLONE_INFERENCE_STUB` and links [`SanitizerInferenceBackend`](../../source/dsp/onnx/SanitizerInferenceBackend.cpp) instead of Anira/ORT. `PluginIntegrationTest` runs with simulated latency; only `AniraModelValidationTest` skips. FetchContent **gtest** links `scyclone_sanitizer_flags` for MSan (see [`setup_tests_and_benchmarks.cmake`](../../cmake/setup_tests_and_benchmarks.cmake)).
+**MSan + inference stub** — prebuilt ORT is not MSan-instrumented. `MEMORY` forces `SCYCLONE_INFERENCE_STUB` and links [`SanitizerInferenceBackend`](../../source/dsp/onnx/SanitizerInferenceBackend.cpp) instead of Anira/ORT. `PluginIntegrationTest`'s latency checks run with simulated latency; `AniraModelValidationTest` skips. FetchContent **gtest** links `scyclone_sanitizer_flags` for MSan (see [`setup_tests_and_benchmarks.cmake`](../../cmake/setup_tests_and_benchmarks.cmake)).
+
+**MSan + full DSP chain** — the plugin's DSP chain (RNBO export, SIMD paths) is not yet MSan-clean. `SCYCLONE_SKIP_MSAN_DSP_CHAIN_TESTS` skips the tests that push audio through the whole processor: `AutomationStabilityTest` and `PluginIntegrationTest.ProcessBlock_PreservesHostBlockSize`. The reported frame (`Envelope::processBlock`) is not the origin: that test feeds each block's output back in as the next input, and MSan only reports the first *branch* on a tainted sample. Find the source with `SCYCLONE_MSAN_TRACK_ORIGINS=ON` before removing the skip.
 
 **Linux ASAN_UBSAN + PluginIntegrationTest** — prebuilt ORT + Linux UBSan hits invalid-vptr in ORT during model load; `PluginIntegrationTest` skips (`SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST`). macOS Apple-Clang ASan still runs it.
 

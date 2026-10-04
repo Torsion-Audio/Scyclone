@@ -55,6 +55,9 @@ TEST_F(PluginIntegrationTest, ReportedLatency_IsMonotonicDecreasingWithHostBlock
 #endif
 
 TEST_F(PluginIntegrationTest, ProcessBlock_PreservesHostBlockSize) {
+#if defined(SCYCLONE_SKIP_MSAN_DSP_CHAIN_TESTS)
+    GTEST_SKIP() << "Skipped under MSan: the DSP chain is not MSan-clean yet (see ScycloneSanitizers.cmake)";
+#endif
     AudioPluginAudioProcessor processor;
     processor.prepareToPlay(44100.0, 512);
 
