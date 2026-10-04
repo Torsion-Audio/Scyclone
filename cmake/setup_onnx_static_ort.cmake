@@ -1,5 +1,7 @@
-# Static ONNX Runtime IMPORTED target via anira-project/backends download (ORT 1.26.0).
-# Must be defined before add_subdirectory(modules/anira) so Anira links against this target.
+# Static ONNX Runtime download via anira-project/backends (ORT 1.26.0). setup_anira.cmake hands
+# SCYCLONE_ONNXRUNTIME_PACKAGE_DIR to anira as ANIRA_ONNXRUNTIME_ROOTDIR; anira builds its own
+# anira::onnxruntime target from it, which is what Scyclone links. The IMPORTED onnxruntime target
+# below is not linked by anything.
 
 if(TARGET onnxruntime)
     return()

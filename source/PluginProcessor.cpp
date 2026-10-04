@@ -321,10 +321,9 @@ void AudioPluginAudioProcessor::releaseResources()
     resample = false;
 
     measurer.reset();
-    // Do not call anira::Context::release_instance() here: the context is a process-wide
-    // singleton shared by every plugin instance, and anira already tears it down in
-    // Context::release_session once the last session goes away. Releasing it manually
-    // destroys the thread pool out from under any other instance still playing.
+    // Do not call anira::Context::shutdown() here: the context is process-wide and shared by
+    // every plugin instance, and anira already joins its thread pool once the last session is
+    // released. Shutting it down manually stops inference for any other instance still playing.
 }
 
 bool AudioPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const

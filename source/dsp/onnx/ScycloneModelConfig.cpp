@@ -183,8 +183,7 @@ bool validateRaveModelFile(const std::string& modelPath, std::string& errorOut)
 }
 
 // User-supplied models must be RAVE exports with the same 2048-in/2048-out shape. Callers are
-// expected to have run validateRaveModelFile() first — see the note there on why anira must not
-// be allowed to throw during session creation.
+// expected to have run validateRaveModelFile() first — anira does not reject a wrong shape.
 anira::InferenceConfig makeScycloneInferenceConfigFromPath(const std::string& modelPath)
 {
     std::vector<anira::ModelData> modelData;

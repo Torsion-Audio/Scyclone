@@ -173,10 +173,9 @@ bool AniraInferenceBackend::loadExternalModel(const juce::File& path)
 
     const std::string modelPath = path.getFullPathName().toStdString();
 
-    // Validate before anira touches the file. A model ORT cannot load throws out of
-    // Context::create_session with its active-session counter already incremented, which leaks
-    // the shared thread pool and Context singleton for the rest of the process (see
-    // validateRaveModelFile). Rejecting bad files here keeps the rollback below survivable.
+    // Validate before anira touches the file: a wrong tensor shape would load and then produce
+    // garbage audio (see validateRaveModelFile), and rejecting here gives the user a clear reason
+    // instead of a failed rollback.
     std::string validationError;
     const bool valid = validateRaveModelFile(modelPath, validationError);
 
