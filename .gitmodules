@@ -7,3 +7,6 @@
 [submodule "modules/libsamplerate"]
 	path = modules/libsamplerate
 	url = https://github.com/libsndfile/libsamplerate.git
+[submodule "modules/anira"]
+	path = modules/anira
+	url = https://github.com/anira-project/anira.git

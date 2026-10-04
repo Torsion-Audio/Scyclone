@@ -1,8 +1,9 @@
 // Plugin-level smoke and latency ordering properties.
-// Why: full graph uses real ONNX — we test block contract and monotonicity, not impulse fidelity.
 
 #include <gtest/gtest.h>
 #include "JuceFixture.h"
+#include "ParameterHelpers.h"
+#include "PluginParameters.h"
 #include "PluginProcessor.h"
 #include "TestTiming.h"
 
@@ -13,40 +14,67 @@ protected:
     void SetUp() override
     {
         JuceAudioTest::SetUp();
-#if defined(SCYCLONE_ONNX_STUB)
-        GTEST_SKIP() << "PluginIntegrationTest requires ONNX Runtime (disabled under sanitizer stub build)";
-#elif defined(SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST)
+#if defined(SCYCLONE_SKIP_PLUGIN_INTEGRATION_TEST)
         GTEST_SKIP() << "PluginIntegrationTest skipped: prebuilt ORT triggers Linux UBSan false positives (see ScycloneSanitizers.cmake)";
 #endif
     }
 };
 
-// Signal: prepareToPlay at 44.1k/512; latency positive and idempotent across release/re-prepare.
+// Regression: the initial mute state of network 2 was read from network 1's on/off parameter.
+// Network 1 defaults to on and network 2 to off, so every fresh instance ran full inference on
+// network 2 only to discard the result.
+TEST_F(PluginIntegrationTest, DefaultState_MutesSwitchedOffNetwork) {
+    AudioPluginAudioProcessor proc;
+    EXPECT_FALSE(proc.isNetworkMuted(1)) << "network 1 is on by default";
+    EXPECT_TRUE(proc.isNetworkMuted(2)) << "network 2 is off by default and must not run inference";
+
+    setBoolParameterById(proc, PluginParameters::ON_OFF_NETWORK2_ID.getParamID(), true);
+    EXPECT_FALSE(proc.isNetworkMuted(2)) << "switching network 2 on must unmute it";
+
+    setBoolParameterById(proc, PluginParameters::ON_OFF_NETWORK1_ID.getParamID(), false);
+    EXPECT_TRUE(proc.isNetworkMuted(1)) << "switching network 1 off must mute it";
+}
+
 TEST_F(PluginIntegrationTest, ReportedLatency_IsPositiveAndIdempotent) {
     AudioPluginAudioProcessor proc;
-    proc.prepareToPlay(44100.0, 512);
+    proc.prepareToPlay(48000.0, 512);
     const int first = proc.getLatencySamples();
     EXPECT_GT(first, 0);
     proc.releaseResources();
-    proc.prepareToPlay(44100.0, 512);
+    proc.prepareToPlay(48000.0, 512);
     EXPECT_EQ(proc.getLatencySamples(), first);
     proc.releaseResources();
 }
 
-// Why: ONNX block-aligned delay shrinks as host block grows — ordering property, not a magic number.
-TEST_F(PluginIntegrationTest, ReportedLatency_IsMonotonicDecreasingWithHostBlockAt44k) {
+// Why: anira derives ONNX latency from the HostConfig, so a larger host block absorbs more of
+// the block-alignment delay. Ordering property, not a magic number — the measured 48 kHz curve
+// runs 4064 samples at block 32 down to 2048 at block 2048 (see OnnxInferenceLatency.h).
+// Stub-excluded: SanitizerInferenceBackend reports a fixed latency by design.
+#if !defined(SCYCLONE_INFERENCE_STUB)
+TEST_F(PluginIntegrationTest, ReportedLatency_IsMonotonicDecreasingWithHostBlockAt48k) {
     AudioPluginAudioProcessor proc;
-    proc.prepareToPlay(44100.0, 32);
+
+    proc.prepareToPlay(48000.0, 32);
     const int chainLatency32 = proc.getLatencySamples() - 32;
     proc.releaseResources();
-    proc.prepareToPlay(44100.0, 512);
-    const int chainLatency512 = proc.getLatencySamples() - 512;
-    EXPECT_GT(chainLatency32, chainLatency512) << "larger host blocks should reduce block-aligned ONNX delay";
-    proc.releaseResources();
-}
 
-// Signal: silence → processBlock × pre-roll; host buffer size unchanged after each callback.
+    proc.prepareToPlay(48000.0, 512);
+    const int chainLatency512 = proc.getLatencySamples() - 512;
+    proc.releaseResources();
+
+    proc.prepareToPlay(48000.0, 2048);
+    const int chainLatency2048 = proc.getLatencySamples() - 2048;
+    proc.releaseResources();
+
+    EXPECT_GT(chainLatency32, chainLatency512) << "larger host blocks should reduce block-aligned ONNX delay";
+    EXPECT_GT(chainLatency512, chainLatency2048) << "larger host blocks should reduce block-aligned ONNX delay";
+}
+#endif
+
 TEST_F(PluginIntegrationTest, ProcessBlock_PreservesHostBlockSize) {
+#if defined(SCYCLONE_SKIP_MSAN_DSP_CHAIN_TESTS)
+    GTEST_SKIP() << "Skipped under MSan: the DSP chain is not MSan-clean yet (see ScycloneSanitizers.cmake)";
+#endif
     AudioPluginAudioProcessor processor;
     processor.prepareToPlay(44100.0, 512);
 

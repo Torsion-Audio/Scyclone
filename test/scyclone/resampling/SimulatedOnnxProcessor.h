@@ -2,28 +2,22 @@
 
 /// @file SimulatedOnnxProcessor.h
 /// @brief ONNX-shaped latency preset for production-chain tests.
-///
-/// Wraps `DelayLineProcessor` with `computeOnnxLatencyInSamples` so chain
-/// contracts validate the same latency formula the plugin reports at 48 kHz.
-///
-/// @namespace scyclone::test::resampling
 
 #include "DelayLineProcessor.h"
-#include "dsp/utils/utils.h"
+#include "dsp/onnx/OnnxInferenceLatency.h"
 
 namespace scyclone::test::resampling
 {
 
-    constexpr int kDefaultInferenceLatency = 16384 + 4096;
+    constexpr int kDefaultInferenceLatency = kOnnxInferenceLatencySamples;
 
     class SimulatedOnnxProcessor : public torsion::test::DelayLineProcessor
     {
     public:
         void prepare(const juce::dsp::ProcessSpec &spec) override
         {
-            const int blockSize = static_cast<int>(spec.maximumBlockSize);
-            const int latency = utils::computeOnnxLatencyInSamples(kDefaultInferenceLatency, blockSize);
-            configure(latency, latency);
+            juce::ignoreUnused(spec);
+            configure(kDefaultInferenceLatency, kDefaultInferenceLatency);
             DelayLineProcessor::prepare(spec);
         }
     };

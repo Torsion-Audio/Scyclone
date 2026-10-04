@@ -8,7 +8,7 @@ set_property(CACHE SCYCLONE_SANITIZERS PROPERTY STRINGS NONE ASAN ASAN_UBSAN THR
 option(SCYCLONE_MSAN_TRACK_ORIGINS "Add -fsanitize-memory-track-origins=2 for MSan (higher overhead)" OFF)
 
 option(SCYCLONE_SANITIZER_STUB_ONNX
-    "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (MSan / MSVC ASan / LEAK)"
+    "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_INFERENCE_STUB (MSan / MSVC ASan / LEAK)"
     OFF)
 
 # Prebuilt ONNX is not MSan-instrumented; MSVC ASan needs matching STL annotations;
@@ -29,10 +29,10 @@ endif()
 
 if(_scyclone_stub_onnx_required)
   set(SCYCLONE_SANITIZER_STUB_ONNX ON CACHE BOOL
-      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (MSan / MSVC ASan / LEAK)" FORCE)
+      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_INFERENCE_STUB (MSan / MSVC ASan / LEAK)" FORCE)
 else()
   set(SCYCLONE_SANITIZER_STUB_ONNX OFF CACHE BOOL
-      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_ONNX_STUB (MSan / MSVC ASan / LEAK)" FORCE)
+      "Skip linking prebuilt ONNX Runtime; compile with SCYCLONE_INFERENCE_STUB (MSan / MSVC ASan / LEAK)" FORCE)
 endif()
 
 # Linux ASAN_UBSAN: prebuilt ORT triggers UBSan vptr false positives in PluginIntegrationTest (macOS passes).
@@ -44,14 +44,16 @@ else()
       "Skip PluginIntegrationTest (prebuilt ORT + Linux UBSan)" FORCE)
 endif()
 
-# MSan: the DSP chain (RNBO export, SIMD paths) is not yet MSan-clean; plugin-level
-# probes report uninitialised-value taint. Unit-level tests remain covered.
+# MSan: the DSP chain (RNBO export, SIMD paths) is not yet MSan-clean; plugin-level tests that
+# run audio through the full chain report uninitialised-value taint. MSan flags the first branch
+# on a tainted sample, which is not where the value originates. Unit-level tests remain covered.
+unset(SCYCLONE_SKIP_AUTOMATION_STABILITY_TEST CACHE)
 if(SCYCLONE_SANITIZERS STREQUAL "MEMORY")
-  set(SCYCLONE_SKIP_AUTOMATION_STABILITY_TEST ON CACHE BOOL
-      "Skip AutomationStabilityTest (DSP chain not MSan-clean yet)" FORCE)
+  set(SCYCLONE_SKIP_MSAN_DSP_CHAIN_TESTS ON CACHE BOOL
+      "Skip plugin-level DSP-chain tests (DSP chain not MSan-clean yet)" FORCE)
 else()
-  set(SCYCLONE_SKIP_AUTOMATION_STABILITY_TEST OFF CACHE BOOL
-      "Skip AutomationStabilityTest (DSP chain not MSan-clean yet)" FORCE)
+  set(SCYCLONE_SKIP_MSAN_DSP_CHAIN_TESTS OFF CACHE BOOL
+      "Skip plugin-level DSP-chain tests (DSP chain not MSan-clean yet)" FORCE)
 endif()
 
 # Linux MSan: distro libc++.so is not instrumented; link against a prefix built with -fsanitize=memory

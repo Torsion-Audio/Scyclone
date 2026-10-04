@@ -45,7 +45,9 @@ function Get-VsInstallations {
         return @()
     }
 
-    return @($json | ConvertFrom-Json)
+    # Windows PowerShell 5.1 emits a JSON array from ConvertFrom-Json as one object
+    # instead of enumerating it; ForEach-Object unrolls it on both 5.1 and 7+.
+    return @(($json -join "`n") | ConvertFrom-Json | ForEach-Object { $_ })
 }
 
 function Find-VcVars64 {
@@ -427,7 +429,8 @@ function Write-MsvcEnvCMake {
 
     $parent = Split-Path -Parent $OutputPath
     New-Item -ItemType Directory -Force -Path $parent | Out-Null
-    Set-Content -Path $OutputPath -Value ($lines -join "`n") -Encoding utf8NoBOM
+    # Set-Content -Encoding utf8NoBOM exists only in PowerShell 7; this writes UTF-8 without BOM on 5.1 too.
+    [System.IO.File]::WriteAllText($OutputPath, ($lines -join "`n"), (New-Object System.Text.UTF8Encoding $false))
 }
 
 function Ensure-MsvcToolset {

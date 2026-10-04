@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.25)
 
 # Helps clangd / C++ IntelliSense resolve JUCE and target include paths.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -19,8 +19,8 @@ include(cmake/generate_build_info.cmake)
 
 
 # ONNX Runtime and libsamplerate
-include(cmake/setup_onnx_runtime.cmake)
 include(cmake/setup_libsamplerate.cmake)
+include(cmake/setup_anira.cmake)
 
 enable_testing()
 
