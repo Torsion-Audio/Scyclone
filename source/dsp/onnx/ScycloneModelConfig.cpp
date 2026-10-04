@@ -78,39 +78,42 @@ constexpr unsigned int kWarmUpInferences = 5;
 /// instance — sharing one between the two networks would cross-contaminate their state.
 constexpr bool kSessionExclusiveProcessor = true;
 
-anira::ModelData makeEmbeddedModelData(RaveModel model)
+/// Both tensors must hold float32: anira feeds and reads float buffers, and a model of another
+/// element type fails every Run(), which anira catches and logs, so the network would be silent.
+bool isFloatTensor(const Ort::TypeInfo& typeInfo, std::string& errorOut)
 {
-    switch (model)
-    {
-        case FunkDrum:
-            return anira::ModelData(
-                (void*) BinaryData::funk_drums_ort,
-                BinaryData::funk_drums_ortSize,
-                anira::InferenceBackend::ONNX,
-                "",
-                true);
-        case Djembe:
-            return anira::ModelData(
-                (void*) BinaryData::djembe_ort,
-                BinaryData::djembe_ortSize,
-                anira::InferenceBackend::ONNX,
-                "",
-                true);
-        default:
-            return anira::ModelData(
-                (void*) BinaryData::funk_drums_ort,
-                BinaryData::funk_drums_ortSize,
-                anira::InferenceBackend::ONNX,
-                "",
-                true);
-    }
+    const auto elementType = typeInfo.GetTensorTypeAndShapeInfo().GetElementType();
+    if (elementType == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT)
+        return true;
+
+    std::ostringstream os;
+    os << "expected float32 samples, got ONNX element type " << static_cast<int>(elementType);
+    errorOut = os.str();
+    return false;
 }
 
 } // namespace
 
 anira::InferenceConfig makeScycloneInferenceConfig(RaveModel model)
 {
-    std::vector<anira::ModelData> modelData{makeEmbeddedModelData(model)};
+    switch (model)
+    {
+        case Djembe:
+            return makeScycloneInferenceConfig(BinaryData::djembe_ort, BinaryData::djembe_ortSize);
+        case FunkDrum:
+        default:
+            return makeScycloneInferenceConfig(BinaryData::funk_drums_ort,
+                                               BinaryData::funk_drums_ortSize);
+    }
+}
+
+anira::InferenceConfig makeScycloneInferenceConfig(const void* modelBytes, size_t modelSize)
+{
+    // Binary ModelData only points at the bytes (copies are shallow); the caller keeps them alive
+    // for as long as this config, or any copy of it, can still be used to build a session.
+    std::vector<anira::ModelData> modelData;
+    modelData.emplace_back(const_cast<void*>(modelBytes), modelSize, anira::InferenceBackend::ONNX,
+                           std::string{}, true);
     return anira::InferenceConfig(
         modelData,
         makeRaveTensorShapes(),
@@ -120,22 +123,22 @@ anira::InferenceConfig makeScycloneInferenceConfig(RaveModel model)
         kSessionExclusiveProcessor);
 }
 
-bool validateRaveModelFile(const std::string& modelPath, std::string& errorOut)
+bool validateRaveModel(const void* modelBytes, size_t modelSize, std::string& errorOut)
 {
     errorOut.clear();
+
+    if (modelBytes == nullptr || modelSize == 0)
+    {
+        errorOut = "the file is empty";
+        return false;
+    }
 
     try
     {
         Ort::Env env{ORT_LOGGING_LEVEL_ERROR, "ScycloneModelValidation"};
         Ort::SessionOptions options;
         options.SetIntraOpNumThreads(1);
-
-#ifdef _WIN32
-        const std::wstring widePath(modelPath.begin(), modelPath.end());
-        Ort::Session session{env, widePath.c_str(), options};
-#else
-        Ort::Session session{env, modelPath.c_str(), options};
-#endif
+        Ort::Session session{env, modelBytes, modelSize, options};
 
         if (session.GetInputCount() != 1 || session.GetOutputCount() != 1)
         {
@@ -146,12 +149,22 @@ bool validateRaveModelFile(const std::string& modelPath, std::string& errorOut)
             return false;
         }
 
-        const auto inputShape =
-            session.GetInputTypeInfo(0).GetTensorTypeAndShapeInfo().GetShape();
-        const auto outputShape =
-            session.GetOutputTypeInfo(0).GetTensorTypeAndShapeInfo().GetShape();
+        const auto inputType = session.GetInputTypeInfo(0);
+        const auto outputType = session.GetOutputTypeInfo(0);
+        const auto inputShape = inputType.GetTensorTypeAndShapeInfo().GetShape();
+        const auto outputShape = outputType.GetTensorTypeAndShapeInfo().GetShape();
 
         std::string reason;
+        if (!isFloatTensor(inputType, reason))
+        {
+            errorOut = "input tensor: " + reason;
+            return false;
+        }
+        if (!isFloatTensor(outputType, reason))
+        {
+            errorOut = "output tensor: " + reason;
+            return false;
+        }
         if (!isCompatibleShape(inputShape, reason))
         {
             errorOut = "input tensor: " + reason;
@@ -180,19 +193,4 @@ bool validateRaveModelFile(const std::string& modelPath, std::string& errorOut)
         errorOut = "unknown error";
         return false;
     }
-}
-
-// User-supplied models must be RAVE exports with the same 2048-in/2048-out shape. Callers are
-// expected to have run validateRaveModelFile() first — anira does not reject a wrong shape.
-anira::InferenceConfig makeScycloneInferenceConfigFromPath(const std::string& modelPath)
-{
-    std::vector<anira::ModelData> modelData;
-    modelData.emplace_back(modelPath, anira::InferenceBackend::ONNX, std::string{}, false);
-    return anira::InferenceConfig(
-        modelData,
-        makeRaveTensorShapes(),
-        makeRaveProcessingSpec(),
-        kMaxInferenceTimeMs,
-        kWarmUpInferences,
-        kSessionExclusiveProcessor);
 }

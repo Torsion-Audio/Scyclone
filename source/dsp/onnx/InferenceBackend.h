@@ -10,7 +10,11 @@ class InferenceBackend {
 public:
     virtual ~InferenceBackend() = default;
 
+    /// Must not throw: it runs inside the host's prepareToPlay. A pipeline that cannot be built
+    /// leaves the backend inert until the next prepare().
     virtual void prepare(const juce::dsp::ProcessSpec& spec) = 0;
+
+    /// An unprepared or inert backend emits silence rather than passing its input through.
     virtual void processBlock(juce::AudioBuffer<float>& buffer) = 0;
     virtual int getLatencyInSamples() const = 0;
 

@@ -4,7 +4,6 @@
 #include "InferenceBackend.h"
 #include <anira/anira.h>
 #include <atomic>
-#include <functional>
 #include <memory>
 
 class AniraInferenceBackend : public InferenceBackend {
@@ -26,18 +25,28 @@ public:
     anira::InferenceBackend activeAniraBackend() const;
 
 private:
+    /// The model the pipeline is built from. External models are read into memory once, so a
+    /// rebuild (every prepare after releaseResources) never depends on the file still existing.
+    struct ModelSource
+    {
+        /// Owns an external model's bytes; null for the embedded models (BinaryData). Declared
+        /// before config, whose binary anira::ModelData only points into it.
+        std::shared_ptr<const juce::MemoryBlock> bytes;
+        anira::InferenceConfig config;
+    };
+
     void rebuildPipeline();
 
-    /// Replaces the model with the one produced by @p makeConfig. Tears the live session
-    /// down before touching inferenceConfig, and rolls back on failure.
-    bool swapPipeline(const std::function<anira::InferenceConfig()>& makeConfig);
-    void restorePipeline(anira::InferenceConfig previousConfig);
+    /// Replaces the model with @p next. Tears the live session down before touching
+    /// currentModel, and rolls back to the previous model on failure.
+    bool swapPipeline(ModelSource next);
+    void restorePipeline(ModelSource previous);
 
     static anira::HostConfig makeHostConfig(const juce::dsp::ProcessSpec& spec);
 
     RaveModel raveModel;
     anira::ContextConfig& contextConfig;
-    anira::InferenceConfig inferenceConfig;
+    ModelSource currentModel; ///< never reassigned while a handler is alive (anira holds config&)
     std::unique_ptr<anira::PrePostProcessor> prePostProcessor;
     std::unique_ptr<anira::InferenceHandler> handler;
     juce::dsp::ProcessSpec lastSpec{};

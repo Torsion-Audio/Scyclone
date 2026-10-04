@@ -123,6 +123,46 @@ TEST(AniraInferenceBackendTest, Prepare_AfterReleaseWithDeletedExternalModel_Doe
         << "the external model should still be loaded";
     EXPECT_EQ(backend.getLatencyInSamples(), latency);
 }
+
+// An empty file is rejected before anira sees it (anira's ModelData asserts on a zero size), the
+// completion callback still fires, and the previous model keeps running.
+TEST(AniraInferenceBackendTest, LoadExternalModel_EmptyFile_ReportsFailureAndResumes)
+{
+    anira::ContextConfig contextConfig{2, anira::WaitStrategy::SpinBackoff, anira::LogLevel::Error};
+    AniraInferenceBackend backend(FunkDrum, contextConfig);
+    std::vector<bool> events;
+    backend.onModelLoad = [&events](bool initLoading, juce::String) { events.push_back(initLoading); };
+    backend.prepare(juce::dsp::ProcessSpec{48000.0, 512, 1});
+    const int latency = backend.getLatencyInSamples();
+
+    const juce::File empty = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                                 .getNonexistentChildFile("scyclone_empty_model", ".onnx", false);
+    ASSERT_TRUE(empty.create());
+
+    EXPECT_FALSE(backend.loadExternalModel(empty));
+    ASSERT_EQ(events.size(), 2u);
+    EXPECT_FALSE(events.back()) << "completion callback must fire for a rejected file";
+    EXPECT_EQ(backend.activeAniraBackend(), anira::InferenceBackend::ONNX);
+    EXPECT_EQ(backend.getLatencyInSamples(), latency);
+
+    empty.deleteFile();
+}
+
+// Windows paths used to be widened byte by byte from UTF-8, so a model under e.g.
+// C:\Users\Jürgen could not be opened. Models are now read through juce::File.
+TEST(AniraInferenceBackendTest, LoadExternalModel_NonAsciiPath_Loads)
+{
+    anira::ContextConfig contextConfig{2, anira::WaitStrategy::SpinBackoff, anira::LogLevel::Error};
+    AniraInferenceBackend backend(FunkDrum, contextConfig);
+    backend.prepare(juce::dsp::ProcessSpec{48000.0, 512, 1});
+
+    const ScopedTempModel model(
+        juce::String::fromUTF8("scyclone_\xc3\xbcml\xc3\xa4ut_\xe6\xa8\xa1\xe5\x9e\x8b"));
+    ASSERT_TRUE(model.get().existsAsFile());
+
+    EXPECT_TRUE(backend.loadExternalModel(model.get()));
+    EXPECT_EQ(backend.activeAniraBackend(), anira::InferenceBackend::ONNX);
+}
 #endif
 
 #ifndef SCYCLONE_INFERENCE_STUB

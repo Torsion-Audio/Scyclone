@@ -10,12 +10,41 @@ bool isPreparable(const juce::dsp::ProcessSpec& spec)
     return spec.sampleRate > 0.0 && spec.maximumBlockSize > 0;
 }
 
+/// Upper bound for a user model read into memory. The bundled RAVE models are about 16.5 MB.
+constexpr juce::int64 kMaxModelFileBytes = 512 * 1024 * 1024;
+
+/// Reads a user model into memory. The bytes are owned by the backend from here on, so the file
+/// may be moved or deleted afterwards. juce::File reads through the wide-character Windows API,
+/// so paths with non-ASCII characters work too.
+std::shared_ptr<const juce::MemoryBlock> readModelFile(const juce::File& path, std::string& errorOut)
+{
+    const auto fileSize = path.getSize();
+    if (fileSize <= 0)
+    {
+        errorOut = "the file is empty or cannot be read";
+        return nullptr;
+    }
+    if (fileSize > kMaxModelFileBytes)
+    {
+        errorOut = "the file is larger than 512 MB";
+        return nullptr;
+    }
+
+    auto bytes = std::make_shared<juce::MemoryBlock>();
+    if (!path.loadFileAsData(*bytes) || bytes->getSize() == 0)
+    {
+        errorOut = "the file cannot be read";
+        return nullptr;
+    }
+    return bytes;
+}
+
 } // namespace
 
 AniraInferenceBackend::AniraInferenceBackend(RaveModel model, anira::ContextConfig& contextConfigIn)
     : raveModel(model),
       contextConfig(contextConfigIn),
-      inferenceConfig(makeScycloneInferenceConfig(model))
+      currentModel{nullptr, makeScycloneInferenceConfig(model)}
 {
 }
 
@@ -29,9 +58,9 @@ AniraInferenceBackend::~AniraInferenceBackend()
 void AniraInferenceBackend::rebuildPipeline()
 {
     handler.reset();
-    prePostProcessor = std::make_unique<anira::PrePostProcessor>(inferenceConfig);
+    prePostProcessor = std::make_unique<anira::PrePostProcessor>(currentModel.config);
     handler = std::make_unique<anira::InferenceHandler>(
-        *prePostProcessor, inferenceConfig, contextConfig);
+        *prePostProcessor, currentModel.config, contextConfig);
 
     // Select the model explicitly. Before anira v2.3.0 a session started on the CUSTOM backend,
     // whose default processor copies input to output, so without this the RAVE model was loaded
@@ -57,20 +86,19 @@ void AniraInferenceBackend::rebuildPipeline()
     flushSamplesRemaining = 0;
 }
 
-bool AniraInferenceBackend::swapPipeline(const std::function<anira::InferenceConfig()>& makeConfig)
+bool AniraInferenceBackend::swapPipeline(ModelSource next)
 {
-    anira::InferenceConfig previousConfig = inferenceConfig;
+    // Shares the previous model's bytes, so they stay alive for the rollback below.
+    ModelSource previous = currentModel;
 
     try
     {
-        // Build first: an invalid path or shape throws here, before anything is torn down.
-        anira::InferenceConfig newConfig = makeConfig();
-
-        // anira::SessionElement stores InferenceConfig& and its thread pool keeps reading it
-        // after the host callback is suspended — the live session must be gone before we assign.
+        // anira's SessionElement, InferenceManager, InferenceHandler and PrePostProcessor hold
+        // InferenceConfig&, and the thread pool keeps reading it after the host callback is
+        // suspended — the live session must be gone before currentModel is reassigned.
         handler.reset();
         prePostProcessor.reset();
-        inferenceConfig = std::move(newConfig);
+        currentModel = std::move(next);
 
         rebuildPipeline();
         return true;
@@ -84,15 +112,15 @@ bool AniraInferenceBackend::swapPipeline(const std::function<anira::InferenceCon
         juce::Logger::writeToLog("Model load failed: unknown error");
     }
 
-    restorePipeline(std::move(previousConfig));
+    restorePipeline(std::move(previous));
     return false;
 }
 
-void AniraInferenceBackend::restorePipeline(anira::InferenceConfig previousConfig)
+void AniraInferenceBackend::restorePipeline(ModelSource previous)
 {
     handler.reset();
     prePostProcessor.reset();
-    inferenceConfig = std::move(previousConfig);
+    currentModel = std::move(previous);
 
     try
     {
@@ -100,8 +128,8 @@ void AniraInferenceBackend::restorePipeline(anira::InferenceConfig previousConfi
     }
     catch (...)
     {
-        // The previous model no longer builds either (e.g. an external file that was deleted).
-        // Leave the backend inert rather than half-constructed; processBlock passes audio through.
+        // The previous model is still in memory, so this can only be a systemic failure (out of
+        // memory, ONNX Runtime refusing to start). Stay inert and silent; prepare() retries.
         juce::Logger::writeToLog("Model load failed: could not restore previous model");
         releaseResources();
     }
@@ -120,20 +148,43 @@ void AniraInferenceBackend::prepare(const juce::dsp::ProcessSpec& spec)
 
     lastSpec = spec;
 
-    if (handler == nullptr)
+    // This runs inside the host's prepareToPlay, so nothing may escape. A pipeline that cannot be
+    // built leaves the backend inert (silent, zero latency); the next prepare() tries again.
+    try
     {
-        rebuildPipeline();
-        return;
-    }
+        if (handler == nullptr)
+        {
+            rebuildPipeline();
+            return;
+        }
 
-    handler->prepare(makeHostConfig(spec));
-    latencyInSamples = static_cast<int>(handler->get_latency());
-    flushSamplesRemaining = 0;
+        handler->prepare(makeHostConfig(spec));
+        latencyInSamples = static_cast<int>(handler->get_latency());
+        flushSamplesRemaining = 0;
+    }
+    catch (const std::exception& e)
+    {
+        juce::Logger::writeToLog("Inference pipeline could not be prepared: " + juce::String(e.what()));
+        releaseResources();
+    }
+    catch (...)
+    {
+        juce::Logger::writeToLog("Inference pipeline could not be prepared: unknown error");
+        releaseResources();
+    }
 }
 
 void AniraInferenceBackend::processBlock(juce::AudioBuffer<float>& buffer)
 {
-    if (handler == nullptr || buffer.getNumChannels() < 1)
+    // No pipeline (not prepared yet, or a failed rebuild): emit silence. Passing the input
+    // through would put undelayed audio on the wet path while the dry path is delayed by the
+    // reported latency.
+    if (handler == nullptr)
+    {
+        buffer.clear();
+        return;
+    }
+    if (buffer.getNumChannels() < 1)
         return;
 
     // Apply a change of the host's offline flag here rather than in setNonRealtime(): JUCE's VST3
@@ -195,45 +246,71 @@ void AniraInferenceBackend::setNonRealtime(bool isNonRealtime) noexcept
 bool AniraInferenceBackend::loadExternalModel(const juce::File& path)
 {
     const juce::String modelName = path.getFileNameWithoutExtension();
+    bool loaded = false;
 
     if (onModelLoad)
         onModelLoad(true, modelName);
 
-    const std::string modelPath = path.getFullPathName().toStdString();
+    // Fire on every path, including an exception below — the host stays suspended (silent)
+    // until it does. An empty name on failure keeps the displayed name on what is loaded.
+    const juce::ScopeGuard notifyCompletion{[&] {
+        if (onModelLoad)
+            onModelLoad(false, loaded ? modelName : juce::String());
+    }};
 
-    // Validate before anira touches the file: a wrong tensor shape would load and then produce
-    // garbage audio (see validateRaveModelFile), and rejecting here gives the user a clear reason
-    // instead of a failed rollback.
-    std::string validationError;
-    const bool valid = validateRaveModelFile(modelPath, validationError);
-
-    if (!valid)
-        juce::Logger::writeToLog("Rejected model \"" + modelName + "\": " + validationError);
-
-    const bool loaded = valid && swapPipeline([&modelPath] {
-        return makeScycloneInferenceConfigFromPath(modelPath);
-    });
-
-    // Fire unconditionally — the host stays suspended if this is skipped. An empty name
-    // on failure leaves the displayed model name pointing at what is actually loaded.
-    if (onModelLoad)
-        onModelLoad(false, loaded ? modelName : juce::String());
+    try
+    {
+        // Validate before anira sees the model: a wrong element type or tensor shape would load
+        // and then produce silence or garbage (see validateRaveModel), and rejecting here gives
+        // the user a clear reason instead of a failed rollback.
+        std::string error;
+        auto bytes = readModelFile(path, error);
+        if (bytes != nullptr && validateRaveModel(bytes->getData(), bytes->getSize(), error))
+        {
+            auto config = makeScycloneInferenceConfig(bytes->getData(), bytes->getSize());
+            loaded = swapPipeline(ModelSource{std::move(bytes), std::move(config)});
+        }
+        else
+        {
+            juce::Logger::writeToLog("Rejected model \"" + modelName + "\": " + error);
+        }
+    }
+    catch (const std::exception& e)
+    {
+        juce::Logger::writeToLog("Model load failed: " + juce::String(e.what()));
+    }
+    catch (...)
+    {
+        juce::Logger::writeToLog("Model load failed: unknown error");
+    }
 
     return loaded;
 }
 
 bool AniraInferenceBackend::setInternalModel()
 {
+    bool loaded = false;
+
     if (onModelLoad)
         onModelLoad(true, "");
 
-    const RaveModel model = raveModel;
-    const bool loaded = swapPipeline([model] {
-        return makeScycloneInferenceConfig(model);
-    });
+    const juce::ScopeGuard notifyCompletion{[&] {
+        if (onModelLoad)
+            onModelLoad(false, "");
+    }};
 
-    if (onModelLoad)
-        onModelLoad(false, "");
+    try
+    {
+        loaded = swapPipeline(ModelSource{nullptr, makeScycloneInferenceConfig(raveModel)});
+    }
+    catch (const std::exception& e)
+    {
+        juce::Logger::writeToLog("Model load failed: " + juce::String(e.what()));
+    }
+    catch (...)
+    {
+        juce::Logger::writeToLog("Model load failed: unknown error");
+    }
 
     return loaded;
 }

@@ -16,7 +16,14 @@ void SanitizerInferenceBackend::prepare(const juce::dsp::ProcessSpec& spec)
 void SanitizerInferenceBackend::processBlock(juce::AudioBuffer<float>& buffer)
 {
     const int numSamples = buffer.getNumSamples();
-    if (fifoLength <= 0 || buffer.getNumChannels() < 1)
+
+    // Not prepared (or released): emit silence, matching AniraInferenceBackend.
+    if (fifoLength <= 0)
+    {
+        buffer.clear();
+        return;
+    }
+    if (buffer.getNumChannels() < 1)
         return;
 
     // Mirror AniraInferenceBackend: muting freezes the delay line rather than draining it,
@@ -83,7 +90,10 @@ bool SanitizerInferenceBackend::isMuted() const
 
 void SanitizerInferenceBackend::releaseResources()
 {
+    // fifoLength must follow the delay line: processBlock indexes delayLine up to fifoLength.
     delayLine.clear();
+    fifoLength = 0;
+    latencyInSamples = 0;
     filled = 0;
     writeIndex = 0;
 }
