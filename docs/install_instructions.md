@@ -2,7 +2,7 @@
 
 ## macOS
 
-Download the macOS zip from [GitHub Releases](https://github.com/Torsion-Audio/Scyclone/releases) (or from a manual workflow run). Universal release builds support Apple Silicon and Intel; choose `arm64` or `universal` when running a manual build if needed. Minimum macOS version: **10.13**.
+Download the macOS zip from [GitHub Releases](https://github.com/Torsion-Audio/Scyclone/releases) (or from a manual workflow run). Universal release builds support Apple Silicon and Intel; choose `arm64` or `universal` when running a manual build if needed. Minimum macOS version: **11.0**.
 
 Extract the archive and copy the formats you need:
 

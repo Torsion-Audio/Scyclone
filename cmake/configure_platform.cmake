@@ -1,6 +1,9 @@
 # Platform-specific settings
 if(APPLE)
-    set(MIN_MACOS_VERSION "10.13")
+    # The prebuilt static ONNX Runtime (anira-project/backends) is compiled for macOS 11.0 — a
+    # 10.13 universal build links it with thousands of "built for newer macOS version (11.0)"
+    # warnings, i.e. 10.13-10.15 were never actually supported. anira is built and tested for 11.0.
+    set(MIN_MACOS_VERSION "11.0")
     set(CMAKE_OSX_DEPLOYMENT_TARGET ${MIN_MACOS_VERSION} CACHE STRING "Minimum version of the target platform" FORCE)
 
     # Check if the current deployment target is at least the minimum required version
