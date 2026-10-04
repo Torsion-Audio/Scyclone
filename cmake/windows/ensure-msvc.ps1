@@ -45,7 +45,9 @@ function Get-VsInstallations {
         return @()
     }
 
-    return @($json | ConvertFrom-Json)
+    # Windows PowerShell 5.1 emits a JSON array from ConvertFrom-Json as one object
+    # instead of enumerating it; ForEach-Object unrolls it on both 5.1 and 7+.
+    return @(($json -join "`n") | ConvertFrom-Json | ForEach-Object { $_ })
 }
 
 function Find-VcVars64 {
