@@ -35,6 +35,7 @@ public:
     void releaseResources();
     /// True while this network skips inference (its ON_OFF parameter is off).
     bool isMuted() const { return backend->isMuted(); }
+    void setNonRealtime(bool isNonRealtime) noexcept { backend->setNonRealtime(isNonRealtime); }
 
     std::function<void(bool initLoading, juce::String modelName)> onOnnxModelLoad;
 

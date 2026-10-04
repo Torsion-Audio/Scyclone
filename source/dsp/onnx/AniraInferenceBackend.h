@@ -19,6 +19,7 @@ public:
     bool setInternalModel() override;
     void setMuted(bool shouldBeMuted) override;
     bool isMuted() const override;
+    void setNonRealtime(bool isNonRealtime) noexcept override;
     void releaseResources() override;
 
     /// The backend anira is currently running, or CUSTOM (passthrough) when no pipeline exists.
@@ -44,6 +45,9 @@ private:
 
     std::atomic<bool> muted{false};
     int flushSamplesRemaining = 0; ///< audio-thread only
+
+    std::atomic<bool> nonRealtime{false}; ///< what the host asked for (any thread)
+    bool appliedNonRealtime = false;      ///< what the current session runs with
 };
 
 #endif // SCYCLONE_ANIRAINFERENCEBACKEND_H

@@ -125,6 +125,53 @@ TEST(AniraInferenceBackendTest, Prepare_AfterReleaseWithDeletedExternalModel_Doe
 }
 #endif
 
+#ifndef SCYCLONE_INFERENCE_STUB
+namespace {
+
+/// Feeds noise as fast as possible (like an offline bounce) and counts the blocks after the
+/// reported latency that came back entirely silent, i.e. dropped hops.
+int countSilentBlocksInTightLoop(InferenceBackend& backend, int checkedBlocks, juce::Random& random)
+{
+    constexpr int kBlockSize = 512;
+    const int settleBlocks = backend.getLatencyInSamples() / kBlockSize + 1;
+    juce::AudioBuffer<float> buffer(1, kBlockSize);
+    int silentBlocks = 0;
+
+    for (int n = 0; n < settleBlocks + checkedBlocks; ++n)
+    {
+        for (int i = 0; i < kBlockSize; ++i)
+            buffer.setSample(0, i, 0.5f * (random.nextFloat() * 2.0f - 1.0f));
+
+        backend.processBlock(buffer);
+
+        if (n >= settleBlocks && isSilent(buffer))
+            ++silentBlocks;
+    }
+    return silentBlocks;
+}
+
+} // namespace
+
+// The offline flag is set before the first pipeline exists (hosts call setNonRealtime before
+// prepareToPlay) and every model swap builds a new anira session that starts in realtime mode,
+// so the flag must be re-applied to each new session.
+TEST(AniraInferenceBackendTest, NonRealtime_SetBeforePrepare_AppliesAndSurvivesModelSwap)
+{
+    anira::ContextConfig contextConfig{2, anira::WaitStrategy::SpinBackoff, anira::LogLevel::Error};
+    AniraInferenceBackend backend(FunkDrum, contextConfig);
+    juce::Random random(11);
+
+    backend.setNonRealtime(true);
+    backend.prepare(juce::dsp::ProcessSpec{48000.0, 512, 1});
+    EXPECT_EQ(countSilentBlocksInTightLoop(backend, 32, random), 0)
+        << "hops were dropped although the backend was set to non-realtime before prepare";
+
+    ASSERT_TRUE(backend.setInternalModel());
+    EXPECT_EQ(countSilentBlocksInTightLoop(backend, 32, random), 0)
+        << "hops were dropped after a model swap: the new session lost the non-realtime flag";
+}
+#endif
+
 // A backend with no prepared pipeline (before prepare, or after a failed rebuild) must emit
 // silence. Passing its input through would put undelayed audio on the wet path while the dry
 // path is delayed by the reported latency.

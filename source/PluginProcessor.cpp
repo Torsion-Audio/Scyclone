@@ -323,6 +323,15 @@ void AudioPluginAudioProcessor::releaseResources()
     // released. Shutting it down manually stops inference for any other instance still playing.
 }
 
+void AudioPluginAudioProcessor::setNonRealtime(bool isNonRealtime) noexcept
+{
+    // An offline bounce runs faster than real time; without this anira drops every hop whose
+    // inference has not finished and the rendered wet signal gets silent gaps.
+    AudioProcessor::setNonRealtime(isNonRealtime);
+    onnxProcessor1.setNonRealtime(isNonRealtime);
+    onnxProcessor2.setNonRealtime(isNonRealtime);
+}
+
 bool AudioPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const
 {
 #if JucePlugin_IsMidiEffect

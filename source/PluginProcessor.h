@@ -34,6 +34,7 @@ public:
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
+    void setNonRealtime (bool isNonRealtime) noexcept override;
 
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 

@@ -24,6 +24,10 @@ public:
     virtual void setMuted(bool shouldBeMuted) = 0;
     virtual bool isMuted() const = 0;
 
+    /// Offline rendering: wait for every inference instead of dropping late hops. May be called
+    /// from any thread, including the audio thread on every block; implementations only store it.
+    virtual void setNonRealtime(bool isNonRealtime) noexcept { juce::ignoreUnused(isNonRealtime); }
+
     virtual void releaseResources() {}
 
     std::function<void(bool initLoading, juce::String modelName)> onModelLoad;

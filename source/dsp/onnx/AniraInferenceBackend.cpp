@@ -38,6 +38,15 @@ void AniraInferenceBackend::rebuildPipeline()
     // but never run. v2.3.0 defaults to the first configured model; don't rely on either default.
     handler->set_inference_backend(anira::InferenceBackend::ONNX);
 
+    // A new session starts in realtime mode, so carry the host's offline flag over. anira only
+    // accepts set_non_realtime() once the session and its thread pool exist, i.e. from here on.
+    appliedNonRealtime = false;
+    if (nonRealtime.load(std::memory_order_relaxed))
+    {
+        handler->set_non_realtime(true);
+        appliedNonRealtime = true;
+    }
+
     if (isPreparable(lastSpec))
     {
         handler->prepare(makeHostConfig(lastSpec));
@@ -127,6 +136,15 @@ void AniraInferenceBackend::processBlock(juce::AudioBuffer<float>& buffer)
     if (handler == nullptr || buffer.getNumChannels() < 1)
         return;
 
+    // Apply a change of the host's offline flag here rather than in setNonRealtime(): JUCE's VST3
+    // wrapper calls that on every block, before its suspended check, so it can run while a model
+    // swap on the message thread is replacing the handler. This is one call per mode change.
+    if (const bool wanted = nonRealtime.load(std::memory_order_relaxed); wanted != appliedNonRealtime)
+    {
+        handler->set_non_realtime(wanted);
+        appliedNonRealtime = wanted;
+    }
+
     // Muted: skip inference entirely. The pipeline freezes, so its buffered audio
     // predates the mute and must be flushed once we resume (see below).
     if (muted.load(std::memory_order_relaxed))
@@ -167,6 +185,11 @@ void AniraInferenceBackend::setMuted(bool shouldBeMuted)
 bool AniraInferenceBackend::isMuted() const
 {
     return muted.load(std::memory_order_relaxed);
+}
+
+void AniraInferenceBackend::setNonRealtime(bool isNonRealtime) noexcept
+{
+    nonRealtime.store(isNonRealtime, std::memory_order_relaxed);
 }
 
 bool AniraInferenceBackend::loadExternalModel(const juce::File& path)
