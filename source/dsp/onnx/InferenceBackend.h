@@ -22,6 +22,7 @@ public:
     /// Muted backends skip inference entirely and emit silence (the wet path is
     /// discarded downstream anyway); unmuting must not leak pre-mute audio.
     virtual void setMuted(bool shouldBeMuted) = 0;
+    virtual bool isMuted() const = 0;
 
     virtual void releaseResources() {}
 

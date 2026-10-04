@@ -3,6 +3,7 @@
 #include "InferenceBackend.h"
 #include "OnnxInferenceLatency.h"
 #include "BinaryData.h"
+#include "ScopedTempModel.h"
 
 #ifndef SCYCLONE_INFERENCE_STUB
 #include <anira/anira.h>
@@ -33,32 +34,6 @@ protected:
     std::unique_ptr<InferenceBackend> backend;
     std::vector<bool> initEvents;
     juce::String lastModelName;
-};
-
-/// Writes the embedded model to a temp file and deletes it again on scope exit.
-class ScopedTempModel
-{
-public:
-    ScopedTempModel()
-        : file(juce::File::getSpecialLocation(juce::File::tempDirectory)
-                   .getChildFile("scyclone_contract_funk_drums.ort"))
-    {
-        file.deleteFile();
-        file.create();
-        juce::FileOutputStream stream(file);
-        if (stream.openedOk())
-            stream.write(BinaryData::funk_drums_ort, BinaryData::funk_drums_ortSize);
-    }
-
-    ~ScopedTempModel() { file.deleteFile(); }
-
-    ScopedTempModel(const ScopedTempModel&) = delete;
-    ScopedTempModel& operator=(const ScopedTempModel&) = delete;
-
-    const juce::File& get() const { return file; }
-
-private:
-    juce::File file;
 };
 
 bool isSilent(const juce::AudioBuffer<float>& buffer)
@@ -122,7 +97,47 @@ TEST(AniraInferenceBackendTest, RunsTheOnnxModelNotPassthrough)
     EXPECT_EQ(backend.activeAniraBackend(), anira::InferenceBackend::ONNX)
         << "a rebuilt pipeline must select ONNX again";
 }
+
+// Regression: releaseResources() drops the session but keeps the model, and the next prepare()
+// rebuilds it. If that rebuild re-read an external model from disk, a file that was moved or
+// deleted in between made prepare() throw straight out of prepareToPlay into the host.
+TEST(AniraInferenceBackendTest, Prepare_AfterReleaseWithDeletedExternalModel_DoesNotThrow)
+{
+    anira::ContextConfig contextConfig{2, anira::WaitStrategy::SpinBackoff, anira::LogLevel::Error};
+    AniraInferenceBackend backend(FunkDrum, contextConfig);
+    const juce::dsp::ProcessSpec spec{48000.0, 512, 1};
+    backend.prepare(spec);
+    const int latency = backend.getLatencyInSamples();
+
+    juce::File modelFile;
+    {
+        const ScopedTempModel model("scyclone_vanishing_model");
+        modelFile = model.get();
+        ASSERT_TRUE(backend.loadExternalModel(modelFile));
+        backend.releaseResources();
+    }
+    ASSERT_FALSE(modelFile.exists()) << "the temp model must be gone for this test to mean anything";
+
+    EXPECT_NO_THROW(backend.prepare(spec));
+    EXPECT_EQ(backend.activeAniraBackend(), anira::InferenceBackend::ONNX)
+        << "the external model should still be loaded";
+    EXPECT_EQ(backend.getLatencyInSamples(), latency);
+}
 #endif
+
+// A backend with no prepared pipeline (before prepare, or after a failed rebuild) must emit
+// silence. Passing its input through would put undelayed audio on the wet path while the dry
+// path is delayed by the reported latency.
+TEST_F(InferenceBackendContractTest, ProcessBlock_WhenNotPrepared_EmitsSilence)
+{
+    juce::AudioBuffer<float> buffer(1, 512);
+    for (int i = 0; i < buffer.getNumSamples(); ++i)
+        buffer.setSample(0, i, 0.25f);
+
+    backend->processBlock(buffer);
+
+    EXPECT_TRUE(isSilent(buffer)) << "an unprepared backend passed its input through";
+}
 
 // The stub is a pure delay line, so it round-trips its input exactly. The real backend is a
 // generative model — it does not preserve the signal, so the assertable contract is that it

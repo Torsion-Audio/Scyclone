@@ -15,6 +15,7 @@ public:
     bool loadExternalModel(const juce::File& path) override;
     bool setInternalModel() override;
     void setMuted(bool shouldBeMuted) override;
+    bool isMuted() const override;
     void releaseResources() override;
 
 private:

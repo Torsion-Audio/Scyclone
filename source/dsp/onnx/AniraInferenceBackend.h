@@ -18,6 +18,7 @@ public:
     bool loadExternalModel(const juce::File& path) override;
     bool setInternalModel() override;
     void setMuted(bool shouldBeMuted) override;
+    bool isMuted() const override;
     void releaseResources() override;
 
     /// The backend anira is currently running, or CUSTOM (passthrough) when no pipeline exists.

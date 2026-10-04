@@ -5,6 +5,9 @@
 #include <gtest/gtest.h>
 #include "PluginProcessor.h"
 #include "OnnxInferenceLatency.h"
+#include "ParameterHelpers.h"
+#include "PluginParameters.h"
+#include "ScopedTempModel.h"
 #include "TestTiming.h"
 
 using namespace torsion::test;
@@ -37,7 +40,7 @@ TEST_F(OnnxProcessorContractTest, ReportedLatency_MatchesCalibratedConstantAtRef
     // ONNX-island latency plus one host block for the fixed-block FIFO.
     EXPECT_EQ(proc.getLatencySamples() - kOnnxInferenceLatencyReferenceBlockSize,
               kOnnxInferenceLatencySamples)
-        << "kOnnxInferenceLatencySamples is stale — re-run OnnxLatencyProbeTest";
+        << "kOnnxInferenceLatencySamples is stale â€” re-run OnnxLatencyProbeTest";
 
     proc.releaseResources();
 }
@@ -73,7 +76,7 @@ TEST_F(OnnxProcessorContractTest, ProcessBlock_PreservesNumSamples)
 
 // Regression: a model file that is not a valid RAVE export used to throw out of
 // AniraInferenceBackend, so onOnnxModelLoad(false, ...) never fired and the processor stayed
-// suspended forever — a permanently silent plugin — with the exception escaping into JUCE's
+// suspended forever â€” a permanently silent plugin â€” with the exception escaping into JUCE's
 // async file-chooser callback.
 TEST_F(OnnxProcessorContractTest, LoadExternalModel_InvalidFile_KeepsPreviousModelAndResumes)
 {
@@ -107,4 +110,73 @@ TEST_F(OnnxProcessorContractTest, LoadExternalModel_InvalidFile_KeepsPreviousMod
 
     proc.releaseResources();
     garbage.deleteFile();
+}
+
+// Regression: a host that deactivates and reactivates the plugin (sample-rate or buffer-size
+// change) after the user's external model file was moved or deleted must not get an exception
+// out of prepareToPlay, and the plugin must not be left suspended.
+TEST_F(OnnxProcessorContractTest, PrepareToPlay_AfterReleaseWithDeletedExternalModel_DoesNotThrow)
+{
+    AudioPluginAudioProcessor proc;
+    proc.prepareToPlay(48000.0, 512);
+    const int latency = proc.getLatencySamples();
+
+    juce::File modelFile;
+    {
+        const ScopedTempModel model("scyclone_vanishing_plugin_model");
+        modelFile = model.get();
+        ASSERT_TRUE(proc.loadExternalModel(modelFile, 1));
+        proc.releaseResources();
+    }
+    ASSERT_FALSE(modelFile.exists());
+
+    EXPECT_NO_THROW(proc.prepareToPlay(48000.0, 512));
+    EXPECT_FALSE(proc.isSuspended());
+    EXPECT_EQ(proc.getLatencySamples(), latency);
+
+    proc.releaseResources();
+}
+
+// Regression: anira is non-blocking by default â€” a hop whose inference has not finished comes
+// back as zeros and is dropped. An offline bounce runs faster than real time, exactly like this
+// loop, so without honouring setNonRealtime() the rendered wet signal is full of silent gaps.
+// getCurrentLevel(n) is the unsmoothed magnitude of network n's inference output for the last
+// block, so it is exactly 0 only for a dropped (zero-filled) block.
+TEST_F(OnnxProcessorContractTest, SetNonRealtime_TightLoop_NetworksNeverDropHops)
+{
+    AudioPluginAudioProcessor proc;
+    setBoolParameterById(proc, PluginParameters::ON_OFF_NETWORK1_ID.getParamID(), true);
+    setBoolParameterById(proc, PluginParameters::ON_OFF_NETWORK2_ID.getParamID(), true);
+    proc.setNonRealtime(true);
+    proc.prepareToPlay(48000.0, 512);
+
+    constexpr int kBlockSize = 512;
+    const int settleBlocks = proc.getLatencySamples() / kBlockSize + 2;
+    constexpr int kCheckedBlocks = 64;
+
+    juce::Random random(7);
+    juce::AudioBuffer<float> buffer(2, kBlockSize);
+    juce::MidiBuffer midi;
+    int silentBlocks1 = 0;
+    int silentBlocks2 = 0;
+
+    for (int n = 0; n < settleBlocks + kCheckedBlocks; ++n)
+    {
+        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+            for (int i = 0; i < kBlockSize; ++i)
+                buffer.setSample(ch, i, 0.5f * (random.nextFloat() * 2.0f - 1.0f));
+
+        proc.processBlock(buffer, midi);
+
+        if (n >= settleBlocks)
+        {
+            silentBlocks1 += proc.getCurrentLevel(1) == 0.0f ? 1 : 0;
+            silentBlocks2 += proc.getCurrentLevel(2) == 0.0f ? 1 : 0;
+        }
+    }
+
+    EXPECT_EQ(silentBlocks1, 0) << "network 1 dropped hops while rendering offline";
+    EXPECT_EQ(silentBlocks2, 0) << "network 2 dropped hops while rendering offline";
+
+    proc.releaseResources();
 }

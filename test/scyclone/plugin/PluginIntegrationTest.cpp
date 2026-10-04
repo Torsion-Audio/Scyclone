@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 #include "JuceFixture.h"
+#include "ParameterHelpers.h"
+#include "PluginParameters.h"
 #include "PluginProcessor.h"
 #include "TestTiming.h"
 
@@ -17,6 +19,21 @@ protected:
 #endif
     }
 };
+
+// Regression: the initial mute state of network 2 was read from network 1's on/off parameter.
+// Network 1 defaults to on and network 2 to off, so every fresh instance ran full inference on
+// network 2 only to discard the result.
+TEST_F(PluginIntegrationTest, DefaultState_MutesSwitchedOffNetwork) {
+    AudioPluginAudioProcessor proc;
+    EXPECT_FALSE(proc.isNetworkMuted(1)) << "network 1 is on by default";
+    EXPECT_TRUE(proc.isNetworkMuted(2)) << "network 2 is off by default and must not run inference";
+
+    setBoolParameterById(proc, PluginParameters::ON_OFF_NETWORK2_ID.getParamID(), true);
+    EXPECT_FALSE(proc.isNetworkMuted(2)) << "switching network 2 on must unmute it";
+
+    setBoolParameterById(proc, PluginParameters::ON_OFF_NETWORK1_ID.getParamID(), false);
+    EXPECT_TRUE(proc.isNetworkMuted(1)) << "switching network 1 off must mute it";
+}
 
 TEST_F(PluginIntegrationTest, ReportedLatency_IsPositiveAndIdempotent) {
     AudioPluginAudioProcessor proc;

@@ -164,6 +164,11 @@ void AniraInferenceBackend::setMuted(bool shouldBeMuted)
     muted.store(shouldBeMuted, std::memory_order_relaxed);
 }
 
+bool AniraInferenceBackend::isMuted() const
+{
+    return muted.load(std::memory_order_relaxed);
+}
+
 bool AniraInferenceBackend::loadExternalModel(const juce::File& path)
 {
     const juce::String modelName = path.getFileNameWithoutExtension();

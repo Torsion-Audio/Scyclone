@@ -89,6 +89,11 @@ public:
     }
 
     float getCpuLoad();
+
+    /// True while network @p id (1 or 2) skips inference because it is switched off.
+    bool isNetworkMuted(int id) const {
+        return id == 1 ? onnxProcessor1.isMuted() : onnxProcessor2.isMuted();
+    }
 private:
     void parameterChanged (const juce::String& parameterID, float newValue) override;
 

@@ -33,6 +33,8 @@ public:
     /// @return false if the file could not be loaded; the previous model stays active.
     bool loadExternalModel(juce::File path);
     void releaseResources();
+    /// True while this network skips inference (its ON_OFF parameter is off).
+    bool isMuted() const { return backend->isMuted(); }
 
     std::function<void(bool initLoading, juce::String modelName)> onOnnxModelLoad;
 

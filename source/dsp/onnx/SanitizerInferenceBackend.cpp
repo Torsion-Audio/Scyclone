@@ -76,6 +76,11 @@ void SanitizerInferenceBackend::setMuted(bool shouldBeMuted)
     muted.store(shouldBeMuted, std::memory_order_relaxed);
 }
 
+bool SanitizerInferenceBackend::isMuted() const
+{
+    return muted.load(std::memory_order_relaxed);
+}
+
 void SanitizerInferenceBackend::releaseResources()
 {
     delayLine.clear();
