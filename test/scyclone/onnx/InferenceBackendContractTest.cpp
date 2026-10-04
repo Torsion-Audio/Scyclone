@@ -243,17 +243,10 @@ TEST_F(InferenceBackendContractTest, ProcessBlock_HonoursReportedLatency)
 
     juce::AudioBuffer<float> buffer(1, 512);
 
-#if defined(SCYCLONE_INFERENCE_STUB)
-    // The stub is an exact delay line: silent for the whole reported latency.
+    // Both backends are silent for exactly the reported latency: the stub is a delay line, and
+    // anira pre-fills its receive buffer with (latency - internal_model_latency) zeros, which is
+    // the whole latency since the RAVE config declares no internal model latency.
     const int silentBlocks = latency / 512;
-#else
-    // The real backend emits sooner than its reported latency. anira pre-fills the receive
-    // buffer with (latency - internal_model_latency) zeros — 5632 - 2048 = 3584 samples at the
-    // reference config — because the declared internal_model_latency accounts for the delay the
-    // model itself contributes. Assert only what is unambiguous: nothing can come out before
-    // RAVE's first 2048-sample hop has been consumed.
-    const int silentBlocks = 2048 / 512;
-#endif
 
     for (int n = 0; n < silentBlocks; ++n)
     {

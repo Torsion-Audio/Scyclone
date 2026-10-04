@@ -4,15 +4,15 @@
 
 #include <sstream>
 
-// Both networks are IRCAM ACIDS RAVE models. The tuning below is a direct port of anira's own
-// reference configuration for this model family — see
-// modules/anira/extras/models/third-party/ircam-acids/RaveFunkDrumConfig.h. Do not change any of
-// these numbers without re-deriving them from that file (or from the model itself); they are not
-// arbitrary and several of them affect dry/wet alignment.
+// Both networks are IRCAM ACIDS RAVE models. The hop, inference budget, warm-up and processor
+// settings below follow anira's reference configuration for this model family
+// (modules/anira/extras/models/third-party/ircam-acids/RaveFunkDrumConfig.h). The internal model
+// latency does not: that file describes a streaming TorchScript export, and these ONNX exports
+// behave differently (see makeRaveProcessingSpec). Several of these numbers affect dry/wet
+// alignment — re-measure with test/scyclone/calibration/OnnxWetLagProbeTest.cpp before changing.
 
 namespace {
 
-/// Matches anira's processing_spec_rave_funk_drum_config.
 anira::ProcessingSpec makeRaveProcessingSpec()
 {
     return anira::ProcessingSpec{
@@ -20,10 +20,17 @@ anira::ProcessingSpec makeRaveProcessingSpec()
         {1},    // postprocess_output_channels
         {2048}, // preprocess_input_size — RAVE's hop
         {2048}, // postprocess_output_size
-        // internal_model_latency: the delay the model itself introduces. anira adds this to the
-        // reported latency and pre-fills its receive buffer with (latency - this) zeros, so a
-        // wrong value shifts the wet path against the dry path by the difference.
-        {2048}};
+        // internal_model_latency: 0, measured. anira places each hop's output by its own buffering
+        // alone and only adds this value to the reported latency, so it must equal the model's
+        // real delay or the wet path drifts against the dry path and host delay compensation.
+        // anira's reference config declares 2048 for a streaming TorchScript export with cached
+        // convolutions; these ONNX exports are stateless (one input, one output, no state) and
+        // process each 2048-sample hop on its own, so they add no whole-hop delay. They do lose
+        // transient timing within a hop: OnnxWetLagProbe measures the median wet onset at about
+        // 600 (FunkDrum) and 100 (Djembe) samples before the reported latency, spread across
+        // roughly one hop depending on where in the hop a transient falls. Declaring 2048 made
+        // the wet signal arrive about 2048 samples (43 ms at 48 kHz) early.
+        {0}};
 }
 
 /// The single tensor shape Scyclone drives RAVE with, as {batch, channels, hop}.
@@ -74,8 +81,9 @@ constexpr float kMaxInferenceTimeMs = 42.66f;
 /// Inferences run at load time so the first real block does not pay allocation/JIT cost.
 constexpr unsigned int kWarmUpInferences = 5;
 
-/// RAVE caches convolution state across calls, so each session needs its own processor
-/// instance — sharing one between the two networks would cross-contaminate their state.
+/// One processor instance per session, as in anira's reference config. (The reference reasons
+/// that RAVE caches convolution state between calls; these stateless ONNX exports do not, so
+/// this only keeps the two networks' inferences from sharing an ORT session.)
 constexpr bool kSessionExclusiveProcessor = true;
 
 /// Both tensors must hold float32: anira feeds and reads float buffers, and a model of another

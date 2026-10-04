@@ -48,7 +48,7 @@ TEST_F(PluginIntegrationTest, ReportedLatency_IsPositiveAndIdempotent) {
 
 // Why: anira derives ONNX latency from the HostConfig, so a larger host block absorbs more of
 // the block-alignment delay. Ordering property, not a magic number — the measured 48 kHz curve
-// runs 6112 samples at block 32 down to 4096 at block 2048 (see OnnxInferenceLatency.h).
+// runs 4064 samples at block 32 down to 2048 at block 2048 (see OnnxInferenceLatency.h).
 // Stub-excluded: SanitizerInferenceBackend reports a fixed latency by design.
 #if !defined(SCYCLONE_INFERENCE_STUB)
 TEST_F(PluginIntegrationTest, ReportedLatency_IsMonotonicDecreasingWithHostBlockAt48k) {
