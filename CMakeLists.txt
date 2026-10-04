@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.25)
 
 # Helps clangd / C++ IntelliSense resolve JUCE and target include paths.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
