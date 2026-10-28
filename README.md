@@ -1,6 +1,12 @@
 # <img style="float: left;" src="assets/pictures/logo.png" width="40" /> &nbsp; SCYCLONE
 ![interface](assets/pictures/interface.png)
 
+### Winner of the 2023 Neural Audio Plugin Competition, hosted by The Audio Programmer
+
+> Scyclone stood out because it took cutting-edge neural audio research and turned it into a plugin musicians actually wanted to use. It's exactly the kind of work we hoped the competition would bring out.
+>
+> — The Audio Programmer
+
 **Scyclone** is an audio plugin that utilizes **neural timbre transfer** technology to offer a new approach to audio production. The plugin builds upon [RAVE](https://github.com/acids-ircam/RAVE) methodology, a realtime audio variational auto encoder, facilitating neural timbre transfer in both single and couple inference mode. <br /><br />
 This enables a new artificial layering technique to be applied on the incoming signal in creating richer drum pallets, fuller atmospheres or simply transferring the timbre of the raw signal to another sound pallet. To further control the behaviour and production of the neural networks, we have internally equipped the plugin with signal processings modules allowing the user to shape, control and embellish the source and target timbres in a distinct manner.
 
